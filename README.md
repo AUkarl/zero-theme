@@ -90,6 +90,14 @@ hugo mod init 你的模块名          # 例如 github.com/you/zero-site
 
 首次 `hugo server` 会自动拉取。升级：`hugo mod get -u ./...`。
 
+这条路有两个前置条件，缺一个就报 `module does not exist` 或 `binary with name "go" not found in PATH`：
+
+1. 本机 `PATH` 里要能找到 `go`（Hugo 不读 `GOROOT`，也不看注册表 —— Go 装了但不在 PATH 一样失败）；
+2. 站点自己也得是模块，先 `hugo mod init github.com/你/你的站点仓库`，再 `hugo mod get -u github.com/AUkarl/zero-theme`。
+
+网络到不了 `proxy.golang.org` 时，让 Go 直接走 git：`setx GOPRIVATE "github.com/AUkarl/*"`（或临时 `$env:GOPRIVATE='github.com/AUkarl/*'`）。
+CI 里同样要有 Go，否则就在 Pages 构建镜像里预装、或者改用方式二/方式三。
+
 ### 方式二：Git Submodule
 
 ```bash
