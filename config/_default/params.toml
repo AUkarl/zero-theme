@@ -1,0 +1,621 @@
+# ============================================================
+# params.toml — zero 主题全量配置（默认值）
+# ============================================================
+#
+# 这份文件是主题的**默认值表**，Hugo 会自动把它与站点的 params 合并：
+#   站点 config/_default/params.toml（只写你要改的那几行）
+#     > 站点 config/development|production/params.toml（按环境覆盖）
+#     > 本文件（主题默认值）
+# 也就是说：站点里没写的项一律按这里的值走，改主题不会冲掉站点的自定义；
+# 站点里写了的项整条覆盖本文件同名项。数组（如 [[footer.services]]、[[works]]）
+# 是整份替换，不做拼接。
+#
+# 再往上一层是后台「前端管理」写的 data/*.json（导航栏 / 首页 / 页脚 / 关于页 /
+# 工坊 / 基本信息 / 时刻页）：那几份的优先级最高，改完不用碰这里。
+# 顺序永远是：data/*.json > 站点 params > 主题 params。
+#
+# 阅读方式：每个分区先说「这一区管前台哪一块」，再逐项标注类型、默认值与影响范围。
+# 空字符串 ""、空数组 []、false 都是有效值，不会被当成「没填」。
+# 改完要重启 hugo server（新增分区时尤其明显，热重载偶尔不重读 config）。
+#
+# 页脚那行「designed by 知止」是主题作者声明，写死在 layouts/partials/footer.html 里，
+# 不提供开关，也不受本文件影响。
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 1. zero-stack 自建后端（评论 / 点赞 / 收藏 / 订阅 / 统计）
+# ------------------------------------------------------------
+# apiBaseURL 留空 = 整站退回纯静态：不加载 <zero-comment>、不显示点赞收藏、
+# 账号入口只留一个跳登录页的链接，前台不会发任何请求。
+# 部署见 zero-stack 的 docs/DEPLOYMENT.md。
+#
+# 这五个开关是**构建期**的默认值；后台「设置 → 功能开关」写的
+# accountSystemEnabled / commentEnabled / likeEnabled / starEnabled / momentsEnabled
+# 等是同名的**运行期**值，前台加载后会用运行期值再接管一次（不必重新构建）。
+
+apiBaseURL = ""                   # 例 https://zero-api.xxx.workers.dev，末尾不要带斜杠
+zeroShortBase = "posts"           # 文章短链前缀，拼成 /post/<标识>（zero 评论组件用）
+cmsBaseURL = ""                   # 站点后台地址；留空时本地开发= http://127.0.0.1:5173/ 、正式构建= /admin/
+zeroEnabled = true                # false = 一次关掉自建评论 / 点赞 / 收藏 / 订阅 / 统计
+commentEnabled = true             # 文章评论区总开关
+likeEnabled = true                # 文章页点赞按钮
+starEnabled = true                # 文章页收藏按钮
+subscribeEnabled = true           # 文章页与订阅页的邮箱订阅框
+analyticsEnabled = true           # 自建访问统计（进入记一次 + 心跳）
+
+
+# ------------------------------------------------------------
+# 2. 站点基本信息
+# ------------------------------------------------------------
+# 后台「前端管理 → 基本信息」写 data/site.json，优先级高于这一段；
+# 这里只作为没写 data 文件时的默认值。
+
+show_logo = true                  # 导航栏是否显示 Logo
+logo = "/img/logo-nav.webp"       # Logo 路径（相对 static 目录），也可填完整 https 地址
+show_site_name = true             # 导航栏是否显示站点名
+site_name = "零度站点"             # 站点名（导航栏、标题兜底）
+navName = "零度站点"               # 导航栏与 SEO 里用的站点名，留空退回 site_name
+show_author = true                # 是否显示全局作者信息
+author = "站长"                    # 默认署名（SEO、文章作者框兜底）
+default_author = "default"        # 默认作者标识，对应 data/authors.yaml 里的 key
+description = "一个极简个人站点"    # 站点描述，用于 SEO 与分享卡片
+keywords = ["blog", "tech", "design"]   # 站点关键词
+favicon = "/img/logo-favicon.png"  # 浏览器图标；留空回落到主题自带的 img/logo-nav.webp
+ogImage = ""                        # 分享图兜底（文章没封面时用），留空回落到 Logo
+aboutAvatar = "img/avatar.webp"   # 关于页 / 时刻页的头像
+aboutName = "站长"                 # 关于页 / 时刻页显示的昵称
+authorAvatar = ""                  # 文章署名行的头像兜底，留空用 aboutAvatar
+
+
+# ------------------------------------------------------------
+# 3. 图片处理管线
+# ------------------------------------------------------------
+# Hugo 构建时把本地图与可达的远程图转 WebP + 生成模糊占位（LQIP）。
+# 封面尺寸（400/800/1200）按版面位置在各模板里指定，这一区管全局参数。
+
+[image]
+  remote_fetch = false            # 是否抓取远程封面构建 WebP（图源在墙内不可达时开它会卡构建）
+  remote_timeout = "20s"          # 单个远程图的最长等待
+  quality = 78                    # WebP 质量 1-100，越高越清晰也越大
+  lqip_width = 20                 # 模糊占位图的宽度（像素），只用来在高清图到达前铺一层底色
+  lqip_quality = 25               # 占位图质量
+  max_age_hours = 8760            # 远程缓存有效期（小时），默认一年
+
+
+# ------------------------------------------------------------
+# 4. 导航栏
+# ------------------------------------------------------------
+# 菜单项本身在后台「前端管理 → 导航栏」（写 data/nav.json），
+# 或在 config/_default/menus.zh.toml；这一段只管导航栏的行为。
+# 站点 params 里若写成顶层的 enable_theme_switch / theme_switch_icon /
+# theme_switch_weight / default_theme（老写法），主题也照样认，[nav] 里的值优先。
+
+[nav]
+  enable_theme_switch = true      # 显示浅色 / 深色 / 跟随系统切换按钮
+  theme_switch_icon = "fas fa-sun"  # 切换按钮的 FontAwesome 类名
+  theme_switch_weight = 90        # 切换按钮在右侧图标区的排序权重（越小越靠左；语言位默认 100）
+  default_theme = "auto"          # enable_theme_switch=false 时的固定主题：auto / light / dark
+  logo_home_link = true           # 点 Logo 与站点名是否回首页（false = 只当图片，不可点）
+  sticky = true                   # 向下滚动时导航是否吸顶
+  blur = true                     # 导航背景是否毛玻璃（backdrop-filter）
+
+
+# ------------------------------------------------------------
+# 5. 外观与设计令牌
+# ------------------------------------------------------------
+# 这里每一项对应 assets/css/*.css 里 :root 的一个 CSS 变量。
+# 留空（""）表示「不改，用主题 CSS 里的默认值」——只想调一两个颜色时，
+# 把其余项留着，别整份填上，否则深色模式那套会跟着失效。
+# [design] 是浅色，[design.dark] 是深色，两边键名一一对应。
+
+[design]
+  font_family = ""                # 全局字体栈，例 "-apple-system, 'PingFang SC', sans-serif"
+  base_font_size = ""             # 正文基准字号（像素数字，例 17）
+  line_height = ""                # 正文行高（例 1.75）
+  radius = ""                     # 卡片圆角（例 4px / 10px）
+  nav_height = ""                 # 导航栏高度（例 64px）
+  max_width = ""                  # 内容区最大宽度（例 1200px）
+  bg = ""                         # 页面底色          --bg
+  card_bg = ""                    # 卡片 / 输入底色    --card-bg
+  text = ""                       # 正文色            --text
+  text_secondary = ""             # 次要文字色        --text-secondary
+  border = ""                     # 边框色            --border
+  shadow = ""                     # 卡片阴影          --shadow
+  tag_bg = ""                     # 标签底色          --tag-bg
+  tag_active_bg = ""              # 标签选中底色      --tag-active-bg
+  tag_active_color = ""           # 标签选中文字      --tag-active-color
+  accent = ""                     # 主色（按钮 / 链接）--logo-accent-text
+  btn_bg = ""                     # 通用按钮底色      --btn-bg
+  btn_color = ""                  # 通用按钮文字      --btn-color
+  scroll_btn_bg = ""              # 右下滚动按钮底色  --scroll-btn-bg
+  scroll_btn_color = ""           # 滚动按钮图标色    --scroll-btn-color
+  shuo_name = ""                  # 时刻卡片昵称色    --shuo-name
+
+  # 深色模式同名令牌（只在 data-theme="dark" 与跟随系统的深色分支生效）
+  [design.dark]
+    bg = ""
+    card_bg = ""
+    text = ""
+    text_secondary = ""
+    border = ""
+    shadow = ""
+    tag_bg = ""
+    tag_active_bg = ""
+    tag_active_color = ""
+    accent = ""
+    btn_bg = ""
+    btn_color = ""
+    scroll_btn_bg = ""
+    scroll_btn_color = ""
+    shuo_name = ""
+
+  # zero 组件条（点赞 / 收藏 / 订阅 / 表单）的令牌，见 assets/css/zero.css
+  [design.zero]
+    action_bg = ""                # --zero-action-bg
+    action_border = ""            # --zero-action-border
+    action_fg = ""                # --zero-action-fg
+    action_muted = ""             # --zero-action-muted
+    chip_bg = ""                  # 胶囊底色 --zero-chip-bg
+    chip_border = ""              # 胶囊边框 --zero-chip-border
+    chip_fg = ""                  # 胶囊文字 --zero-chip-fg
+    react_fg = ""                 # 点赞点亮后的颜色（心）--zero-react-fg
+    star_fg = ""                  # 收藏点亮后的颜色（星）--zero-star-fg；两颗形状与动画一致，只有颜色分开
+    accent_bg = ""                # 主按钮底色 --zero-accent-bg
+    accent_fg = ""                # 主按钮文字 --zero-accent-fg
+    ok_fg = ""                    # 成功提示 --zero-ok-fg
+    error_fg = ""                 # 失败提示 --zero-error-fg
+
+
+# ------------------------------------------------------------
+# 6. 动效与滚动按钮
+# ------------------------------------------------------------
+
+[motion]
+  enable = true                   # 卡片与区块的入场动画（关闭后所有内容直接可见）
+  reduced_motion_respect = true   # 尊重系统的「减少动态效果」设置
+
+[scroll_buttons]
+  enable_top = true               # 右下角「回到顶部」
+  enable_bottom = true            # 右下角「到底部」
+
+
+# ------------------------------------------------------------
+# 7. 页面切换加载层
+# ------------------------------------------------------------
+
+[page_loader]
+  enable = true                   # 进页时那层带站点名的过场；false 完全不加载
+  text = ""                       # 过场文案，留空用 i18n 字典里的 loader-text
+  min_ms = 320                    # 最短停留毫秒数，太快看不清就别设成 0
+  max_ms = 2600                   # 资源没加载完也强制结束的毫秒数
+
+
+# ------------------------------------------------------------
+# 8. 首页落地页（站点根路径 /）
+# ------------------------------------------------------------
+
+[landing]
+  show_quotes = true              # 是否显示诗词轮播
+  quotes = ["海上生明月 & 天涯共此时", "碧山幽人来 & 清酒酌满杯", "江南无所有 & 聊赠一枝春"]
+  quote_letters_delay = 50        # 逐字出现的间隔（毫秒）
+  quote_switch_delay = 5000       # 两句之间的停留（毫秒）
+  show_welcome = true             # 是否显示问候行
+  welcome = "Hey，好久不见"        # 问候语
+  show_background = true           # 是否使用背景图
+  background_image = "img/bj.webp" # 背景图（相对 static）
+  background_fade = true           # 背景渐入动画
+  enter_text = "进入"              # 进入按钮文字
+  show_copyright = true           # 底部是否显示版权行（内容取 footer.copyright_text）
+  auto_enter = false               # 二次访问直接跳过落地页进首页
+
+
+# ------------------------------------------------------------
+# 9. 首页（布局与文章列表）
+# ------------------------------------------------------------
+# 后台「前端管理 → 首页」写 data/home.json，优先于这一段。
+
+[home]
+  layout = "bento"                # bento=精选网格 + 全部文章；grid=等宽等高卡片
+  paginate = 20                   # grid 布局每页条数（bento 用下面的行数控制）
+  columns = 4                     # grid 卡片列数 1-4（窄屏自动降为 2 / 1）
+  stagger_offset = 22             # 第 2、4 列下移的卡宽百分比，0=不错落
+  image_ratio = "4 / 3"           # 卡片封面宽高比
+  title_lines = 2                 # 卡片标题固定行数（超出截断）
+  desc_lines = 3                  # 卡片摘要固定行数
+  width_ratio = 90                # 内容区宽度占比 1-100
+  mainSections = ["posts"]        # 首页、归档、RSS 一起用的文章目录
+  show_images = true              # 卡片是否显示封面（仅 grid 布局；bento 恒显示）
+  show_summary = true             # 卡片是否显示摘要（仅 grid 布局）
+  summary_length = 120            # 摘要截断字数
+  show_desc = true                # 首页标题下那行描述是否显示
+  desc = "这里生长着我关于设计、技术与生活的思考片段。"   # 那行描述的文字
+
+  # --- 新版 bento 布局的细节 ---
+  [home.bento]
+    width_ratio = 90              # 版块宽度占比 1-100
+    max_width = 0                 # 宽度上限（像素），0=不限制
+    intro_eyebrow = ""            # 顶部小标签
+    intro_title = ""              # 顶部大标题
+    intro_desc = ""               # 顶部一句话介绍
+    featured_title = ""           # 精选区标题，留空用「精选」
+    featured_sub = ""             # 精选区副标题
+    featured_mode = "auto"        # auto=按热度取前 N 篇；manual=按下面 [[home.bento.featured]] 槽位
+    featured_auto_count = 11      # auto 模式取几篇（默认排满 11 个槽位）
+    featured_auto_badge = "置顶"   # 排在最前的那篇的角标文字，留空不显示角标
+    articles_title = ""           # 全部文章区标题，留空用「全部文章」
+    articles_link_text = ""       # 右上角跳转文字，留空用「全部 →」
+    initial_rows = 3              # 首屏显示几行（每行 = 当前列数张）
+    load_rows = 5                 # 每次点「加载更多」加几行
+    articles_columns = 3          # 全部文章的列数（宽屏），中屏 2、窄屏 1
+    gap = 20                      # 卡片间距（像素）
+    radius = 16                   # 卡片圆角（像素）
+    card_height = 360             # 全部文章卡片高度（像素）
+    card_image_ratio = 52         # 卡片里封面占的高度百分比
+    show_views = false            # 卡片底部是否显示浏览量（数据来自 data/poststats.json）
+    default_image = ""            # 封面缺失 / 加载失败时的兜底图，留空用莫兰迪渐变底
+    # 热度分 = 阅读×views_weight + 评论×comments_weight + 点赞×likes_weight + 收藏×stars_weight
+    # 计数来自后台定时导出的 data/poststats.json；没有那份文件时才回落到前端现查评论系统
+    views_weight = 1
+    comments_weight = 5
+    likes_weight = 3
+    stars_weight = 5
+    enable_hot = true             # 关掉就不显示「最热」这一档，也不再取统计
+    stats_provider = "auto"       # 没构建 poststats 时的现查来源：auto/waline/twikoo/artalk/none
+    stats_server_url = ""         # 现查的评论服务地址，留空取 [comment.article] 的配置
+    stats_cache_minutes = 360     # 现查结果的浏览器缓存时长
+    stats_comment_probe = 6       # 现查评论数时最多探测前几篇（控制请求量）
+    # 莫兰迪纯色文字卡的四个底色 + 文字色，留空用主题内置那组
+    palette_1 = ""
+    palette_2 = ""
+    palette_3 = ""
+    palette_4 = ""
+    palette_ink = ""
+
+  # manual 模式的槽位：一条 [[home.bento.featured]] 一格，顺序即版面顺序
+  # variant 可用：hero / wide / overlay / top / tall / dark / indigo / amber / outline
+  # 例：
+  # [[home.bento.featured]]
+  #   url = "/posts/某篇/"
+  #   variant = "hero"
+  #   badge = "置顶"
+  #   title = ""        # 覆盖文章标题
+  #   desc = ""         # 覆盖摘要
+  #   image = ""        # 覆盖封面
+  #   tag = ""          # 覆盖角标分类文字
+  #   date = ""         # 覆盖显示的日期
+
+
+# ------------------------------------------------------------
+# 10. 文章页
+# ------------------------------------------------------------
+
+[article]
+  math = false                    # 全站开启 KaTeX 数学公式（单篇也可用 front matter 的 math = true 单独打开）
+  show_date = true                # 头部是否显示发布日期
+  show_updated = true             # 发布日期后面那条「修改于 …」（取 front matter 的 lastmod，与发布日期相同则不显示）
+  date_format = "2006-01-02"      # 日期格式（Hugo 布局写法）
+  show_category_badge = true      # 标题上方那枚分类角标
+  show_meta_category = true       # 元信息行里的「分类：xxx」（两块都想显示才都开，避免重复）
+  show_word_count = true          # 元信息行里的字数
+  show_reading_time = true        # 元信息行里的预计阅读时间
+  reading_speed = 250             # 每分钟阅读字数，用来把字数换算成分钟
+  show_tags = true                # 文末的标签行
+  show_prev_next = true           # 上一篇 / 下一篇导航
+  show_views = false              # 元信息行里的浏览量（zero 统计或 Waline 计数器）
+  show_toc = true                 # 右侧目录总开关（关掉时正文居中）；单篇还可由 front matter 的 toc = false 关掉，窄屏目录本来就用 CSS 隐藏
+  toc_levels = ["h2", "h3"]       # 目录收哪几级标题
+  toc_numbering = false           # 目录条目是否加 1.2 这类编号
+  show_author_box = true          # 文末的作者框
+  show_license = true             # 作者框里的 CC 协议行
+  license_text = "CC BY-NC-SA 4.0"        # 协议名
+  license_url = "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh"  # 协议链接
+  donate_max_qr = 3               # 赞赏弹窗最多显示几张二维码
+  image_zoom = true               # 正文图片点击放大（灯箱）
+  actions_order = ["like", "star", "subscribe"]   # 操作条从左到右的顺序，删掉即不显示该位置
+
+
+# ------------------------------------------------------------
+# 11. 归档页
+# ------------------------------------------------------------
+
+[archive]
+  group_by_year = true            # 按年份分组（false = 一条平铺时间线）
+  enable_tag_danmaku = true       # 顶部的标签弹幕
+  danmaku_lanes = 5               # 弹幕轨道数
+  danmaku_speed = 28              # 一轮弹幕的秒数
+  enable_search = true            # 页内搜索框
+  enable_categories = true        # 分类筛选区
+  show_desc = true                # 标题下的描述行
+  desc = "浏览所有文章归档。"       # 描述文字
+
+
+# ------------------------------------------------------------
+# 12. 时刻页（朋友圈式卡片）
+# ------------------------------------------------------------
+# 后台「前端管理 → 时刻页」写 data/moments.json，优先级高于这一段。
+# 每条形时刻自己的正文 / 配图 / 位置在 content/…/moments/*.md 里。
+
+[moment]
+  comment_provider = "zero"       # 时刻的评论系统：zero/waline/twikoo/artalk/giscus，留空=关闭评论
+  paginate = 10                   # 每次滚动的条数
+  show_location = true            # 卡片底栏是否显示位置
+  default_location = ""           # 该条没填位置时的兜底文案，留空则不显示位置
+  show_like = true                # 卡片上的「赞」
+  show_comment = true             # 卡片上的「评论」
+  batch_preload = 2               # 提前预取几批（滚动更顺）
+
+  [moment.banner]
+    show_background = true        # 顶部横幅背景图
+    background_image = "img/bj.webp"
+
+  [moment.profile]
+    show_avatar = true            # 横幅里的头像
+    show_nickname = true          # 横幅里的昵称
+    default_nickname = "站长"
+    default_avatar = "img/avatar.webp"
+
+  # 非 zero 评论系统的连接参数（用哪个由上面的 comment_provider 决定）
+  [moment.waline]
+    server_url = ""               # 留空则沿用 [comment.article].waline_server_url
+    emoji = []
+    reaction_type = "reaction0"   # 点赞计数用的 Waline 计数器名
+  [moment.twikoo]
+    env_id = ""
+    region = ""
+  [moment.artalk]
+    server = ""
+    site = "default"
+
+
+# ------------------------------------------------------------
+# 13. 文章评论区
+# ------------------------------------------------------------
+# provider 与「允许游客发言 / 先审后发 / 表情库」等运行期开关在后台设置里改
+# （存 site_config，不必重新构建）；这一段是构建期的默认值与各评论系统的连接参数。
+
+[comment]
+  enable = true                   # 全站评论区总开关
+
+  [comment.article]
+    provider = "zero"             # zero / waline / giscus / twikoo / artalk，留空=整站不显示评论
+    # --- Waline ---
+    waline_server_url = ""        # 服务端地址，例 https://waline.xxx.vercel.app
+    waline_emoji = []             # 表情包 CDN 列表
+    waline_visitor = true         # 文章页访客数（Waline 自带计数器）
+    waline_comment_sorting = "latest"   # latest / oldest / hottest
+    waline_pageview = true        # 是否在元信息行显示 Waline 浏览量
+    waline_required_meta = ["nick", "mail"]   # 必填字段
+    waline_hint = ""              # 评论区输入框的提示文案，留空用 Waline 自带文案
+    # --- Giscus（GitHub Discussions）---
+    giscus_repo = ""              # user/repo，仓库需开 Discussions
+    giscus_repo_id = ""
+    giscus_category = "Announcements"
+    giscus_category_id = ""
+    giscus_mapping = "pathname"   # pathname / url / title / og:title
+    giscus_label = "comment"
+    giscus_lang = "zh-CN"
+    giscus_reactions = true       # 讨论区的表情回应
+    # --- Twikoo ---
+    twikoo_env_id = ""
+    twikoo_region = ""
+    # --- Artalk ---
+    artalk_server = ""
+    artalk_site = "default"
+
+
+# ------------------------------------------------------------
+# 14. 访问统计
+# ------------------------------------------------------------
+
+[analytics]
+  enable_google = false           # Google Analytics
+  google_ga_id = ""               # G-XXXXXXXXXX
+  enable_baidu = false            # 百度统计
+  baidu_site_id = ""              # 站点 ID
+  beat_seconds = 300              # 停留时长兜底上报上限（秒）：正常访问只在切后台/关页时结算一次，页面一直开着才按这个间隔补报
+  enable_zero = true              # 自建统计（进入记一次 PV + 心跳）。false 完全不发请求
+  ignore_localhost = true         # 本地 hugo server 不记录，省掉开发时的脏数据
+
+
+# ------------------------------------------------------------
+# 15. 页脚
+# ------------------------------------------------------------
+# 后台「前端管理 → 页脚」写 data/footer.json，优先于这一段。
+# 「designed by 知止」那行是主题作者声明，写死在模板里，没有开关也不受这里影响。
+
+[footer]
+  copyright_text = "2025-{year} 我的站点"   # {year} 会自动换成当前年份
+  show_powered_by = true          # 是否显示那行标语 / powered by
+  powered_by_text = "powered by Hugo"
+  powered_by_link = ""            # 填了地址这行就变超链接
+  # 备案条目（旧版单条 footer.icp 仍然兼容）
+  [[footer.icp_items]]
+    text = ""
+    link = ""
+  # 中部图标行：站点联盟 / 出行等，img 与 icon 二选一，invert=true 深色下反色
+  [[footer.services]]
+    name = ""
+    img = ""
+    link = ""
+    icon = ""
+    invert = false
+  # 右侧社交图标（两行）
+  [[footer.social_row1]]
+    name = "GitHub"
+    icon = "fa-brands fa-github"
+    link = ""
+  [[footer.social_row2]]
+    name = "RSS"
+    icon = "fa-solid fa-rss"
+    link = "/index.xml"
+
+
+# ------------------------------------------------------------
+# 16. 关于页
+# ------------------------------------------------------------
+# 后台「前端管理 → 关于页」写 data/about.json，优先于这一段。
+
+[about]
+  show_avatar = true              # 头像
+  show_name = true                # 名称
+  show_bio = true                 # 「关于我」段落组
+  show_social = true              # 「找到我」分组
+  show_declaration = true         # 「站点声明」段落组
+  show_site = true                # 「关于本站」段落组
+  show_desc = true                # 标题下的描述行
+  desc = "关于我与这个站点。"
+  tagline = "独立创作者 · 极简主义践行者"   # 名字下面那行小字
+  [[about.bio]]
+    text = "你好，我是站长。"
+  [[about.site]]
+    text = "这个站点用来记录我读过的、写过的和想过的东西。"
+  [[about.declaration]]
+    text = "本站所有内容除特别声明外均采用 CC BY-NC-SA 4.0 许可协议。"
+  [[aboutContacts]]
+    label = "Email"
+    text = "you@example.com"
+    url = "mailto:you@example.com"
+    external = true
+
+
+# ------------------------------------------------------------
+# 17. 友链页
+# ------------------------------------------------------------
+
+[links]
+  show_desc = true                # 标题下的描述行
+  desc = "互联网的毛细血管里，依然流淌着真诚的联结。"
+  feed = true                     # 「朋友动态」选项卡
+  neighbors = true                # 「左邻右舍」
+  alliance = true                 # 「站点联盟」选项卡
+  apply = true                    # 「申请友链」表单
+  per_page = 10                   # 朋友动态每页条数（两列布局 = 五行）
+  avatar_service = "cravatar"     # 没有图标时的头像服务：cravatar / gravatar / none
+  lost_offline_days = 30          # 失联 N 天 → 归入「迷失的小船」（与 .github/workflows/check-links.yml 一致）
+  lost_stale_days = 90            # 断更 N 天 → 归入「迷失的小船」
+  drop_offline_days = 90          # 失联 N 天 → 工作流自动删除友链
+  drop_stale_days = 180           # 断更 N 天 → 工作流自动删除友链
+  # 站点联盟的条目与友链本身都不在这里：它们在站点的 data/links.yaml
+  #   links:  { 友链条目 }
+  #   alliance: [ { name, url, icon } ]   ←「站点联盟」那一栏的内容
+  # 后台「友链」页与仓库里那份 yaml 才是数据源，params 只管上面这些开关。
+
+
+# ------------------------------------------------------------
+# 18. 工具页 / 工坊页
+# ------------------------------------------------------------
+
+[tools]
+  enable = false                  # 工具页是否开放
+  show_desc = true
+  desc = "收藏与分享常用工具。"
+
+[work]
+  enable = true                   # 工坊页是否开放
+  show_desc = true
+  desc = "我的项目与作品。"
+  show_status = true              # 卡片上显示状态标签
+  show_url_icon = true            # 卡片右上角的外部链接图标
+  [[works]]
+    title = "示例项目"
+    desc = "项目描述文字"
+    status = "进行中"
+    url = ""
+
+
+# ------------------------------------------------------------
+# 19. RSS
+# ------------------------------------------------------------
+
+[rss]
+  enable = true                   # 生成 RSS
+  full_content = false            # true=输出完整正文，false=只输出摘要
+  limit = 30                      # 最近多少条
+  cover_image = ""                # 条目没有封面时的兜底图
+
+
+# ------------------------------------------------------------
+# 20. SEO 与结构化数据
+# ------------------------------------------------------------
+
+[seo]
+  default_description = ""        # 页面没有描述时的兜底，留空退回 params.description
+  default_keywords = []           # 页面没有关键词时的兜底
+  enable_og = true                # Open Graph 标签
+  enable_twitter = true           # Twitter Card
+  site_author = ""                # 文章作者兜底，留空退回 params.author
+  enable_canonical = true         # canonical 规范链接
+  enable_robots = true            # robots 标签
+  robots_default = "index, follow"
+  robots_disallow = ["/account/", "/admin/", "/api/"]   # 同步写进 robots.txt
+  robots_allow = []
+  enable_robots_sitemap = true    # robots.txt 里带 Sitemap 行
+  robots_crawl_delay = 0          # 0=不输出
+  robots_host = ""
+  enable_keywords = true          # keywords meta
+  enable_jsonld = true            # 结构化数据（Article / WebSite / BreadcrumbList）
+  enable_breadcrumb = true        # 面包屑
+  enable_search_action = false    # WebSite 里的站内搜索 potentialAction
+  description_length = 160        # 描述截断长度
+  title_separator = "·"           # 标题分隔符
+  og_image_default = ""           # 默认分享图
+  publisher_logo = ""             # JSON-LD 里的出版方 Logo，留空退回 params.logo
+  twitter_site = ""               # @username
+  twitter_creator = ""
+  theme_color_light = "#ffffff"   # 浏览器地址栏配色（浅色）
+  theme_color_dark = "#1e1e1e"    # 浏览器地址栏配色（深色）
+  color_scheme = "light dark"     # meta color-scheme
+
+
+# ------------------------------------------------------------
+# 21. 自定义注入（只在 head / body 末尾各插一次）
+# ------------------------------------------------------------
+
+[custom]
+  head_html = ""                  # 追加到 <head> 末尾的原始 HTML
+  footer_html = ""                # 追加到 </body> 前的原始 HTML
+  extra_css = []                  # 额外样式表地址列表
+  extra_js = []                   # 额外脚本地址列表
+
+
+# ------------------------------------------------------------
+# 22. 第三方资源地址（可换成自建 / 国内镜像）
+# ------------------------------------------------------------
+# 留空即退回主题内置的 cdnjs / jsdelivr 默认地址。
+
+[cdn]
+  font_awesome_css = ""           # 例 https://cdn.xxx/font-awesome@6.4.2/css/all.min.css
+  katex_css = ""                  # 数学公式（启用 math 时用到）
+  katex_js = ""
+
+
+# ------------------------------------------------------------
+# 23. 作者资料（文章底部作者框 / 赞赏 / 联系方式）
+# ------------------------------------------------------------
+# 多作者资料在 data/authors.yaml；这一段是默认作者（站长）的兜底资料，
+# 后台「前端管理 → 基本信息」和「作者认证」可以覆盖显示名与头像。
+
+[author_profile]
+  avatar = "img/avatar.webp"      # 头像
+  nickname = "站长"                # 显示名
+  bio = "独立创作者 · 极简主义践行者"   # 简介
+  show_cc_license = true          # 作者框里显示协议（false 时改在页脚显示）
+  donate_max = 3                  # 赞赏最多几张码（与 article.donate_max_qr 取小的那个）
+  [[author_profile.donate]]
+    qr = ""
+    name = "赞赏"
+  [[author_profile.contacts]]
+    name = "GitHub"
+    icon = "fab fa-github"
+    url = ""
+
+
+# ------------------------------------------------------------
+# 24. 全局社交链接（作者资料没配时的兜底）
+# ------------------------------------------------------------
+
+[[social]]
+  name = "GitHub"
+  icon = "fab fa-github"
+  url = ""

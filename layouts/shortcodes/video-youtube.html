@@ -1,0 +1,15 @@
+{{- /* video-youtube.html — YouTube 视频嵌入
+   用法: {{< video-youtube id="dQw4w9WgXcQ" >}}
+   校验: id 必填且只保留安全字符；地址固定 https，走白名单 */ -}}
+{{- $id := replaceRE `[^A-Za-z0-9_-]` "" (string (.Get "id" | default "")) -}}
+{{- $src := partial "shortcodes/safe-url.html" (printf "https://www.youtube.com/embed/%s" $id) -}}
+{{- if or (not $id) (not $src) -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "video-youtube" "param" "id") -}}
+{{- else -}}
+<div class="shortcode-embed youtube-video">
+  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
+    src="{{ $src }}"
+    allowfullscreen allow="autoplay; encrypted-media"
+    loading="lazy"></iframe>
+</div>
+{{- end -}}

@@ -1,0 +1,57 @@
+{{- /* ============================================================
+  account-me.html — 登录后的个人管理页骨架（/account/me/）
+  ------------------------------------------------------------
+  只出静态骨架：左侧 tab + 右侧面板容器 + 身份卡，数据全部由
+  assets/js/account-me.js 走 window.ZeroStack.api() 现取（自动带 Cookie、解包 data）。
+  身份区顺序固定：昵称 → 注册邮箱 → chips 里的 @账号标识 → 用户组。
+  管理员不在此页停留：account-me.js 读到 role=admin 就直接跳站点后台。
+  没配 params.apiBaseURL 时给一句人话提示，不空转。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+<main class="main" id="main">
+  <section class="section">
+    <div class="zsme" id="zsMe" data-api="{{ if $zero.enabled }}1{{ else }}0{{ end }}">
+      <aside class="zsme-side">
+        <div class="zsme-id">
+          <img class="zsme-avatar" id="zsMeAvatar" alt="" width="52" height="52" hidden>
+          <div class="zsme-idtext">
+            <p class="zsme-name" id="zsMeName">{{ i18n "zero-me-loading" | default "正在确认登录状态…" }}</p>
+            <p class="zsme-mail" id="zsMeMail"></p>
+          </div>
+        </div>
+        <p class="zsme-chips" id="zsMeChips"></p>
+        <nav class="zsme-tabs" id="zsMeTabs" aria-label="{{ i18n `zero-me-tabs-label` | default `个人中心栏目` }}"></nav>
+        <div class="zsme-sidefoot">
+          <button type="button" class="zsme-minibtn" id="zsMeLogout" hidden>{{ i18n "zero-account-btn-logout" | default "退出登录" }}</button>
+        </div>
+      </aside>
+
+      <div class="zsme-main">
+        <header class="zsme-head">
+          <h1 class="zsme-title" id="zsMeTitle">{{ i18n "zero-me-title" | default "个人中心" }}</h1>
+          <p class="zsme-note" id="zsMeNote"></p>
+        </header>
+        <div class="zsme-pane" id="zsMePane">
+          <p class="zsme-loading">{{ i18n "zero-me-busy" | default "正在加载…" }}</p>
+        </div>
+        <p class="zsme-msg" id="zsMeMsg" role="status" aria-live="polite" hidden></p>
+      </div>
+
+      <div class="zsme-aside-card" id="zsMeLogin" hidden>
+        <h2>{{ i18n "zero-me-login-title" | default "先登录，再管理自己的账号" }}</h2>
+        <p>{{ i18n "zero-me-login-note" | default "这里的数据都来自登录会话，请先去账号页登录或注册；登录成功后会自动回到本页。" }}</p>
+        <p class="zsme-acts">
+          <a class="zsme-btn primary" href="/account/?next=/account/me/">{{ i18n "zero-me-go-login" | default "去登录 / 注册" }}</a>
+        </p>
+        <noscript><p>{{ i18n "zero-me-noscript" | default "本页需要浏览器启用 JavaScript 才能加载你的数据。" }}</p></noscript>
+      </div>
+
+      {{- if not $zero.enabled -}}
+      <div class="zsme-aside-card" id="zsMeNoBackend">
+        <h2>{{ i18n "zero-me-no-backend-title" | default "本站还没接后端" }}</h2>
+        <p>{{ i18n "zero-me-no-backend" | default "站点配置里没有 params.apiBaseURL，个人中心无法读取任何数据。请在 config/_default/params.toml 里填上 zero-api 地址。" }}</p>
+      </div>
+      {{- end -}}
+    </div>
+  </section>
+</main>

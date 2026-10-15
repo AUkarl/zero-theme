@@ -1,0 +1,29 @@
+{{- /* ============================================================
+  zero/nav-switch.html — 导航项对应的后台开关键名
+  ------------------------------------------------------------
+  用法：{{- $key := partial "zero/nav-switch.html" (dict "entry" .) -}}
+  返回 ""（不需要挂开关）或键名（subscribeEnabled / friendsEnabled / momentsEnabled …）。
+
+  三种认法，优先级从高到低：
+    1. 菜单里显式写了 zero_switch = "xxx"      → 直接用（最可靠，想控制别的页面就用它）
+    2. 账号入口（zero_account / zeroAccount 标记，或路径是 /account/）→ accountSystemEnabled：
+       后台关掉前台账号系统时，导航上那个登录图标要整块不出现，而不是点进去才看到关闭提示
+    3. 按站内路径猜：/moments/ → momentsEnabled，/links/ → friendsEnabled，
+       /subscribe/ → subscribeEnabled（外链不参与猜测）
+  ============================================================ */ -}}
+{{- $e := .entry -}}
+{{- $key := trim (string ($e.Params.zero_switch | default "")) " " -}}
+{{- $isAccount := or ($e.Params.zero_account | default false) ($e.Params.zeroAccount | default false) -}}
+{{- if and (eq $key "") (not $e.Params.external) -}}
+  {{- $u := lower (trim (string ($e.URL | default "")) " ") -}}
+  {{- if or $isAccount (eq $u "/account/") (hasSuffix $u "/account/") -}}
+    {{- $key = "accountSystemEnabled" -}}
+  {{- else if or (eq $u "/moments/") (hasSuffix $u "/moments/") -}}
+    {{- $key = "momentsEnabled" -}}
+  {{- else if or (eq $u "/links/") (hasSuffix $u "/links/") -}}
+    {{- $key = "friendsEnabled" -}}
+  {{- else if or (eq $u "/subscribe/") (hasSuffix $u "/subscribe/") -}}
+    {{- $key = "subscribeEnabled" -}}
+  {{- end -}}
+{{- end -}}
+{{- return $key -}}

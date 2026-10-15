@@ -1,0 +1,701 @@
+{{- /* ============================================================
+  index.html — 首页落地页
+  完整迁移自原始index.html，包含诗句轮播、主题切换、语言切换等功能
+  ============================================================ */ -}}
+<!DOCTYPE html>
+<html lang="zh-CN"{{ if eq .Site.Params.motion.reduced_motion_respect false }} data-motion-force{{ end }}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {{- $landingName := (partial "site-config.html" .).name | default "站点" -}}
+  <title>{{ $landingName }}</title>
+  {{- /* SEO：description / canonical / robots / OG / Twitter / JSON-LD */ -}}
+  {{- partial "seo.html" . }}
+  {{- /* RSS 自动发现 */ -}}
+  {{- range .AlternativeOutputFormats -}}
+  {{ printf "<link rel=%q type=%q href=%q title=%q>" .Rel .MediaType.Type .Permalink $landingName | safeHTML }}
+  {{- end }}
+  {{- /* 图标跟普通页保持一致：后台「基本信息」> params.favicon > 主题默认那张 */ -}}
+  {{- $favicon := (partial "site-config.html" .).favicon | default "img/logo-favicon.png" }}
+  <link rel="icon" href="{{ $favicon | relURL }}">
+  <link rel="apple-touch-icon" href="{{ $favicon | relURL }}">
+  {{- /* 预连接外部资源，减少首屏建连等待 */ -}}
+      <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  {{- /* 图标库非阻塞加载（原先是同步加载，占掉约 2.3s 首屏时间）。
+         这里以前还引 Google Fonts 和 animate.css：前者国内不可达且字体晚到引起文本重排，
+         已改为只用系统字体栈（见 common.css 的 --font）；后者全项目没有一个 animate__ 类在用，
+         落地页的动画由 home-bento.css / motion.css 自己的 keyframes 承担，于是少一个 CDN 请求。 */ -}}
+    {{- $cdnL := site.Params.cdn | default dict -}}
+    {{- $faURL := $cdnL.font_awesome_css | default "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" -}}
+  <link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
+  <noscript>
+        <link rel="stylesheet" href="{{ $faURL }}">
+  </noscript>
+  <style>
+    /* ===== 主题变量 ===== */
+    /* 这个页面不加载 common.css，字体变量要自己定义（否则 var(--font) 取不到值会退化成衬线体） */
+    :root {
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    }
+    body {
+      --bg-color: #fff;
+      --text-color: #777;
+      --heading-color: #000;
+      --link-color: #777;
+      --footer-color: #777;
+      --frame-bg: #fff;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.4s, color 0.4s;
+      margin: 0;
+      overflow: hidden;
+      font-family: var(--font);
+    }
+
+    /* ===== 无障碍：跳过链接（键盘聚焦时才出现） ===== */
+    .skip-link {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      z-index: 999;
+      padding: 10px 16px;
+      background: var(--bg-color);
+      color: var(--heading-color);
+      border: 1px solid var(--text-color);
+      font-size: 0.9rem;
+    }
+
+    .skip-link:focus {
+      left: 0;
+      outline: 2px solid var(--heading-color);
+      outline-offset: 2px;
+    }
+
+    #main:focus { outline: none; }
+
+    [data-theme="dark"] body,
+    body.dark-theme {
+      --bg-color: #1a1a1a;
+      --text-color: #ccc;
+      --heading-color: #eee;
+      --link-color: #aaa;
+      --footer-color: #aaa;
+      --frame-bg: #1a1a1a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      [data-theme="auto"] body {
+        --bg-color: #1a1a1a;
+        --text-color: #ccc;
+        --heading-color: #eee;
+        --link-color: #aaa;
+        --footer-color: #aaa;
+        --frame-bg: #1a1a1a;
+      }
+    }
+
+    /* ===== 应用变量 ===== */
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--heading-color);
+    }
+    a {
+      color: var(--link-color);
+    }
+    .box-intro h1 {
+      color: var(--heading-color);
+    }
+    .box-intro h3 {
+      color: var(--heading-color);
+    }
+    .footer-home a {
+      color: var(--link-color);
+    }
+    .footer-home {
+      color: var(--footer-color);
+    }
+    .box-intro {
+      background-color: var(--bg-color);
+    }
+
+    /* ===== 边框颜色 ===== */
+    .frame-line {
+      background-color: var(--frame-bg) !important;
+      transition: background 0.4s;
+    }
+
+    /* ===== Logo 智能反色 ===== */
+    .box-logo img {
+      transition: filter 0.4s;
+    }
+    [data-theme="dark"] .box-logo img,
+    body.dark-theme .box-logo img {
+      filter: invert(1);
+    }
+    @media (prefers-color-scheme: dark) {
+      [data-theme="auto"] .box-logo img {
+        filter: invert(1);
+      }
+    }
+
+    /* ===== 工具栏按钮 ===== */
+    .index-toolbar {
+      /* 与 logo 同处 .box-header 的 flex 行内：
+         不再绝对定位，交给 space-between 排到右侧，保证两者始终在同一行 */
+      position: static;
+      right: auto;
+      top: auto;
+      transform: none;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: none;
+    }
+    .toolbar-btn {
+      cursor: pointer;
+      font-size: 22px;
+      color: var(--text-color);
+      background: none;
+      border: none;
+      backdrop-filter: none;
+      border-radius: 0;
+      width: auto;
+      height: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      transition: all 0.3s;
+      user-select: none;
+    }
+    .toolbar-btn:hover {
+      transform: scale(1.12);
+      background: none;
+    }
+    [data-theme="dark"] .toolbar-btn,
+    body.dark-theme .toolbar-btn {
+      background: none;
+      border: none;
+    }
+    @media (max-width: 992px) {
+      .toolbar-btn {
+        font-size: 18px;
+      }
+    }
+    @media (max-width: 480px) {
+      .toolbar-btn {
+        font-size: 16px;
+        padding: 4px;
+      }
+    }
+
+    h1.index-greeting {
+      white-space: nowrap;
+    }
+
+    /* ===== "进入"文字呼吸动画 ===== */
+    .enter-text {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5em;
+      color: var(--text-color);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.3s;
+      animation: breathe-text 2.4s ease-in-out infinite;
+    }
+    .enter-text:hover {
+      color: #7beec7;
+    }
+    @keyframes breathe-text {
+      0% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.04); }
+      100% { opacity: 0.6; transform: scale(1); }
+    }
+    .btn-wrapper {
+      margin-top: 20px;
+    }
+    .clickable-div .enter-text {
+      position: relative;
+      z-index: 5;
+    }
+
+    /* ===== 深色模式遮罩 ===== */
+    .box-intro {
+      position: relative;
+    }
+    .bg-film:before {
+      z-index: 0;
+    }
+    .box-intro .table-cell {
+      position: relative;
+      z-index: 2;
+    }
+    [data-theme="dark"] .box-intro::after,
+    body.dark-theme .box-intro::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1;
+      pointer-events: none;
+      border-radius: inherit;
+    }
+    @media (prefers-color-scheme: dark) {
+      [data-theme="auto"] .box-intro::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1;
+        pointer-events: none;
+        border-radius: inherit;
+      }
+    }
+
+    /* ===== 圆角效果 ===== */
+    .clickable-div {
+      border-radius: 5px;
+      overflow: hidden;
+      height: 100vh;
+      cursor: pointer;
+    }
+    .box-intro {
+      background-attachment: scroll !important;
+      height: 100vh;
+    }
+    .box-intro .table-cell {
+      display: table-cell;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .footer-home {
+      position: absolute;
+      bottom: 30px;
+      width: 100%;
+      text-align: center;
+      left: 0;
+    }
+
+    /* ===== 边框装饰 ===== */
+    .frame-line {
+      position: absolute;
+      background: #000;
+      z-index: 1000;
+      pointer-events: none;
+    }
+    .top-frame, .bottom-frame {
+      left: 0;
+      right: 0;
+      height: 20px;
+    }
+    .top-frame { top: 0; }
+    .bottom-frame { bottom: 0; }
+    .left-frame, .right-frame {
+      top: 0;
+      bottom: 0;
+      width: 20px;
+    }
+    .left-frame { left: 0; }
+    .right-frame { right: 0; }
+
+    @media (max-width: 992px) {
+      .frame-line { display: none; }
+    }
+
+    /* ===== 头部样式 ===== */
+    .main-header {
+      height: 100vh;
+      position: relative;
+    }
+    .container-fluid {
+      height: 100%;
+    }
+    .box-header {
+      position: absolute;
+      /* 从原来的 20px 往内收，避免 logo 贴到边框 / 背景图边缘 */
+      top: 40px;
+      left: 44px;
+      right: 44px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      z-index: 10;
+    }
+    .box-logo a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-color);
+    }
+    .box-logo img {
+      height: 40px;
+      width: auto;
+    }
+
+    /* ===== 主视觉区域 ===== */
+    .box-intro {
+      {{- $landing := .Site.Params.landing -}}
+      {{- if and (ne $landing.show_background false) ($landing.background_image | default "img/bj.webp") -}}
+      background: url('{{ $landing.background_image | default "img/bj.webp" | relURL }}') center/cover no-repeat, linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      {{- else }}
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      {{- end }}
+      display: table;
+      /* 注意：这里不要用 table-layout: fixed。
+         深色模式的遮罩是 .box-intro::after（content:"" + 绝对定位），Chrome 会把它当成
+         表格的匿名单元格，表格就变成"两个格子"；一旦 fixed，两格各占 50%，
+         正文被挤到左半边（深色模式下内容靠左就是这个原因）。
+         英文长句的溢出由 .box-words-wrapper b.is-visible 的换行规则解决。 */
+      width: 100%;
+      max-width: 100%;
+      position: relative;
+    }
+    .bg-film {
+      position: relative;
+    }
+
+    /* ===== 诗句轮播 ===== */
+    b {
+      font-weight: 300;
+    }
+    .box-headline {
+      font-size: 130px;
+      line-height: 1.0;
+    }
+    .box-words-wrapper {
+      display: inline-block;
+      position: relative;
+      max-width: 100%;
+    }
+    .box-words-wrapper b {
+      display: inline-block;
+      position: absolute;
+      white-space: nowrap;
+      left: 0;
+      top: 0;
+    }
+    /* 正在显示的那一句参与排版：允许换行，英文长句在窄屏才不会被切掉 */
+    .box-words-wrapper b.is-visible {
+      position: relative;
+      white-space: normal;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .box-headline.rotate-2 .box-words-wrapper {
+      perspective: 300px;
+    }
+    .box-headline.rotate-2 i,
+    .box-headline.rotate-2 em {
+      display: inline-block;
+      backface-visibility: hidden;
+    }
+    .box-headline.rotate-2 b {
+      opacity: 0;
+    }
+    .box-headline.rotate-2 i {
+      transform-style: preserve-3d;
+      transform: translateZ(-20px) rotateX(90deg);
+      opacity: 0;
+    }
+    .is-visible .box-headline.rotate-2 i {
+      opacity: 1;
+    }
+    .box-headline.rotate-2 i.in {
+      animation: box-rotate-2-in 0.4s forwards;
+    }
+    .box-headline.rotate-2 i.out {
+      animation: box-rotate-2-out 0.4s forwards;
+    }
+    .box-headline.rotate-2 em {
+      transform: translateZ(20px);
+    }
+    @keyframes box-rotate-2-in {
+      0% { opacity: 0; transform: translateZ(-20px) rotateX(90deg); }
+      60% { opacity: 1; transform: translateZ(-20px) rotateX(-10deg); }
+      100% { opacity: 1; transform: translateZ(-20px) rotateX(0deg); }
+    }
+    @keyframes box-rotate-2-out {
+      0% { opacity: 1; transform: translateZ(-20px) rotateX(0); }
+      60% { opacity: 0; transform: translateZ(-20px) rotateX(-100deg); }
+      100% { opacity: 0; transform: translateZ(-20px) rotateX(-90deg); }
+    }
+    .box-intro h1 {
+      font-size: clamp(24px, 5vw, 40px);
+      margin-top: 35px;
+      letter-spacing: clamp(2px, 2vw, 40px);
+      font-weight: 700;
+      max-width: 80%;
+      margin-left: auto;
+      margin-right: auto;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+    .box-intro h3 {
+      font-family: var(--font);
+      font-size: 14px;
+      letter-spacing: 10px;
+      text-transform: uppercase;
+      line-height: 4;
+      font-weight: 700;
+    }
+
+    @media (max-width: 992px) {
+      .box-intro h1 {
+        font-size: clamp(20px, 6.4vw, 25px);
+        letter-spacing: clamp(1px, 1.2vw, 5px);
+        /* 英文问候语（Hey, long time no see）比中文长，窄屏必须允许换行 */
+        white-space: normal;
+        overflow-wrap: anywhere;
+        max-width: 92%;
+      }
+      .box-intro h3 {
+        font-size: clamp(12px, 3.4vw, 16px);
+        letter-spacing: clamp(1px, 1vw, 5px);
+        line-height: 2.4;
+      }
+      .enter-text {
+        font-size: 16px;
+        letter-spacing: 0.35em;
+      }
+      .box-header {
+        top: 22px;
+        left: 22px;
+        right: 22px;
+      }
+      .box-logo img {
+        height: 32px;
+      }
+    }
+    @media (max-width: 480px) {
+      .box-header {
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  {{- /* 页面加载过渡动画（首页是独立模板，不经过 baseof，这里单独引入一次） */ -}}
+  {{- partial "page-loader.html" . -}}
+  {{- /* 无障碍：跳过导航直达主内容（落地页主内容即下方主视觉区） */ -}}
+  <a class="skip-link" href="#main">{{ i18n "skip-to-content" | default "跳到主要内容" }}</a>
+  <!-- 边框装饰 -->
+  <span class="frame-line top-frame visible-lg"></span>
+  <span class="frame-line right-frame visible-lg"></span>
+  <span class="frame-line bottom-frame visible-lg"></span>
+  <span class="frame-line left-frame visible-lg"></span>
+
+  <!-- 头部 -->
+  <header class="main-header">
+    <div class="container-fluid">
+      <div class="box-header">
+        {{- $site := partial "site-config.html" . -}}
+        {{- if $site.showLogo }}
+        <div class="box-logo">
+          <a href="{{ "/" | relURL }}">
+            {{- $logoPath := $site.logo | default "/img/logo-nav.webp" -}}
+            <img src="{{ $logoPath | relURL }}" alt="Logo">
+          </a>
+        </div>
+        {{- end }}
+        <!-- 主题切换按钮 -->
+        {{- $nav := partial "nav-config.html" . -}}
+        {{- $landing := .Site.Params.landing | default dict -}}
+        {{- if $nav.themeSwitch }}
+        <div class="index-toolbar">
+          {{- $themeTitle := i18n "theme-toggle" | default "切换主题" -}}
+          <div class="toolbar-btn" id="themeToggle" title="{{ $themeTitle }}" aria-label="{{ $themeTitle }}" onclick="event.stopPropagation()">
+            <i id="themeIcon" class="fas fa-adjust"></i>
+          </div>
+        </div>
+        {{- end }}
+      </div>
+
+      <!-- 主视觉区域 -->
+      <div class="clickable-div" onclick="navigateToUrl()">
+        <section class="box-intro{{ if (ne $landing.background_fade false) }} bg-film{{ end }}" id="main" role="main">
+          <div class="table-cell">
+            {{- if ne $landing.show_quotes false }}
+            <h3 class="box-headline letters rotate-2">
+              <span class="box-words-wrapper">
+                {{- $quotes := $landing.quotes | default (slice "海上生明月 & 天涯共此时") -}}
+                {{- range $i, $q := $quotes -}}
+                <b{{ if eq $i 0 }} class="is-visible"{{ end }}>&nbsp;{{ $q }} </b>
+                {{- end }}
+              </span>
+            </h3>
+            {{- end }}
+            {{- if ne $landing.show_welcome false }}
+            <h1 class="index-greeting">{{ $landing.welcome | default (i18n "index-greeting" | default "Hey，好久不见") }}</h1>
+            {{- end }}
+            <div class="btn-wrapper">
+              <a href="{{ "home/" | relURL }}" class="enter-text" onclick="event.stopPropagation();">{{ $landing.enter_text | default (i18n "index-enter" | default "进入") }}</a>
+            </div>
+            {{- if ne $landing.show_copyright false }}
+            {{- $cr := partial "copyright.html" . -}}
+            <p class="footer-home">&copy;{{ $cr | default (printf "%d %s" now.Year $landingName) }}</p>
+            {{- end }}
+          </div>
+        </section>
+      </div>
+    </div>
+  </header>
+
+  {{- if $landing.auto_enter }}
+  <!-- 二次访问直接进首页：第一次记下标记，之后再进落地页立刻跳走（单独一个 script，
+       放在主脚本的 if 分支里会让 html/template 的 JS 上下文检查报错） -->
+  <script>
+    if (sessionStorage.getItem('landingSeen') === '1') {
+      window.location.replace('{{ "home/" | relURL }}');
+    } else {
+      sessionStorage.setItem('landingSeen', '1');
+    }
+  </script>
+  {{- end }}
+
+  <script>
+    // ===== 点击跳转 =====
+    function navigateToUrl() {
+      window.location.href = "{{ "home/" | relURL }}";
+    }
+
+    // ===== 主题切换 =====
+    (function() {
+      var themes = ['auto', 'light', 'dark'];
+      var iconMap = {
+        'auto': 'fas fa-adjust',
+        'light': 'fas fa-sun',
+        'dark': 'fas fa-moon'
+      };
+      var toggleBtn = document.getElementById('themeToggle');
+      var iconEl = document.getElementById('themeIcon');
+      var enableSwitch = {{ $nav.themeSwitch }};
+      var defaultTheme = '{{ $nav.defaultTheme }}';
+
+      var current = enableSwitch ? (localStorage.getItem('theme') || defaultTheme) : defaultTheme;
+      applyTheme(current);
+
+      if (toggleBtn && enableSwitch) {
+        toggleBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var idx = themes.indexOf(current);
+          idx = (idx + 1) % themes.length;
+          current = themes[idx];
+          applyTheme(current);
+          localStorage.setItem('theme', current);
+        });
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        if (iconEl) iconEl.className = iconMap[theme] || 'fas fa-adjust';
+      }
+    })();
+
+    // ===== 诗句轮播（逐字3D翻转动画） =====
+    (function() {
+      var wordsWrapper = document.querySelector('.box-words-wrapper');
+      if (!wordsWrapper) return;
+      var quotesZh = {{ $landing.quotes | default (slice "海上生明月 & 天涯共此时") | jsonify | safeJS }};
+      var currentWord = 0;
+      var lettersDelay = {{ $landing.quote_letters_delay | default 50 }};
+      var animationDelay = {{ $landing.quote_switch_delay | default 5000 }};
+
+      function singleLetters(words) {
+        words.forEach(function(word) {
+          var text = word.textContent;
+          var selected = word.classList.contains('is-visible');
+          var html = '';
+          for (var j = 0; j < text.length; j++) {
+            var ch = text[j];
+            if (ch === ' ') ch = '\u00a0';
+            html += '<i' + (selected ? ' class="in"' : '') + '><em>' + ch + '</em></i>';
+          }
+          word.innerHTML = html;
+          word.style.opacity = '1';
+        });
+      }
+
+      function setQuotes(quotes) {
+        wordsWrapper.innerHTML = '';
+        quotes.forEach(function(q, i) {
+          var b = document.createElement('b');
+          b.textContent = '\u00a0' + q + ' ';
+          if (i === 0) b.classList.add('is-visible');
+          wordsWrapper.appendChild(b);
+        });
+        currentWord = 0;
+        singleLetters(Array.from(wordsWrapper.querySelectorAll('b')));
+      }
+
+      function takeNext($word) {
+        var siblings = Array.from($word.parentNode.querySelectorAll('b'));
+        var idx = siblings.indexOf($word);
+        return (idx < siblings.length - 1) ? siblings[idx + 1] : siblings[0];
+      }
+
+      function hideLetter($letter, $word, bool) {
+        $letter.classList.remove('in');
+        $letter.classList.add('out');
+        if ($letter.nextElementSibling) {
+          setTimeout(function() { hideLetter($letter.nextElementSibling, $word, bool); }, lettersDelay);
+        } else if (bool) {
+          setTimeout(function() { hideWord(takeNext($word)); }, animationDelay);
+        }
+      }
+
+      function showLetter($letter, $word, bool) {
+        $letter.classList.add('in');
+        $letter.classList.remove('out');
+        if ($letter.nextElementSibling) {
+          setTimeout(function() { showLetter($letter.nextElementSibling, $word, bool); }, lettersDelay);
+        } else {
+          if (!bool) setTimeout(function() { hideWord($word); }, animationDelay);
+        }
+      }
+
+      function hideWord($word) {
+        var nextWord = takeNext($word);
+        var bool = $word.querySelectorAll('i').length >= nextWord.querySelectorAll('i').length;
+        var firstOut = $word.querySelector('i');
+        var firstIn = nextWord.querySelector('i');
+        if (firstOut) hideLetter(firstOut, $word, bool);
+        if (firstIn) showLetter(firstIn, nextWord, bool);
+      }
+
+      setQuotes(quotesZh);
+      setTimeout(function() {
+        hideWord(wordsWrapper.querySelector('.is-visible'));
+      }, animationDelay);
+    })();
+
+    // ===== 首次访问跳转 =====
+    if (localStorage.getItem('visited')) {
+      // 非首次访问可取消注释下面的跳转
+      // window.location.href = "{{ "home/" | relURL }}";
+    } else {
+      localStorage.setItem('visited', 'true');
+    }
+
+    // ===== 回车键跳转 =====
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        window.location.href = "{{ "home/" | relURL }}";
+      }
+    });
+  </script>
+</body>
+</html>

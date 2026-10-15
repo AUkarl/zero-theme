@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  partials/shortcodes/safe-url.html — 短代码外部地址的 http/https 白名单
+  ------------------------------------------------------------
+  用法：{{- $src := partial "shortcodes/safe-url.html" (.Get "src") -}}
+    · 空值           → 返回 ""（调用方据此提示「缺参数」）
+    · http:// https:// → 原样返回
+    · //host/path    → 原样返回（协议相对，浏览器补当前协议）
+    · 站内路径 / 相对路径（没有协议头）→ 原样返回
+    · 其它协议（javascript: / data: / vbscript: / file: / …）→ 返回 ""
+  为什么要这一层：短代码是给后台编辑器插进正文用的，地址来自可编辑的字段；
+  `<img src>`、`<source src>`、`<a href>` 直接吃 javascript: 就是自伤型 XSS。
+  ============================================================ */ -}}
+{{- $u := trim (string (. | default "")) " " -}}
+{{- if eq $u "" -}}{{- return "" -}}{{- end -}}
+{{- $lower := lower $u -}}
+{{- if or (hasPrefix $lower "http://") (hasPrefix $lower "https://") (hasPrefix $u "//") -}}
+  {{- return $u -}}
+{{- end -}}
+{{- /* 出现「<字母…>:」这种协议头就说明不是站内路径，一律拒绝 */ -}}
+{{- if findRE `^[a-zA-Z][a-zA-Z0-9+.-]*:` $u -}}{{- return "" -}}{{- end -}}
+{{- return $u -}}

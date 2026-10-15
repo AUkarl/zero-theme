@@ -1,0 +1,8 @@
+{{- /* 取文章 front matter 里某个分类/标签字段的第一项。
+       Hugo 允许写成列表或单个字符串，两种都要吃得下，否则 index 会在字符串上报错。 */ -}}
+{{- $raw := index (.p).Params .key -}}
+{{- $out := "" -}}
+{{- if $raw -}}
+  {{- $out = cond (reflect.IsSlice $raw) (index $raw 0) $raw | string -}}
+{{- end -}}
+{{- return $out -}}

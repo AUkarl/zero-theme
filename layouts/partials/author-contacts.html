@@ -1,0 +1,66 @@
+{{- /* ============================================================
+  author-contacts.html — 作者联系方式
+  入参：dict "p" 作者资料（data/authors.yaml 的一项）
+  social 支持两种写法：{ 平台: 主页 URL } 或 [{ platform|name, url, icon? }]
+  平台键：weibo bilibili zhihu instagram twitter facebook telegram github gitlab gitee email
+  ============================================================ */ -}}
+{{- $p := .p -}}
+{{- $icons := dict
+  "weibo" (dict "label" "微博" "icon" "fab fa-weibo")
+  "bilibili" (dict "label" "B 站" "icon" "fab fa-bilibili")
+  "zhihu" (dict "label" "知乎" "icon" "fab fa-zhihu")
+  "instagram" (dict "label" "Instagram" "icon" "fab fa-instagram")
+  "twitter" (dict "label" "X" "icon" "fab fa-x-twitter")
+  "facebook" (dict "label" "Facebook" "icon" "fab fa-facebook")
+  "telegram" (dict "label" "Telegram" "icon" "fab fa-telegram")
+  "github" (dict "label" "GitHub" "icon" "fab fa-github")
+  "gitlab" (dict "label" "GitLab" "icon" "fab fa-gitlab")
+  "gitee" (dict "label" "Gitee" "icon" "fab fa-gitee")
+  "email" (dict "label" "Email" "icon" "fas fa-envelope") -}}
+{{- $order := slice "weibo" "bilibili" "zhihu" "instagram" "twitter" "facebook" "telegram" "github" "gitlab" "gitee" "email" -}}
+{{- $rows := dict -}}
+{{- with $p.social -}}
+  {{- if reflect.IsMap . -}}
+    {{- $rows = . -}}
+  {{- else if reflect.IsSlice . -}}
+    {{- range . -}}
+      {{- if reflect.IsMap . -}}
+        {{- $key := lower (string (.platform | default .key | default .name | default "")) -}}
+        {{- $url := string (.url | default .link | default .handle | default "") -}}
+        {{- if and $key $url -}}
+          {{- $meta := index $icons $key -}}
+          {{- with .icon -}}
+            {{- if $meta -}}{{- $meta = merge $meta (dict "icon" (string .)) -}}{{- end -}}
+          {{- end -}}
+          {{- if $meta -}}{{- $rows = merge $rows (dict $key $url) -}}{{- end -}}
+          {{- $icons = merge $icons (dict $key $meta) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- with $p.email -}}{{- $rows = merge $rows (dict "email" (string .)) -}}{{- end -}}
+{{- $links := slice -}}
+{{- range $key := $order -}}
+  {{- with index $rows $key -}}
+    {{- $u := string . -}}
+    {{- if $u -}}
+      {{- if hasPrefix $u "@handle:" -}}{{- $u = "" -}}{{- end -}}
+      {{- if $u -}}
+        {{- if eq $key "email" -}}
+          {{- if not (hasPrefix $u "mailto:") -}}{{- $u = printf "mailto:%s" $u -}}{{- end -}}
+        {{- else -}}
+          {{- if not (or (hasPrefix $u "http://") (hasPrefix $u "https://") (hasPrefix $u "mailto:")) -}}{{- $u = printf "https://%s" $u -}}{{- end -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if $u -}}{{- $links = $links | append (dict "key" $key "url" $u "meta" (index $icons $key)) -}}{{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $links -}}
+<div class="author-social author-contacts">
+  {{- range $links }}
+  <a href="{{ .url }}" title="{{ .meta.label }}" target="_blank" rel="noopener nofollow" aria-label="{{ .meta.label }}"><i class="{{ .meta.icon }}"></i></a>
+  {{- end }}
+</div>
+{{- end -}}

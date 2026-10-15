@@ -1,0 +1,13 @@
+{{- /* 主页布局开关的统一取法：data/home.json（后台「前端管理」写的）优先，
+       没有这个文件时回落到 params.toml 的 [home]。
+       define 块之间不共享变量，所以每个块各自调这个 partial。 */ -}}
+{{- $d := hugo.Data.home | default dict -}}
+{{- $p := site.Params.home | default dict -}}
+{{- $showDesc := true -}}
+{{- if isset $d "showDesc" }}{{ $showDesc = not (eq $d.showDesc false) }}{{ else if isset $p "show_desc" }}{{ $showDesc = not (eq $p.show_desc false) }}{{ end -}}
+{{- return (dict
+  "layout" ($d.layout | default ($p.layout | default "bento"))
+  "desc" ($d.desc | default ($p.desc | default $p.desc_zh))
+  "showDesc" $showDesc
+  "params" $p
+) -}}

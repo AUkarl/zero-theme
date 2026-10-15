@@ -1,0 +1,386 @@
+// ============================================================
+// account.js — 账号页（/account/）控制器
+//
+// 这一页只有「登录 / 注册」两件事，加上一个不请求接口的「找回密码」入口。
+// 会话是 HttpOnly Cookie，所以每个请求都要带 credentials，由 ZeroStack.api
+// 统一处理（解包 {data}、把 {error,message} 变成 Error，err.body 留着
+// 给登录接口回的 {next:'totp'} 判断用）。
+// 登录表单默认只有「邮箱 + 密码」：登录接口回 next:'totp' 时才补出动态码
+// 输入框，要求带着 totp 重新提交一次。注册标签也只在 /api/config 的
+// allowRegister 不为 false 时才插进标签行——后台关掉注册，页面上就没有它。
+// 登录成功后本页不落地任何面板，一律跳转：
+//   · 管理员 → 站点后台（CMS）首页
+//   · 普通用户 → /account/me/
+//
+// 站点后台地址来源，优先级从高到低：
+//   1) account/list.html 注入的 cmsBaseURL —— 站点 config 的 params.cmsBaseURL；
+//   2) 模板按构建环境给出的 cmsURL —— hugo server 时是 zero-cms 的本地
+//      vite 端口，正式构建是同域 /admin/；
+//   3) 常量 CMS_ONLINE：前两者都空时的兜底（与 account/list.html 里的
+//      $cmsFallback 成对，改一处要改两处）。
+// ============================================================
+(function () {
+  'use strict';
+
+  var CMS_ONLINE = '/admin/';
+
+  function start() {
+    var box = document.getElementById('zeroAccountBox');
+    var tabsEl = document.getElementById('zeroAccountTabs');
+    var form = document.getElementById('accountForm');
+    var content = document.getElementById('accountFormContent');
+    var errEl = document.getElementById('accountError');
+    var okEl = document.getElementById('accountSuccess');
+    var btn = document.getElementById('accountSubmitBtn');
+    var forgotBtn = document.getElementById('zaForgot');
+    var forgotNote = document.getElementById('zeroAccountForgot');
+    if (!box || !tabsEl || !form || !content || !btn) return;
+    if (!window.ZeroStack || !window.ZeroStack.enabled) return;
+
+    var T = readI18n();
+    var tab = 'login';
+    var cfg = {};
+    var user = null;
+    var busy = false;
+    /** 登录接口回 next:'totp' 时，登录表单补出动态码这一项 */
+    var needTotp = false;
+    var nextPath = readNextParam();
+    /** 带着有效会话直接进本页：只跳转，不再闪一句提示 */
+    var silent = false;
+
+    Promise.all([window.ZeroStack.config(), me()]).then(function (res) {
+      cfg = res[0] || {};
+      user = res[1];
+      paint();
+    });
+
+    /** ?next=/account/me/ 只接受站内相对路径，防开放重定向 */
+    function readNextParam() {
+      var m = /[?&]next=([^&]+)/.exec(location.search);
+      if (!m) return '';
+      try {
+        var raw = decodeURIComponent(m[1]);
+        return /^\/(?!\/)[\w\-./?%&=#@~+]*$/.test(raw) ? raw : '';
+      } catch (e) {
+        return '';
+      }
+    }
+
+    /* ---------------- 后台地址与登录分流 ---------------- */
+
+    /** 站点后台入口：params.cmsBaseURL → 模板按环境算好的地址 → 线上常量 */
+    function cmsHref() {
+      var fromParams = String(T.cmsBaseURL || '').trim();
+      if (fromParams) return fromParams;
+      var fromBuild = String(T.cmsURL || '').trim();
+      return fromBuild || CMS_ONLINE;
+    }
+
+    /** 先认后端正在补的新字段 isAdmin，再兼容老响应的 user.role / 顶层 role */
+    function isAdminPayload(payload) {
+      if (!payload) return false;
+      if (payload.isAdmin === true) return true;
+      var inner = payload.user || {};
+      return payload.role === 'admin' || inner.role === 'admin' || inner.isAdmin === true;
+    }
+
+    /**
+     * 登录/注册成功后的分流：管理员 → 站点后台；普通用户 → 个人中心。
+     * 返回 true 表示已经安排跳转，本页不再渲染表单。
+     */
+    function leave(payload) {
+      var d = payload || {};
+      var inner = d.user || d;
+      var slug =
+        d.account_slug || d.accountSlug || d.slug || inner.account_slug || inner.accountSlug || '';
+      if (isAdminPayload(d)) {
+        if (!silent) say(okEl, T.adminEnter || '登录成功，正在进入站点后台…');
+        setTimeout(function () {
+          window.location = cmsHref();
+        }, 260);
+        return true;
+      }
+      var target = nextPath || (slug ? '/account/me/?u=@' + encodeURIComponent(slug) : '/account/me/');
+      if (!silent) say(okEl, T.loginOk || '登录成功。');
+      setTimeout(function () {
+        window.location = target;
+      }, 260);
+      return true;
+    }
+
+    /** 会话状态：/api/auth/me 的顶层身份字段（isAdmin / accountSlug）并到 user 上 */
+    function me() {
+      return window.ZeroStack.api('/api/auth/me')
+        .then(function (d) {
+          if (!d || !d.user) return null;
+          var u = d.user;
+          u.isAdmin = d.isAdmin === true || u.role === 'admin';
+          u.accountSlug = d.accountSlug || u.accountSlug || d.account_slug || u.account_slug;
+          return u;
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+
+    /* ---------------- 渲染 ---------------- */
+
+    /** 后台关掉整套前台账号系统：整页只剩提示，管理员走后台地址登录 */
+    function showGate() {
+      tabsEl.hidden = true;
+      form.hidden = true;
+      hideForgot();
+      if (document.getElementById('zeroAccountGate')) return;
+      var g = document.createElement('div');
+      g.className = 'za-gate';
+      g.id = 'zeroAccountGate';
+      g.innerHTML =
+        '<p class="za-gate-main">' + esc(T.gateTitle || '登录注册已关闭，如需访问请联系站长。') + '</p>';
+      content.appendChild(g);
+    }
+
+    function paint() {
+      // 导航栏的账号图标（header.html 里的 #navAccount）监听这个事件换头像
+      document.dispatchEvent(new CustomEvent('zero:session', { detail: { user: user } }));
+      if (user) {
+        // 已登录不再在本页停留：管理员进后台，其他人进个人中心
+        silent = true;
+        leave(user);
+        return;
+      }
+      if (cfg.accountSystemEnabled === false) {
+        showGate();
+        return;
+      }
+      tabsEl.hidden = false;
+      form.hidden = false;
+      syncTabs();
+      renderForm();
+    }
+
+    /** 找回密码那行文案收起 */
+    function hideForgot() {
+      if (forgotBtn) forgotBtn.classList.remove('is-open');
+      if (forgotNote) {
+        forgotNote.textContent = '';
+        forgotNote.hidden = true;
+      }
+    }
+
+    /** 后台关掉注册时注册标签整块不出现：按钮不在 DOM 里，不是禁用 */
+    function registerAllowed() {
+      return cfg.allowRegister !== false;
+    }
+
+    /** 注册标签由这里按后台开关插入（静态输出里没有），关掉注册时把它摘掉 */
+    function syncRegisterTab() {
+      var registerTab = tabsEl.querySelector('button[data-tab="register"]');
+      if (!registerAllowed()) {
+        if (registerTab) registerTab.remove();
+        return;
+      }
+      if (registerTab) return;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-tab', 'register');
+      b.textContent = T.tabRegister || '注册';
+      // 插在「找回密码」前面，保持 登录 / 注册 / 找回密码 的顺序
+      tabsEl.insertBefore(b, forgotBtn || tabsEl.firstChild);
+    }
+
+    function syncTabs() {
+      syncRegisterTab();
+      if (!registerAllowed() && tab !== 'login') tab = 'login';
+      Array.prototype.forEach.call(tabsEl.querySelectorAll('button[data-tab]'), function (b) {
+        b.classList.toggle('active-tab', b.dataset.tab === tab);
+      });
+      // 找回密码只在登录页出现；注册页不需要它
+      if (forgotBtn) forgotBtn.hidden = tab !== 'login';
+      if (!forgotBtn || tab !== 'login') hideForgot();
+    }
+
+    function field(name, label, type, attrs) {
+      return (
+        '<div class="form-group"><label for="za-' + name + '">' + esc(label) + '</label>' +
+        '<input id="za-' + name + '" name="' + name + '" type="' + type + '" ' + (attrs || '') + ' autocomplete="' + auto(name) + '">' +
+        '</div>'
+      );
+    }
+
+    function auto(name) {
+      if (name === 'email') return 'email';
+      if (name === 'password' || name === 'confirm') return tab === 'login' ? 'current-password' : 'new-password';
+      if (name === 'code') return 'one-time-code';
+      if (name === 'name') return 'nickname';
+      return 'off';
+    }
+
+    /** 找回密码：不请求任何接口，只给一段文案（管理员邮箱来自 /api/config） */
+    function forgotText() {
+      var mail = String(cfg.adminContactEmail || '').trim();
+      if (mail) return (T.forgotWithMail || '如密码遗失，可使用注册邮箱向管理员 {email} 发送邮件找回').replace('{email}', mail);
+      return T.forgotNoMail || '请通过站内留言联系站长';
+    }
+
+    function renderForm() {
+      clearMessages();
+      btn.disabled = false;
+      var html = field('email', T.labelEmail, 'email', 'required maxlength="200"');
+      if (tab === 'login') {
+        html += field('password', T.labelPassword, 'password', 'required maxlength="200"');
+        if (needTotp) {
+          html += field('code', T.labelTotp, 'text', 'required inputmode="numeric" maxlength="6"');
+          html += '<p class="za-hint za-totp">' + esc(T.hintTotp || '本账号已开启两步验证，填身份验证器上当前的 6 位动态码。') + '</p>';
+        }
+        btn.textContent = T.btnLogin || '登 录';
+      } else {
+        html += field('name', T.labelName, 'text', 'maxlength="64"');
+        html += field('password', T.labelPassword, 'password', 'required minlength="8" maxlength="200"');
+        html += field('confirm', T.labelConfirm, 'password', 'required minlength="8" maxlength="200"');
+        html += field('invite', T.labelInvite, 'text', (cfg.requireInviteCode ? 'required ' : '') + 'maxlength="64"');
+        html += '<p class="za-hint">' + esc(cfg.requireInviteCode ? T.hintInvite : T.pwHint) + '</p>';
+        btn.textContent = T.btnRegister || '注 册';
+      }
+      content.innerHTML = html;
+    }
+
+    /* ---------------- 提交 ---------------- */
+
+    tabsEl.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-tab]');
+      if (!b || b.hidden) return;
+      tab = b.dataset.tab;
+      needTotp = false;
+      syncTabs();
+      renderForm();
+    });
+
+    /* 找回密码：点击不发任何请求，只把那一行提示文案展开 / 收起 */
+    if (forgotBtn) {
+      forgotBtn.addEventListener('click', function () {
+        if (forgotNote && !forgotNote.hidden) {
+          hideForgot();
+          return;
+        }
+        var text = forgotText();
+        if (forgotNote) {
+          forgotNote.textContent = text;
+          forgotNote.hidden = false;
+          forgotBtn.classList.add('is-open');
+        } else {
+          say(okEl, text);
+        }
+      });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (busy) return;
+      clearMessages();
+      if (tab === 'login') return doLogin();
+      return doRegister();
+    });
+
+    function val(name) {
+      var el = content.querySelector('[name="' + name + '"]');
+      return el ? el.value.trim() : '';
+    }
+
+    function doLogin() {
+      var email = val('email');
+      var password = val('password');
+      if (!email || !password) return say(errEl, T.fill || '请填写完整信息。');
+      var body = { email: email, password: password };
+      if (needTotp) {
+        var code = val('code').replace(/\s/g, '');
+        if (!/^\d{6}$/.test(code)) return say(errEl, T.codeBad || '请输入验证器上的 6 位动态码。');
+        body.totp = code;
+      }
+      busy = true;
+      window.ZeroStack.api('/api/auth/login', { method: 'POST', body: body })
+        .then(function (d) {
+          user = (d && d.user) || null;
+          needTotp = false;
+          if (user) leave(d || user);
+          return null;
+        })
+        .catch(function (err) {
+          // 第二因子：后端要身份验证器动态码时才补那一行输入框。
+          // 邮箱验证码这一档只给后台管理员用（普通用户永远是邮箱 + 密码，策略管不到他们），
+          // 站点这个表单没有那一步，遇到就直说去哪儿登录，别让人卡在「请输入邮箱收到的 6 位验证码」上。
+          var next = err && err.body && err.body.next;
+          var message = err.message || (T.network || '出错了');
+          if (next === 'totp') needTotp = true;
+          else if (next === 'email-code') message = T.adminEmailCodeOnly || message;
+          paint2();
+          say(errEl, message);
+        })
+        .then(function () {
+          busy = false;
+        });
+    }
+
+    /** 出错重画表单，但不重新请求接口 */
+    function paint2() {
+      syncTabs();
+      renderForm();
+    }
+
+    function doRegister() {
+      if (!registerAllowed()) return say(errEl, T.registerClosed || '站点当前关闭了注册');
+      var email = val('email');
+      var password = val('password');
+      var confirmPassword = val('confirm');
+      var invite = val('invite');
+      if (!email || !password) return say(errEl, T.fill || '请填写完整信息。');
+      if (cfg.requireInviteCode && !invite) return say(errEl, T.hintInvite || '本站需要邀请码才能注册。');
+      if (password !== confirmPassword) return say(errEl, T.pwMatch || '两次输入的密码不一致。');
+      if (password.length < 8) return say(errEl, T.pwShort || '密码长度至少 8 位。');
+
+      var body = { email: email, password: password };
+      var name = val('name');
+      if (name) body.name = name;
+      if (invite) body.invite = invite;
+
+      busy = true;
+      window.ZeroStack.api('/api/auth/register', { method: 'POST', body: body })
+        .then(function (d) {
+          // 注册成功即已登录，和登录走同一条分流；首个账号注册就是管理员，直接进后台
+          leave(d || {});
+          return null;
+        })
+        .catch(function (err) { say(errEl, err.message || (T.network || '出错了')); })
+        .then(function () { busy = false; });
+    }
+
+    /* ---------------- 小工具 ---------------- */
+
+    function say(el, text) {
+      if (!el) return;
+      el.textContent = text || '';
+      el.style.display = text ? 'block' : 'none';
+      if (el === errEl && okEl && text) okEl.style.display = 'none';
+      if (el === okEl && errEl && text) errEl.style.display = 'none';
+    }
+
+    function clearMessages() {
+      if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+      if (okEl) { okEl.textContent = ''; okEl.style.display = 'none'; }
+    }
+
+    function readI18n() {
+      var el = document.querySelector('.zero-account-i18n');
+      if (!el) return {};
+      try { return JSON.parse(el.textContent) || {}; } catch (e) { return {}; }
+    }
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();

@@ -1,0 +1,32 @@
+{{- /*
+  figure.html — 增强图片短代码
+  用法: {{< figure src="image.jpg" alt="描述" caption="图片说明" link="https://..." target="_blank" class="wide" >}}
+  支持: 图片标题、链接、自定义 CSS 类、懒加载
+
+  图片处理见 partials/img-src.html：构建时抓取/读取 → 400/800/1200 WebP + 20px 模糊占位，
+  页面先显示占位、进入视口前 200px 才加载高清图；拿不到就退回原始链接。
+  宽高会写进 width/height，图片没到也不会顶动下方文字。
+  校验: src 与 link 都走 http/https 白名单（partials/shortcodes/safe-url.html），
+        src 缺失或非法时输出一句提示而不是一个破图。
+*/ -}}
+{{- $src := partial "shortcodes/safe-url.html" (.Get "src") -}}
+{{- $link := partial "shortcodes/safe-url.html" (.Get "link") -}}
+{{- if not $src -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "figure" "param" "src") -}}
+{{- else -}}
+{{- $widths := slice 400 800 1200 -}}
+{{- with .Get "width" -}}{{- $widths = slice (int .) -}}{{- end -}}
+<figure class="figure{{ with .Get "class" }} {{ . }}{{ end }}">
+  <a {{ with $link }}href="{{ . }}"{{ end }} {{ with .Get "target" }}target="{{ . }}"{{ end }} {{ with .Get "rel" }}rel="{{ . }}"{{ end }}>
+    {{ partial "img-pair.html" (dict
+        "src" $src
+        "alt" (.Get "alt" | default "")
+        "page" .Page
+        "sizes" "(max-width: 820px) 92vw, 760px"
+        "widths" $widths) }}
+  </a>
+  {{- with .Get "caption" }}
+  <figcaption class="figure-caption">{{ . }}</figcaption>
+  {{- end }}
+</figure>
+{{- end -}}

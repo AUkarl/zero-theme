@@ -1,0 +1,10 @@
+{{- /* ============================================================
+  zero/short-base.html — Markdown 短链 [[标识符]] 的站内前缀
+  ------------------------------------------------------------
+  评论 / 时刻里的 [[hello]] 会渲染成 <前缀>hello/。
+  默认 /post/（zero-theme 文章的默认地址），站点可用 params.zeroShortBase 改写，
+  比如把文章挂在 /blog/ 下就写 zeroShortBase = "blog"。
+  ============================================================ */ -}}
+{{- $raw := trim (string (site.Params.zeroShortBase | default "post")) " /" -}}
+{{- if eq $raw "" -}}{{- $raw = "post" -}}{{- end -}}
+{{- return printf "/%s/" $raw -}}

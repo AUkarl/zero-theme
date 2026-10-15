@@ -1,0 +1,351 @@
+{{- /* ============================================================
+  links/list.html — 友链页（/links/）
+  ------------------------------------------------------------
+  结构：
+    选项卡：朋友动态 / 左邻右舍 / 站点联盟 / 申请友链
+    选项卡下方：评论系统（与文章页同一套）
+
+  数据来源（全部是文件，构建时不需要联网）：
+    data/links.yaml        朋友站点 + 站点联盟（手写）
+    data/linksstatus.json  检测脚本写入：在线状态 / 最后更新 / 分组 / 图标
+    data/friendfeed.json   检测脚本写入：朋友们的最新动态（RSS 聚合，最多保留若干条）
+  由 .github/scripts/check-links.mjs 在北京时间 02:00 / 11:00 / 20:00 自动更新。
+
+  「站点联盟」这一页按 kind 分两组显示（见 .links-kind-groups）：
+    友链      ← /api/friends 的 friends[]
+    站点联盟  ← data/links.yaml 的 alliance + /api/friends 的 alliance[]
+  后端契约（另一代理实现）：GET /api/friends → { friends: [...], alliance: [...] }，
+  每个条目 { name, url, description/desc, icon/avatar, email, alive }。
+  老形状（直接返回一个数组）也认：整份当作 friends。
+  后端还没返回 alliance 字段时按空数组处理，两组都是空的就保持构建期的样子，不报错。
+  图标退化沿用现有那条链：手填 icon → 检测脚本抓到的 favicon → 邮箱 cravatar → 首字母。
+  文案全部是中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+
+{{- define "styles" -}}
+{{- $linksCSS := resources.Get "css/links.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $linksCSS.RelPermalink }}">
+{{- $zeroAPI := partial "zero/api.html" . -}}
+{{- if $zeroAPI.enabled }}
+  {{- $applyCSS := resources.Get "css/zero-apply.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $applyCSS.RelPermalink }}">
+{{- end }}
+{{- end -}}
+
+{{- define "main" -}}
+{{- $lc := site.Params.links | default dict -}}
+{{- /* 四个板块的开关（config/_default/params.toml 的 [links]），默认全开。
+       面板与标签用同一组开关；默认激活第一个启用的板块，全开时就是「朋友动态」。 */ -}}
+{{- $onFeed := (ne $lc.feed false) -}}
+{{- $onNeighbors := (ne $lc.neighbors false) -}}
+{{- $onAlliance := (ne $lc.alliance false) -}}
+{{- $onApply := (ne $lc.apply false) -}}
+{{- /* 头像服务：友链没填图标、检测脚本也没抓到 favicon 时，用邮箱哈希去取头像。
+       写成 none 就跳过这一层，只剩「首字母占位」那一路。 */ -}}
+{{- $avatarBase := "https://cravatar.cn/avatar/" -}}
+{{- $avatarSvc := $lc.avatar_service | default "cravatar" -}}
+{{- if eq $avatarSvc "gravatar" }}{{ $avatarBase = "https://www.gravatar.com/avatar/" }}{{ else if eq $avatarSvc "none" }}{{ $avatarBase = "" }}{{ end -}}
+{{- $active := "" -}}
+{{- if $onFeed -}}{{- $active = "feed" -}}
+{{- else if $onNeighbors -}}{{- $active = "neighbors" -}}
+{{- else if $onAlliance -}}{{- $active = "alliance" -}}
+{{- else if $onApply -}}{{- $active = "apply" -}}{{- end -}}
+{{- $d := hugo.Data -}}
+{{- $links := $d.links | default dict -}}
+{{- $friends := $links.friends | default slice -}}
+{{- $alliance := $links.alliance | default slice -}}
+{{- $status := $d.linksstatus | default dict -}}
+{{- $icons := $d.linksicons | default dict -}}
+{{- /* 朋友 URL → 条目：朋友动态的封面要回查手填的 image / icon / email */ -}}
+{{- $byURL := dict -}}
+{{- range $friends -}}{{- $byURL = merge $byURL (dict .url .) -}}{{- end -}}
+{{- $feed := $d.friendfeed | default dict -}}
+{{- $items := $feed.items | default slice -}}
+{{- $online := slice -}}
+{{- $lost := slice -}}
+{{- range $friends -}}
+  {{- $st := index $status .url | default dict -}}
+  {{- /* 排序用：最近更新时间（ISO 字符串按字典序排就是时间序），没有的排最后 */ -}}
+  {{- $row := dict "site" . "st" $st "sortKey" ($st.latestPost | default "") -}}
+  {{- if eq ($st.group | default "active") "lost" -}}
+    {{- $lost = $lost | append $row -}}
+  {{- else -}}
+    {{- $online = $online | append $row -}}
+  {{- end -}}
+{{- end -}}
+{{- /* 最近更新的排前面；没有更新时间的（例如没配 RSS）放最后 */ -}}
+{{- $online = sort $online "sortKey" "desc" -}}
+{{- $lost = sort $lost "sortKey" "desc" -}}
+{{- /* 后台开关（GET /api/config 的扁平键）：
+       friendsEnabled   = false → 四个板块 + 申请表单全部不显示，只留一句「该功能已关闭」
+       friendApplyEnabled = false → 只收掉「申请友链」这个标签页（含在线表单）
+       两个都先写成 hidden，由 js/zero-switches.js 拿到配置后才露出，关闭态不会闪一下。 */ -}}
+{{- $zeroL := partial "zero/api.html" . -}}
+{{- $swF := partial "zero/switch.html" (dict "zero" $zeroL "key" "friendsEnabled") -}}
+{{- $swA := partial "zero/switch.html" (dict "zero" $zeroL "key" "friendApplyEnabled") -}}
+
+<main class="main" id="main">
+  <section class="section links-page">
+    <h1 class="section-title">{{ i18n "links-title" | default "友链" }}</h1>
+    {{- if ne $lc.show_desc false }}
+    <p class="section-desc">{{ $lc.desc | default "互联网的毛细血管里，依然流淌着真诚的联结。" }}</p>
+    {{- end }}
+
+    <div class="links-body"{{ $swF.attrs | safeHTMLAttr }}>
+    <div class="links-tabs" role="tablist" aria-label="友链">
+      {{- if $onFeed }}
+      <button type="button" class="links-tab{{ if eq $active "feed" }} is-active{{ end }}" role="tab" id="tab-feed" data-tab="feed" aria-selected="{{ if eq $active "feed" }}true{{ else }}false{{ end }}" aria-controls="panel-feed">朋友动态</button>
+      {{- end }}
+      {{- if $onNeighbors }}
+      <button type="button" class="links-tab{{ if eq $active "neighbors" }} is-active{{ end }}" role="tab" id="tab-neighbors" data-tab="neighbors" aria-selected="{{ if eq $active "neighbors" }}true{{ else }}false{{ end }}" aria-controls="panel-neighbors">左邻右舍</button>
+      {{- end }}
+      {{- if $onAlliance }}
+      <button type="button" class="links-tab{{ if eq $active "alliance" }} is-active{{ end }}" role="tab" id="tab-alliance" data-tab="alliance" aria-selected="{{ if eq $active "alliance" }}true{{ else }}false{{ end }}" aria-controls="panel-alliance">站点联盟</button>
+      {{- end }}
+      {{- if $onApply }}
+      <button type="button" class="links-tab{{ if eq $active "apply" }} is-active{{ end }}" role="tab" id="tab-apply" data-tab="apply" aria-selected="{{ if eq $active "apply" }}true{{ else }}false{{ end }}" aria-controls="panel-apply"{{ $swA.attrs | safeHTMLAttr }}>申请友链</button>
+      {{- end }}
+    </div>
+
+    {{- /* ---------- 朋友动态 ---------- */ -}}
+    {{- if $onFeed }}
+    <section class="links-panel{{ if eq $active "feed" }} is-active{{ end }}" id="panel-feed" role="tabpanel" aria-labelledby="tab-feed"{{ if ne $active "feed" }} hidden{{ end }}>
+      {{- if $items }}
+      <div class="feed-grid" id="feedGrid" data-per-page="{{ $lc.per_page | default 10 }}">
+        {{- range $items }}
+        {{- /* 左侧封面：文章自带图 → links.yaml 里手填的 image → 站点 icon → 邮箱头像 → 首字母 */ -}}
+        {{- $fr := index $byURL .siteurl | default dict -}}
+        {{- $st := index $status .siteurl | default dict -}}
+        {{- $cover := .image | default ($fr.image | default "") -}}
+        {{- if not $cover -}}
+          {{- $cover = $st.icon | default ($fr.icon | default "") -}}
+          {{- if and (not $cover) $fr.email $avatarBase -}}
+            {{- $cover = printf "%s%s?s=128&d=mp" $avatarBase (md5 $fr.email) -}}
+          {{- end -}}
+        {{- end -}}
+        <article class="feed-card" data-feed-item>
+          <span class="feed-cover{{ if not $cover }} is-letter{{ end }}">
+            {{- with $cover }}
+            <img src="{{ . }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                 onerror="this.style.display='none';this.parentNode.classList.add('is-letter')">
+            {{- end -}}
+            <span class="feed-letter" aria-hidden="true">{{ substr (.site | default "?") 0 1 }}</span>
+          </span>
+          <div class="feed-body">
+            <div class="feed-head">
+              <span class="feed-site">{{ .site }}</span>
+              {{- with .date }}<time class="feed-date" datetime="{{ . }}">{{ time.Format "2006-01-02" . }}</time>{{ end }}
+            </div>
+            <h3 class="feed-title"><a href="{{ .url }}" target="_blank" rel="noopener">{{ .title }}</a></h3>
+            {{- with .summary }}<p class="feed-desc">{{ . }}</p>{{ end }}
+          </div>
+        </article>
+        {{- end }}
+      </div>
+      <nav class="feed-pager" id="feedPager" aria-label="动态翻页"></nav>
+      {{- else }}
+      <p class="links-empty">还没有抓到朋友们的动态。检测脚本每天运行三次（北京时间 02:00 / 11:00 / 20:00），稍后再来看看。</p>
+      {{- end }}
+    </section>
+    {{- end }}
+
+    {{- /* ---------- 左邻右舍 ---------- */ -}}
+    {{- if $onNeighbors }}
+    <section class="links-panel{{ if eq $active "neighbors" }} is-active{{ end }}" id="panel-neighbors" role="tabpanel" aria-labelledby="tab-neighbors"{{ if ne $active "neighbors" }} hidden{{ end }}>
+      <h2 class="links-subtitle"><i class="fas fa-circle-check" aria-hidden="true"></i> 活跃的朋友 <span class="links-count">{{ len $online }}</span></h2>
+      {{- if $online }}
+      <div class="neighbor-grid">
+        {{- range $online }}{{ partial "links-neighbor.html" . }}{{ end }}
+      </div>
+      {{- else }}
+      <p class="links-empty">暂无（等检测脚本跑一次就会显示）。</p>
+      {{- end }}
+
+      {{- if $lost }}
+      <h2 class="links-subtitle is-lost"><i class="fas fa-sailboat" aria-hidden="true"></i> 迷失的小船 <span class="links-count">{{ len $lost }}</span></h2>
+      <p class="links-hint">超过 30 天无法访问、或 90 天没有新动态。</p>
+      <div class="neighbor-grid is-lost">
+        {{- range $lost }}{{ partial "links-neighbor.html" . }}{{ end }}
+      </div>
+      {{- end }}
+    </section>
+    {{- end }}
+
+    {{- /* ---------- 站点联盟 ----------
+       这一页只放 data/links.yaml 里 alliance: 段的那些站。
+       「友链」（friends: 段）一律在「左邻右舍」，不在这里重复一遍：
+       后台的新增 / 改 / 删都会写回这份 yaml（见 api services/friends-file.ts），
+       所以运行期不再往这里补友链条目。运行期只补一样：还没赶上本次构建的新联盟站。 */ -}}
+    {{- if $onAlliance }}
+    <section class="links-panel{{ if eq $active "alliance" }} is-active{{ end }}" id="panel-alliance" role="tabpanel" aria-labelledby="tab-alliance"{{ if ne $active "alliance" }} hidden{{ end }}>
+      <div class="links-kind-groups" data-kind-groups>
+        <section class="links-kind-group" data-kind="alliance">
+          <h2 class="links-subtitle"><i class="fas fa-layer-group" aria-hidden="true"></i> 站点联盟 <span class="links-count" data-kind-count>{{ len $alliance }}</span></h2>
+          {{- if $alliance }}
+          <ul class="alliance-list" data-kind-list>
+            {{- range $alliance }}
+            {{- /* 图标退化：links.yaml 手填 icon → data/linksicons.json（检测脚本抓的 favicon）
+                    → 邮箱 cravatar → 首字母占位 */ -}}
+            {{- $icon := .icon | default (index $icons .url | default "") -}}
+            {{- if and (not $icon) .email $avatarBase -}}
+              {{- $icon = printf "%s%s?s=96&d=mp" $avatarBase (md5 .email) -}}
+            {{- end -}}
+            <li class="alliance-item">
+              <span class="alliance-icon{{ if not $icon }} is-letter{{ end }}">
+                {{- with $icon }}
+                <img src="{{ . }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+                     onerror="this.style.display='none';this.parentNode.classList.add('is-letter')">
+                {{- end -}}
+                <span class="alliance-letter" aria-hidden="true">{{ substr (.name | default "?") 0 1 }}</span>
+              </span>
+              <a href="{{ .url }}" target="_blank" rel="noopener">{{ .name }}</a>{{ with .desc }}<span class="alliance-desc">{{ . }}</span>{{ end }}
+            </li>
+            {{- end }}
+          </ul>
+          {{- else }}
+          <p class="links-empty" data-kind-empty>暂未加入任何联盟。</p>
+          {{- end }}
+        </section>
+      </div>
+    </section>
+    {{- end }}
+
+    {{- /* ---------- 申请友链：站主写的说明 + 在线申请表单 ----------
+       friendApplyEnabled 关掉时整块收起：外面再套一层 wrapper，
+       面板自己的 hidden（选项卡切换用）不能被动开关脚本改动。 */ -}}
+    {{- if $onApply }}
+    <div class="links-apply-wrap"{{ $swA.attrs | safeHTMLAttr }}>
+    <section class="links-panel links-apply{{ if eq $active "apply" }} is-active{{ end }}" id="panel-apply" role="tabpanel" aria-labelledby="tab-apply"{{ if ne $active "apply" }} hidden{{ end }}>
+      {{ .Content }}
+      {{- partial "zero/apply.html" . -}}
+    </section>
+    </div>
+    {{- end }}
+    </div>{{- /* /.links-body */ -}}
+
+    {{- /* friendsEnabled 关掉时露出来的一句话 */ -}}
+    {{- partial "zero/closed.html" (dict "zero" $zeroL "key" "friendsEnabled" "text" "友链功能已关闭。") -}}
+  </section>
+
+  {{- /* 评论：与文章页完全同一套 */ -}}
+  {{- if ne .Params.comments false -}}
+    {{- partial "comments/loader.html" . -}}
+  {{- end -}}
+</main>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- /* 「站点联盟那一页」的分组开关要在 scripts 里重算一次：define 块之间不共享变量 */ -}}
+{{- $lcS := site.Params.links | default dict -}}
+{{- $onAllianceS := (ne $lcS.alliance false) -}}
+{{- $linksJS := resources.Get "js/links.js" | minify | fingerprint -}}
+<script src="{{ $linksJS.RelPermalink }}"></script>
+{{- /* 按 kind 分区：把 GET /api/friends 的 { friends, alliance } 各填进对应那一组。
+       脚本内联在本页，只服务于这一页，不额外拉一份 JS。 */ -}}
+{{- if $onAllianceS -}}
+<script>
+(function () {
+  'use strict';
+
+  function normOrigin(u) {
+    var s = String(u || '').trim();
+    if (!s) return '';
+    try { return new URL(s, location.href).origin.toLowerCase(); }
+    catch (e) { return s.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, ''); }
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /** 页面上已经渲染过的站点（左邻右舍 / 朋友动态 / 联盟列表都算），用来去重 */
+  function knownOrigins(scope) {
+    var set = {};
+    Array.prototype.slice.call(scope.querySelectorAll('.links-body a[href]')).forEach(function (a) {
+      var k = normOrigin(a.getAttribute('href'));
+      if (k) set[k] = 1;
+    });
+    return set;
+  }
+
+  /** 图标退化：手填图标 → 后端给的 favicon → 邮箱 cravatar → 站名首字母（图片挂了也走首字母） */
+  function iconOf(item) {
+    var raw = item.icon || item.avatar || item.image || '';
+    if (!raw && item.url) {
+      try { raw = new URL(item.url, location.href).origin + '/favicon.ico'; } catch (e) { raw = ''; }
+    }
+    return raw || item.cravatar || '';
+  }
+
+  function itemHTML(item) {
+    var url = String(item.url || '').trim();
+    var name = String(item.name || item.title || '').trim() || url;
+    var desc = String(item.description || item.desc || '').trim();
+    var icon = iconOf(item);
+    var letter = esc(name.charAt(0) || '?');
+    var pic = icon
+      ? '<img src="' + esc(icon) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" ' +
+        'onerror="this.style.display=\'none\';this.parentNode.classList.add(\'is-letter\')">'
+      : '';
+    return '<li class="alliance-item" data-kind-from-api>' +
+      '<span class="alliance-icon' + (icon ? '' : ' is-letter') + '">' + pic +
+      '<span class="alliance-letter" aria-hidden="true">' + letter + '</span></span>' +
+      '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(name) + '</a>' +
+      (desc ? '<span class="alliance-desc">' + esc(desc) + '</span>' : '') +
+      '</li>';
+  }
+
+  /** 填一组：只补页面里还没有的站点，一条都没有就把这一组继续藏着 */
+  function fill(host, kind, list, seen) {
+    var group = host.querySelector('.links-kind-group[data-kind="' + kind + '"]');
+    if (!group) return;
+    var ul = group.querySelector('[data-kind-list]');
+    if (!ul || !Array.isArray(list)) return;
+    var html = '';
+    var added = 0;
+    list.forEach(function (item) {
+      if (!item || !item.url) return;
+      var key = normOrigin(item.url);
+      if (!key || seen[key]) return;
+      seen[key] = 1;
+      html += itemHTML(item);
+      added++;
+    });
+    if (!added) return;
+    var empty = group.querySelector('[data-kind-empty]');
+    if (empty) empty.parentNode.removeChild(empty);
+    var box = document.createElement('ul');
+    box.innerHTML = html;
+    while (box.firstChild) ul.appendChild(box.firstChild);
+    group.hidden = false;
+    var count = group.querySelector('[data-kind-count]');
+    if (count) count.textContent = ul.querySelectorAll('.alliance-item').length;
+  }
+
+  /** 后端形状兼容：{ friends, alliance } 是新契约，这一页只取 alliance（friends 归左邻右舍） */
+  function allianceOf(body) {
+    if (Array.isArray(body)) return [];
+    return body && Array.isArray(body.alliance) ? body.alliance : [];
+  }
+
+  function start() {
+    var host = document.querySelector('[data-kind-groups]');
+    if (!host) return;
+    if (!window.ZeroStack || !window.ZeroStack.enabled) return;   // 没配后端：只有构建期那一份列表，不发请求
+    window.ZeroStack.ready(function () {
+      window.ZeroStack.api('/api/friends')
+        .then(function (body) {
+          fill(host, 'alliance', allianceOf(body), knownOrigins(document));
+        })
+        .catch(function () { /* 后端还没上这个接口 / 形状不对：维持原样，不弹错 */ });
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
+{{- end -}}
+{{- end -}}

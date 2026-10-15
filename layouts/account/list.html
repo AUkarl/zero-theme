@@ -1,0 +1,112 @@
+{{- /* ============================================================
+  account/list.html — 账号页（/account/）
+  ------------------------------------------------------------
+  这一页只有「登录 / 注册 / 找回密码」三件事，全部走 zero-api：
+    POST /api/auth/register   注册（是否开放、是否要邀请码由后台开关决定）
+    POST /api/auth/login      邮箱 + 密码登录（该账号开启两步验证时补 6 位动态码）
+    GET  /api/auth/me         当前登录状态
+  默认只渲染「邮箱 + 密码」两个字段：登录接口回 {next:'totp'} 时，account.js
+  才补出动态码输入框并要求重新提交。
+  注册标签由 account.js 在 allowRegister!==false 时插进标签行；后台关掉注册时
+  本页的静态输出里根本没有注册标签，只剩登录。requireInviteCode=true 时注册
+  表单带邀请码（字段名 invite）。
+  登录后一律跳转，本页不落地任何账号面板（见 account.js）：
+    role=admin → 站点后台首页；普通用户 → /account/me/。
+  找回密码是与两个标签同级的第三个入口：点击不请求接口，只展开一行文案，
+  管理员邮箱取 /api/config 的 adminContactEmail，取不到时写「请通过站内留言
+  联系站长」。
+  邮箱验证 / 身份验证器 / 改密码都在个人中心-账号安全（/account/me/?tab=security），
+  本页没有订阅入口，也没有第三方登录。
+  整页关闭只由站点参数决定：params.apiBaseURL 留空或 params.zeroEnabled=false，
+  此时不加载脚本，只显示「登录注册已关闭」并附一行小字，说明管理员可经后台
+  地址登录。页面本身不需要重新构建：后台改动下次加载就跟上。
+  ============================================================ */ -}}
+
+{{- define "styles" -}}
+{{- /* 先通用面板样式（account.css），再本页专属样式（zero-account.css）：
+       同优先级下后加载的生效，zero-account.css 的深色模式覆盖才压得住。 */ -}}
+{{- $accountCSS := resources.Get "css/account.css" | minify | fingerprint -}}
+{{- $zeroAccountCSS := resources.Get "css/zero-account.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $accountCSS.RelPermalink }}">
+<link rel="stylesheet" href="{{ $zeroAccountCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- /* 站点后台地址：params.cmsBaseURL 优先；没配就按环境给常量
+       （hugo server 本地开发 = zero-cms 的 vite 端口 5173，正式构建 = 同域 /admin/）。
+       这份常量与 account.js 里的 CMS_ONLINE 成对，改一处要改两处。 */ -}}
+{{- $cmsFromParams := trim (.Site.Params.cmsBaseURL | default "") " " -}}
+{{- $cmsFallback := cond hugo.IsServer "http://127.0.0.1:5173/" "/admin/" -}}
+{{- $cms := $cmsFromParams | default $cmsFallback -}}
+<main class="main" id="main">
+  <section class="section">
+    <div class="account-wrapper">
+      <div class="account-box" id="zeroAccountBox">
+        {{- if not $zero.enabled -}}
+        {{- /* 整页由站点参数关掉（params.apiBaseURL 留空 / params.zeroEnabled=false）*/ -}}
+        <div class="za-gate">
+          <p class="za-gate-main">{{ i18n "zero-account-gate-title" | default "登录注册已关闭，如需访问请联系站长。" }}</p>
+        </div>
+        {{- else -}}
+        <div class="account-tabs" id="zeroAccountTabs" hidden>
+          <button type="button" class="active-tab" data-tab="login">{{ i18n "zero-account-tab-login" | default "登录" }}</button>
+          {{- /* 注册标签不在这里出现：account.js 读到 /api/config 的 allowRegister 才插入，
+                 后台关掉注册时静态输出里就没有它 */ -}}
+          {{- /* 第三个入口：找回密码。只在登录页显示，点击不发请求，只展开下面那行文案 */ -}}
+          <button type="button" class="za-forgotbtn" id="zaForgot" hidden>{{ i18n "zero-account-forgot-link" | default "找回密码" }}</button>
+        </div>
+        <p class="za-forgot" id="zeroAccountForgot" hidden></p>
+        <form class="account-form" id="accountForm" hidden>
+          <div id="accountFormContent"></div>
+          <div class="error-msg" id="accountError"></div>
+          <div class="success-msg" id="accountSuccess"></div>
+          <button type="submit" class="btn-account" id="accountSubmitBtn">{{ i18n "zero-account-submit-login" | default "登 录" }}</button>
+        </form>
+        {{- end -}}
+      </div>
+    </div>
+  </section>
+</main>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- /* 后台地址在 main 与 scripts 两个块里各算一次：define 之间不共享变量。
+       算法与上面 main 里的那份一致，改一处要改两处。 */ -}}
+{{- $cmsFromParams := trim (.Site.Params.cmsBaseURL | default "") " " -}}
+{{- $cmsFallback := cond hugo.IsServer "http://127.0.0.1:5173/" "/admin/" -}}
+{{- $cms := $cmsFromParams | default $cmsFallback -}}
+{{- if $zero.enabled -}}
+<script type="application/json" class="zero-account-i18n">{{ dict
+  "cmsBaseURL" (trim (.Site.Params.cmsBaseURL | default "") " ")
+  "cmsURL" $cms
+  "tabRegister" (i18n "zero-account-tab-register" | default "注册")
+  "gateTitle" (i18n "zero-account-gate-title" | default "登录注册已关闭，如需访问请联系站长。")
+  "forgotWithMail" (i18n "zero-account-forgot-mail" | default "如密码遗失，可使用注册邮箱向管理员 {email} 发送邮件找回")
+  "forgotNoMail" (i18n "zero-account-forgot-nomail" | default "请通过站内留言联系站长")
+  "labelEmail" (i18n "zero-account-label-email" | default "邮箱地址")
+  "labelPassword" (i18n "zero-account-label-password" | default "密码")
+  "labelConfirm" (i18n "zero-account-label-confirm" | default "确认密码")
+  "labelName" (i18n "zero-account-label-name" | default "昵称")
+  "labelInvite" (i18n "zero-account-label-invite" | default "邀请码")
+  "labelTotp" (i18n "zero-account-label-totp" | default "动态验证码")
+  "hintTotp" (i18n "zero-account-hint-totp" | default "本账号已开启两步验证，填身份验证器上当前的 6 位动态码。")
+  "codeBad" (i18n "zero-account-code-bad" | default "请输入验证器上的 6 位动态码。")
+  "adminEmailCodeOnly" (i18n "zero-account-admin-email-code-only" | default "本站把管理员登录设成了「密码 + 邮箱验证码」，这一步只有后台登录页有：请用后台的登录地址进门。普通用户不受这条策略影响，照常邮箱 + 密码登录。")
+  "hintInvite" (i18n "zero-account-hint-invite" | default "本站需要邀请码才能注册。")
+  "pwHint" (i18n "zero-account-pw-hint" | default "密码至少 8 位。")
+  "btnLogin" (i18n "zero-account-submit-login" | default "登 录")
+  "btnRegister" (i18n "zero-account-submit-register" | default "注 册")
+  "fill" (i18n "zero-account-fill" | default "请填写完整信息。")
+  "pwMatch" (i18n "zero-account-pw-match" | default "两次输入的密码不一致。")
+  "pwShort" (i18n "zero-account-pw-short" | default "密码长度至少 8 位。")
+  "network" (i18n "zero-account-network" | default "网络出错了，请稍后再试。")
+  "loginOk" (i18n "zero-account-login-ok" | default "登录成功。")
+  "adminEnter" (i18n "zero-account-admin-enter" | default "登录成功，正在进入站点后台…")
+  "registerClosed" (i18n "zero-account-register-closed" | default "站点当前关闭了注册")
+  | jsonify | safeJS }}</script>
+{{- $accountJS := resources.Get "js/account.js" | minify | fingerprint -}}
+<script src="{{ $accountJS.RelPermalink }}"></script>
+{{- end -}}
+{{- end -}}

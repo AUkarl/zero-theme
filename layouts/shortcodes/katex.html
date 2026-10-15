@@ -1,0 +1,15 @@
+{{- /* katex.html — KaTeX 数学公式
+       资源地址可在 [cdn].katex_css / katex_js 换成自建或国内镜像；留空用 jsdelivr 默认。
+       katex_js 只替换 katex.min.js 那一个文件，auto-render 仍按同版本推导。 */ -}}
+{{- if not (.Page.Scratch.Get "katex_loaded") -}}
+{{- $cdn := site.Params.cdn | default dict -}}
+{{- $katexCss := $cdn.katex_css | default "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" -}}
+{{- $katexJs := $cdn.katex_js | default "https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" -}}
+{{- $autoRender := printf "%s/contrib/auto-render.min.js" (strings.TrimSuffix "/katex.min.js" $katexJs) -}}
+<link rel="stylesheet" href="{{ $katexCss }}">
+<script defer src="{{ $katexJs }}"></script>
+<script defer src="{{ $autoRender }}"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false},{left:'\\[',right:'\\]',display:true}]});"></script>
+{{- .Page.Scratch.Set "katex_loaded" true -}}
+{{- end -}}
+<span class="katex-block">{{ .Inner | safeHTML }}</span>

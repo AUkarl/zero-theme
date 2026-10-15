@@ -1,0 +1,20 @@
+# ============================================================
+# data/authors.yaml — 作者资料表（示例）
+# 键 = 文章 front matter 里 author 写的作者标识，也是 /author/<标识>/ 的地址。
+# 多作者：front matter 写成列表，例如 author: ["default", "guest"]。
+# ============================================================
+
+default:
+  name: "作者"
+  avatar: "img/avatar.png"
+  bio_zh: "独立创作者"
+  website: "https://example.com/"
+  social:
+    - name: "GitHub"
+      url: "https://github.com/your-username"
+      icon: "fab fa-github"
+
+guest:
+  name: "客座作者"
+  avatar: "img/avatar.png"
+  bio_zh: "偶尔来写两篇的朋友"

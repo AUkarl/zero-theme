@@ -1,0 +1,33 @@
+{{- /* ============================================================
+  zero/switch.html — 受后台开关控制的区块的统一标记
+  ------------------------------------------------------------
+  用法（在已经拿到 zero/api.html 结果上下文里）：
+    $sw  := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled")
+    section 带上 $sw.attrs 即为「开关为真时显示」
+
+    $off := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled" "when" "off")
+    提示块带上 $off.attrs 即为「开关为假时才显示」
+    （注意：文档注释里不能再出现星号斜杠的组合，Hugo 会把第一个当成注释结束，整份模板就解析失败了）
+
+  行为：
+    · key 为空 → 不加任何标记（纯构建期开关，例如 params 里的板块开关）
+    · zero.enabled 为真（配了 params.apiBaseURL）→ 额外写 hidden，
+      由 js/zero-switches.js 拿到 /api/config 后决定是否露出，关闭态不会闪一下
+    · zero.enabled 为假 → 只有 data-zero-switch 属性、没有 hidden，
+      纯静态站点照常显示（脚本也不会加载）
+  返回 (dict "attrs" ... "hidden" ...)
+  ============================================================ */ -}}
+{{- $key := trim (string (.key | default "")) " " -}}
+{{- $when := .when | default "on" -}}
+{{- $zero := .zero | default dict -}}
+{{- $hidden := and ($zero.enabled | default false) (ne $key "") -}}
+{{- $attrs := "" -}}
+{{- if ne $key "" -}}
+  {{- $attrs = printf ` data-zero-switch="%s"` $key -}}
+  {{- if eq $when "off" -}}{{- $attrs = printf `%s data-zero-when="off"` $attrs -}}{{- end -}}
+  {{- if $hidden -}}{{- $attrs = printf `%s hidden` $attrs -}}{{- end -}}
+{{- else if eq $when "off" -}}
+  {{- /* 没有开关键的「关闭提示」不该出现：让它始终不显示由调用方自己判断 */ -}}
+  {{- $attrs = " hidden" -}}
+{{- end -}}
+{{- return (dict "attrs" $attrs "hidden" $hidden "key" $key) -}}

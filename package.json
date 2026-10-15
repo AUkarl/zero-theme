@@ -1,0 +1,22 @@
+{
+  "name": "zero-theme",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build scripts for the zero Hugo theme and its Cloudflare Pages demo site",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "link-theme": "node scripts/link-theme.mjs",
+    "sync-comment": "node scripts/sync-comment.mjs",
+    "build": "npm run link-theme && hugo --minify --source exampleSite",
+    "pages": "npm run build",
+    "dev": "npm run link-theme && hugo server --source exampleSite"
+  },
+  "optionalDependencies": {
+    "hugo-bin": "^0.149.2"
+  },
+  "hugo-bin": {
+    "version": "0.165.0"
+  }
+}

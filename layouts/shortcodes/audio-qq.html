@@ -1,0 +1,15 @@
+{{- /* audio-qq.html — QQ音乐嵌入
+   用法: {{< audio-qq id="200924381" auto="0" >}}
+   校验: id 必须是纯数字（QQ音乐歌曲 ID），否则给提示不渲染空 iframe */ -}}
+{{- $id := .Get "id" | default (.Get 0) -}}
+{{- $auto := cond (in (slice "1" "true") (string (.Get "auto"))) "1" "0" -}}
+{{- if not (findRE `^[0-9]+$` (string ($id | default ""))) -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "audio-qq" "param" "id") -}}
+{{- else -}}
+<div class="shortcode-embed qq-music">
+  <iframe style="max-width:100%;width:330px;height:86px;border:none;"
+    src="https://i.y.qq.com/n2/m/outchain/player/play/index.html?type=song&id={{ $id }}&auto={{ $auto }}"
+    allowfullscreen allow="autoplay; encrypted-media"
+    loading="lazy" scrolling="no" frameborder="0"></iframe>
+</div>
+{{- end -}}

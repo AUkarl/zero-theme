@@ -1,0 +1,151 @@
+{{- /* ============================================================
+  page/about.html — 关于页
+  展示个人简介、关于本站、找到我、站点声明
+  文案来源：data 目录里的 about.json（后台 CMS 写）优先，
+  没这个文件时回落 params 的 [about] 与 [[aboutContacts]]。
+  取值与字段对照见 partials/about-content.html。
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $aboutCSS := resources.Get "css/about.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $aboutCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $a := partial "about-content.html" . -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title" data-i18n="about-title">{{ i18n "about-title" | default "关于" }}</h1>
+    {{- if $a.show_desc }}
+    {{- if $a.desc }}
+    <p class="section-desc" data-i18n="about-desc">{{ $a.desc | markdownify }}</p>
+    {{- else }}
+    <p class="section-desc" data-i18n="about-desc">{{ i18n "about-desc" | default "一个在数字世界里种花的人。" }}</p>
+    {{- end }}
+    {{- end }}
+
+    <div class="about-container">
+      {{- /* 关于我（含头像昵称） */ -}}
+      <div class="about-section">
+        <div class="about-me-header">
+          {{- if (ne .Site.Params.about.show_avatar false) }}
+          <img class="about-avatar" src="{{ .Site.Params.aboutAvatar | default "img/avatar.webp" | relURL }}" alt="Avatar">
+          {{- end }}
+          <div class="about-me-info">
+            {{- if (ne .Site.Params.about.show_name false) }}
+            <div class="about-name">{{ .Site.Params.aboutName | default (partial "site-config.html" .).name }}</div>
+            {{- end }}
+            {{- if $a.show_bio }}
+            {{- if $a.tagline }}
+            <p class="about-tagline" data-i18n="about-tagline">{{ $a.tagline }}</p>
+            {{- else }}
+            <p class="about-tagline" data-i18n="about-tagline">{{ i18n "about-tagline" | default "独立创作者 · 极简主义践行者 · 数字花园园丁" }}</p>
+            {{- end }}
+            {{- end }}
+          </div>
+        </div>
+        {{- if $a.show_bio }}
+          {{- range $i, $p := $a.bio }}
+        <p data-i18n="about-bio-{{ $i }}">{{ $p | markdownify }}</p>
+          {{- end }}
+          {{- if not $a.bio }}
+        <p data-i18n="about-bio-0">{{ i18n "about-me-p1" | default "相信好的设计是隐形的，好的文字是真诚的。" }}</p>
+          {{- end }}
+        {{- end }}
+      </div>
+
+      <hr class="about-divider">
+
+      {{- /* 关于本站 */ -}}
+      {{- if $a.show_site }}
+      <div class="about-section">
+        <div class="about-block-title"><i class="fas fa-globe"></i> <span data-i18n="about-site-title">{{ i18n "about-site-title" | default "关于本站" }}</span></div>
+        {{- range $i, $p := $a.site }}
+        <p data-i18n="about-site-{{ $i }}">{{ $p | markdownify }}</p>
+        {{- end }}
+        {{- if not $a.site }}
+        <p data-i18n="about-site-0">{{ i18n "about-site-p1" | default "这是一个用 Hugo 搭建的个人站点，保留了手工搭建的质感。" }}</p>
+        {{- end }}
+      </div>
+
+      <hr class="about-divider">
+      {{- end }}
+
+      {{- /* 找到我 */ -}}
+      {{- if $a.show_social }}
+      <div class="about-section">
+        <div class="about-block-title"><i class="fas fa-link"></i> <span data-i18n="about-findme-title">{{ i18n "about-findme-title" | default "找到我" }}</span></div>
+        {{- /* 同一 label 归成一组（params 侧的 labelKey 只是历史字段，模板从未用它取过文案） */ -}}
+        {{- $contacts := $a.contacts -}}
+        {{- $labels := slice -}}
+        {{- range $contacts -}}
+          {{- $labels = $labels | append .label -}}
+        {{- end -}}
+        {{- $uniqueLabels := $labels | uniq -}}
+        <div class="find-me-grid">
+          {{- range $uniqueLabels -}}
+            {{- $label := . -}}
+            <div class="find-me-group">
+              <div class="find-me-label">{{ $label }}</div>
+              <div class="find-me-values">
+                {{- range $contacts -}}
+                  {{- if eq .label $label -}}
+                    <a class="find-me-link" href="{{ .url }}"{{ if .external }} target="_blank" rel="noopener"{{ end }}>{{ .text }}{{ if .external }}<i class="fas fa-external-link-alt ext-arrow"></i>{{ end }}</a>
+                  {{- end -}}
+                {{- end -}}
+              </div>
+            </div>
+          {{- end -}}
+        </div>
+      </div>
+
+      <hr class="about-divider">
+      {{- end }}
+
+                        {{- /* 站点声明 */ -}}
+      {{- if $a.show_declaration }}
+      <div class="about-section">
+        <div class="about-block-title"><i class="fas fa-shield-alt"></i> <span data-i18n="about-declaration-title">{{ i18n "about-declaration-title" | default "站点声明" }}</span></div>
+        <div class="site-declaration">
+          {{- range $i, $p := $a.declaration }}
+          <p data-i18n="about-declaration-{{ $i }}">{{ $p }}</p>
+          {{- end }}
+          {{- if not $a.declaration }}
+          <p data-i18n="about-declaration-0">{{ i18n "about-declaration-p1" | default "本站所有原创文章均采用 MIT 许可协议，转载请注明出处。" }}</p>
+          {{- end }}
+        </div>
+      </div>
+      {{- end }}
+    </div>
+  </section>
+</main>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $a := partial "about-content.html" . -}}
+{{- /* 关于页文案：common.js 按 [data-i18n] 重写文本，所以这里要和上面渲染的同一份内容。
+       本站只有中文，不再按语言分支。值一律走 jsonify：文案是后台写的，出现英文撇号或
+       换行时用单引号拼字符串会让整段脚本解析失败（common.js 一挂，导航抽屉、主题切换全失效）。
+       这段说明放在 Hugo 注释里：Hugo 0.165 会把 HTML 模板里的 C 式注释当注释吃掉，
+       留在 script 里只会剩下空白行。 */ -}}
+<script>
+  window.i18nMap = {
+    'zh': {
+      'about-title': {{ i18n "about-title-zh" | default "关于" | jsonify | safeJS }},
+      'about-desc': {{ $a.desc | default (i18n "about-desc-zh" | default "一个在数字世界里种花的人。") | jsonify | safeJS }},
+      'about-tagline': {{ $a.tagline | default (i18n "about-tagline-zh" | default "独立创作者 · 极简主义践行者 · 数字花园园丁") | jsonify | safeJS }},
+      'about-site-title': {{ i18n "about-site-title-zh" | default "关于本站" | jsonify | safeJS }},
+      'about-findme-title': {{ i18n "about-findme-title-zh" | default "找到我" | jsonify | safeJS }},
+      'about-declaration-title': {{ i18n "about-declaration-title-zh" | default "站点声明" | jsonify | safeJS }}
+      {{- range $i, $p := $a.bio }},
+      'about-bio-{{ $i }}': {{ $p | jsonify | safeJS }}
+      {{- end }}
+      {{- range $i, $p := $a.site }},
+      'about-site-{{ $i }}': {{ $p | jsonify | safeJS }}
+      {{- end }}
+      {{- range $i, $p := $a.declaration }},
+      'about-declaration-{{ $i }}': {{ $p | jsonify | safeJS }}
+      {{- end }}
+    }
+  };
+</script>
+{{- end -}}

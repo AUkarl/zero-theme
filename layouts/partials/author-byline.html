@@ -1,0 +1,56 @@
+{{- /* ============================================================
+  author-byline.html — 文章署名（支持多作者）
+  ------------------------------------------------------------
+  front matter 的 author 既可以写一个作者标识，也可以写成列表；标识对应
+  data/authors.yaml 的键，同时也是 /author/<标识>/ 的地址片段。
+  静态渲染只吃 data/authors.yaml 与站点参数；yaml 里没登记的新作者，
+  由 zero-authors.js 在运行时向 /api/authors 补齐昵称与头像。
+  认证徽章已删除：署名旁不再画对勾，作者身份看「用户组」那句文字和作者资料页。
+  文案直接写中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+{{- $ids := slice -}}
+{{- with .Params.author | default (partial "site-config.html" .).defaultAuthor -}}
+  {{- $list := . -}}
+  {{- if not (reflect.IsSlice $list) -}}{{- $list = slice $list -}}{{- end -}}
+  {{- range $list -}}
+    {{- $id := trim (string .) " " -}}
+    {{- if $id -}}{{- $ids = $ids | append $id -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $ids -}}
+{{- $data := hugo.Data.authors -}}
+{{- $profile := .Site.Params.author_profile -}}
+{{- $default := trim (string ((partial "site-config.html" .).defaultAuthor | default "")) " " -}}
+{{- $linkTitle := "TA 的全部文章" -}}
+<div class="author-byline" data-author-ids="{{ delimit $ids "," }}">
+  <span class="byline-label">作者</span>
+  {{- range $id := $ids -}}
+  {{- $p := dict -}}
+  {{- with $data -}}{{- with index $data $id -}}{{- $p = . -}}{{- end -}}{{- end -}}
+  {{- $name := "" -}}
+  {{- with $p.name -}}{{- $name = string . -}}{{- end -}}
+  {{- if and (not $name) $profile (eq $id $default) -}}
+    {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
+  {{- end -}}
+  {{- $known := ne $name "" -}}
+  {{- if not $known -}}{{- $name = $id -}}{{- end -}}
+  {{- $avatar := ($.Site.Params.authorAvatar | default "img/avatar.webp") | relURL -}}
+  {{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
+  {{- $term := "" -}}
+  {{- if isset $.Site.Taxonomies "author" -}}{{- $term = index $.Site.Taxonomies.author ($id | urlize) -}}{{- end -}}
+  {{- $open := "<span class=\"byline-link\">" -}}
+  {{- $close := "</span>" -}}
+  {{- if $term -}}
+    {{- $open = printf "<a class=\"byline-link\" href=\"%s\" title=\"%s\">" $term.Page.RelPermalink $linkTitle -}}
+    {{- $close = "</a>" -}}
+  {{- end -}}
+  <span class="byline-item" data-author="{{ $id }}" data-initial="{{ substr $name 0 1 }}" data-raw="{{ if $known }}0{{ else }}1{{ end }}">
+    {{- $open | safeHTML -}}
+    <img class="byline-avatar" src="{{ $avatar }}" alt="{{ $name }}" loading="lazy"
+         onerror="var h=this.closest('.byline-item');if(h)h.classList.add('is-fallback')">
+    <span class="byline-name">{{ $name }}</span>
+    {{- $close | safeHTML -}}
+  </span>
+  {{- end -}}
+</div>
+{{- end -}}

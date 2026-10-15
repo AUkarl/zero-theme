@@ -1,0 +1,26 @@
+{{- /*
+  bilibili.html — B站视频嵌入短代码
+  用法: {{< bilibili "BV1xx411c7mD" >}}
+  或:   {{< bilibili id="BV1xx411c7mD" page="2" >}}
+  支持: BV 号、分P选择、自动播放
+  校验: id 必填且只保留 [A-Za-z0-9_-]；page 只留数字；iframe 用 https（原来是 //，会跟着页面协议）
+*/ -}}
+{{- $id := replaceRE `[^A-Za-z0-9_-]` "" (string (.Get "id" | default (.Get 0) | default "")) -}}
+{{- $page := replaceRE `[^0-9]` "" (string (.Get "page" | default "1")) -}}
+{{- $danmaku := cond (eq (lower (string (.Get "danmaku"))) "true") "true" "false" -}}
+{{- if not $id -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "bilibili" "param" "id") -}}
+{{- else -}}
+<div class="video-embed bilibili-embed">
+  <iframe src="https://player.bilibili.com/player.html?bvid={{ $id }}&page={{ $page | default "1" }}&danmaku={{ $danmaku }}&high_quality=1"
+    scrolling="no"
+    border="0"
+    frameborder="no"
+    framespacing="0"
+    allowfullscreen="true"
+    loading="lazy"
+    referrerpolicy="no-referrer-when-downgrade"
+    style="width:100%;aspect-ratio:16/9;height:auto;">
+  </iframe>
+</div>
+{{- end -}}

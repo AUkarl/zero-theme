@@ -1,0 +1,67 @@
+{{- /* ============================================================
+  comments/loader.html — 文章页评论系统加载器
+  根据评论 provider 分发到对应系统：
+    zero（默认，zero-stack 自建后端）/ waline / twikoo / giscus / artalk
+
+  总开关兼容两种写法：
+    新：[params] commentEnabled = true
+    旧：[params.comment] enable = true
+  provider 兼容：
+    新：[params.comment.article] provider = "zero"
+    未写 provider 时，配了 params.apiBaseURL 即走 zero，否则不渲染评论区。
+
+  运行时接管：配了 apiBaseURL 时额外挂上 zero-comments.js，
+  它按 /api/config 的 commentProvider / commentEnabled 决定要不要把
+  下面这份构建期渲染的结果换掉或撤掉——后台切换不需要重建站点。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $article := .Site.Params.comment.article | default dict -}}
+{{- $provider := $article.provider | default "" -}}
+{{- if and (eq $provider "") $zero.enabled -}}{{- $provider = "zero" -}}{{- end -}}
+
+{{- $enabled := true -}}
+{{- if isset .Site.Params "commentenabled" -}}
+  {{- $enabled = .Site.Params.commentEnabled -}}
+{{- else if isset .Site.Params.comment "enable" -}}
+  {{- $enabled = .Site.Params.comment.enable -}}
+{{- end -}}
+
+{{- if and $enabled (ne $provider "") -}}
+  {{- if and (eq $provider "zero") (not $zero.enabled) -}}
+    {{- partial "zero/config-hint.html" . -}}
+  {{- else -}}
+  {{- /* 只把构建期选中那一家（provider 前缀相同的键）交给前端：其余几家的服务地址
+         不必出现在每页 HTML 里。运行时换评论系统，参数由后台「设置 → 评论系统配置」
+         下发，zero-comments.js 优先用后台值，这份构建期配置只是兜底。 */ -}}
+  {{- $buildCfg := dict -}}
+  {{- range $k, $v := $article -}}
+    {{- if or (eq $k "provider") (hasPrefix $k (printf "%s_" $provider)) -}}
+      {{- $buildCfg = merge $buildCfg (dict $k $v) -}}
+    {{- end -}}
+  {{- end -}}
+<section class="comments-section" id="comments"{{ if $zero.enabled }} data-zero-comment{{ end }}
+         data-build-provider="{{ $provider }}"
+         data-slug="{{ .RelPermalink }}"
+         data-short-base="{{ partial "zero/short-base.html" }}"{{ with partial "zero/component-url.html" }} data-component-src="{{ . }}"{{ end }}>
+    {{- if $zero.enabled -}}
+    <script type="application/json" class="zero-comment-build-config">{{ $buildCfg | jsonify | safeJS }}</script>
+    <script type="application/json" class="zero-comment-labels">{{ dict "title" (i18n "comments-title" | default "评论") "pageTitle" (.Title | plainify | htmlUnescape) "unavailable" (i18n "zero-comment-unavailable" | default "该评论系统暂时不可用，请稍后刷新") "zero" (i18n "comments-title" | default "评论") | jsonify | safeJS }}</script>
+    {{- end -}}
+    {{- if eq $provider "zero" -}}
+      {{- partial "comments/zero.html" . -}}
+    {{- else if eq $provider "waline" -}}
+      {{- partial "comments/waline.html" (dict "page" . "cfg" $article) -}}
+    {{- else if eq $provider "giscus" -}}
+      {{- partial "comments/giscus.html" (dict "page" . "cfg" $article) -}}
+    {{- else if eq $provider "twikoo" -}}
+      {{- partial "comments/twikoo.html" (dict "page" . "cfg" $article) -}}
+    {{- else if eq $provider "artalk" -}}
+      {{- partial "comments/artalk.html" (dict "page" . "cfg" $article) -}}
+    {{- end -}}
+  {{- if $zero.enabled -}}
+    {{- $takeover := resources.Get "js/zero-comments.js" | minify | fingerprint -}}
+<script src="{{ $takeover.RelPermalink }}"></script>
+  {{- end -}}
+</section>
+  {{- end -}}
+{{- end -}}

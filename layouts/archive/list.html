@@ -1,0 +1,103 @@
+{{- /* ============================================================
+  page/archive.html — 归档页
+  按年份时间线展示所有文章，含弹幕标签云、分类筛选、搜索
+  数据由 Hugo 模板注入 JSON，由 archive.js 渲染
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $archiveCSS := resources.Get "css/archive.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $archiveCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $archiveCfg := .Site.Params.archive | default dict -}}
+{{- /* 文章范围与首页、RSS 用同一份 [home].mainSections */ -}}
+{{- $mainSections := .Site.Params.home.mainSections | default (slice "posts") -}}
+{{- $showSearch := cond (isset $archiveCfg "enable_search") (ne $archiveCfg.enable_search false) true -}}
+{{- $showCats := cond (isset $archiveCfg "enable_categories") (ne $archiveCfg.enable_categories false) true -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title">{{ i18n "archive-title" | default "归档" }}</h1>
+    {{- if ne $archiveCfg.show_desc false }}
+    {{- $archiveDesc := $archiveCfg.desc | default $archiveCfg.desc_zh -}}
+    {{- if $archiveDesc }}
+    <p class="section-desc">{{ $archiveDesc }}</p>
+    {{- else }}
+    <p class="section-desc">{{ i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}</p>
+    {{- end }}
+    {{- end }}
+    <div class="archive-wrapper">
+      {{- /* 左侧时间刻度尺：本体由 archive-timeline.js 渲染，移动端换成下面的横向月份条 */ -}}
+      <div class="archive-timeline" id="archiveTimeline">
+        <div class="tl-ruler" id="tlRuler" tabindex="0" role="group"
+             aria-label="{{ i18n "archive-timeline-label" | default "时间刻度尺：滚轮或拖拽滑动，方向键切换月份" }}">
+          <div class="tl-viewport" id="tlViewport">
+            <div class="tl-glow" aria-hidden="true"></div>
+            <div class="tl-track" id="tlTrack">
+              <svg class="tl-svg" id="tlSvg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"></svg>
+              <div class="tl-years" id="tlYears" aria-hidden="true"></div>
+              <div class="tl-nodes" id="tlNodes"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-chips" id="tlChips"></div>
+      </div>
+      <div class="archive-list" id="archiveList"></div>
+      <aside class="archive-sidebar">
+        {{- if $showSearch }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-search" | default "搜索" }}</div>
+          <input type="text" class="search-input" id="archiveSearch" placeholder="{{ i18n "archive-search-placeholder" | default "搜索文章..." }}" />
+        </div>
+        {{- end }}
+        {{- if $showCats }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-categories" | default "分类" }}</div>
+          <div class="tag-cloud-static" id="categoryCloud"></div>
+        </div>
+        {{- end }}
+        {{- if ne $archiveCfg.enable_tag_danmaku false }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-tags" | default "标签" }}</div>
+          <div class="danmaku-wrapper" id="tagDanmaku"></div>
+        </div>
+        {{- end }}
+      </aside>
+    </div>
+  </section>
+</main>
+
+{{- /* 将文章数据注入 JSON 供 archive.js 使用 */ -}}
+<script type="application/json" id="archiveData">
+{{- $pages := where .Site.RegularPages "Section" "in" $mainSections -}}
+{{- $data := slice -}}
+{{- range $page := $pages -}}
+  {{- $cat := "" -}}
+  {{- with $page.Params.categories }}{{ $cat = index . 0 }}{{ end -}}
+  {{- $item := dict
+    "title" $page.Title
+    "date" ($page.Date.Format "2006-01-02")
+    "category" $cat
+    "tags" ($page.Params.tags | default slice)
+    "permalink" $page.RelPermalink
+  -}}
+  {{- $data = $data | append $item -}}
+{{- end -}}
+{{ $data | jsonify | safeJS }}
+</script>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $archiveCfg := .Site.Params.archive | default dict -}}
+<script>
+  window.archiveConfig = {
+    groupByYear: {{ ne $archiveCfg.group_by_year false }},
+    enableDanmaku: {{ ne $archiveCfg.enable_tag_danmaku false }},
+    danmakuLanes: {{ $archiveCfg.danmaku_lanes | default 5 }},
+    danmakuSpeed: {{ $archiveCfg.danmaku_speed | default 28 }}
+  };
+</script>
+{{- $timelineJS := resources.Get "js/archive-timeline.js" | minify | fingerprint -}}
+<script src="{{ $timelineJS.RelPermalink }}"></script>
+{{- $archiveJS := resources.Get "js/archive.js" | minify | fingerprint -}}
+<script src="{{ $archiveJS.RelPermalink }}"></script>
+{{- end -}}

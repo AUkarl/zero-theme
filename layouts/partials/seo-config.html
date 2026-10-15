@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  seo-config.html — SEO 参数的统一取法
+  ------------------------------------------------------------
+  优先级：站点 data/seo.json（后台「前端管理 → SEO」写的）
+          > params.toml 的 [seo] 段。
+
+  为什么要有这一层：SEO 的消费方有四处（head.html 的两处、seo.html、robots.txt），
+  每处各写一遍「先看 data 再看 params」迟早会漏掉一个；合成一次、大家都读同一个结果。
+
+  键名一律 snake_case：params 的键在 Hugo 里会被小写化，而 JSON 的键保持原样，
+  两种拼法混用会让同一个参数在合成表里出现两个键。原来那四个驼峰键
+  （robotsDisallow / robotsAllow / robotsCrawlDelay / robotsHost）已改成
+  robots_disallow / robots_allow / robots_crawl_delay / robots_host。
+
+  布尔值可以放心 merge：这里是整键覆盖，不是 `| default`，
+  后台写 false 就是 false，不会被 params 里的 true 盖回去。
+  ============================================================ */ -}}
+{{- $p := .Site.Params.seo | default dict -}}
+{{- $d := hugo.Data.seo | default dict -}}
+{{- /* 两个都是整键覆盖：data 有哪个键就用哪个，没有的仍从 params 走 */ -}}
+{{- return (merge (dict) $p $d) -}}

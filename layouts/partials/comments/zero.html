@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  comments/zero.html — zero-stack 自建评论（zero-theme 默认方案）
+  由 comments/loader.html 在 provider = "zero" 时调用，
+  外层 <section class="comments-section"> 由 loader 负责。
+
+  依赖：
+  - params.apiBaseURL 指向已部署的 zero-api
+  - assets/js/zero-comment.js 组件产物
+  嵌套深度、是否先审后发、是否允许匿名发言都由 zero-api 后台下发，
+  主题不再重复设置这些参数。
+
+  组件脚本不在这里引：它由 zero/boot.html 每页输出一次（配了 apiBaseURL 才输出），
+  文章页、友链页、时刻页用的是同一份，任何用到 <zero-*> 元素的页面都不必自己管。
+
+  标题也不在这里加：组件自己的 <h3 class="title"> 用的就是 loader 下发的
+  .zero-comment-labels 里的「评论」，模板再写一个 h2 就成了两个标题。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- /* 登录框常驻：评论区里点「登录」会派发 zero:login 事件唤起它 */}}
+<zero-login api-base="{{ $zero.base }}"></zero-login>
+<zero-comment api-base="{{ $zero.base }}" post-slug="{{ .RelPermalink }}" short-base="{{ partial "zero/short-base.html" }}"></zero-comment>

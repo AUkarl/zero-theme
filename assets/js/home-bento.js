@@ -1,0 +1,526 @@
+// ============================================================
+// home-bento.js — 新版主页（精选 + 全部文章）
+// ------------------------------------------------------------
+// 职责：
+//   1) 全部文章：打开时显示 N 行，每次点「加载更多」再显示 M 行，
+//      没有更多时隐藏按钮（行数在 config 的 [home.bento] 里配）
+//   2) 最新 / 热门 切换：最新 = 服务端渲染的日期倒序；热门 = 按统计分数倒序
+//   3) 统计：按评论系统自动选择数据源（Waline：浏览量+评论数；Twikoo：评论数）
+//   4) 精选·自动：拿到统计后按热度重排精选槽位
+//
+// 加载体验（避免"先显示最新、再跳成最热"的闪烁）：
+//   · 统计结果缓存在 localStorage（默认 6 小时）：再次打开时立刻按热度渲染，零等待
+//   · 页面上先渲染骨架态（卡片底色，尺寸不变），取数完成一次性显示
+//   · 页面一解析完就并行发起统计请求（不占用首屏关键资源）
+// ============================================================
+(function () {
+  'use strict';
+
+  var cfg = window.hbConfig || {};
+  var root = document.getElementById('home-bento');
+  if (!root) return;
+
+  var grid = document.getElementById('hbArticles');
+  var featured = document.getElementById('hbFeatured');
+  var moreBtn = root.querySelector('[data-hb-more]');
+  var subEl = root.querySelector('[data-hb-sub]');
+  var tabs = Array.prototype.slice.call(root.querySelectorAll('[data-hb-sort]'));
+  if (!grid) return;
+
+  var initialRows = cfg.initialRows || 3;
+  var loadRows = cfg.loadRows || 5;
+  var extraRows = 0;
+  var currentSort = 'latest';
+
+  function cards() { return Array.prototype.slice.call(grid.querySelectorAll('[data-hb-card]')); }
+
+  // 当前列数（跟着 CSS 断点走，1 / 2 / 3）
+  function columns() {
+    var n = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length;
+    return n > 0 ? n : 1;
+  }
+
+  function visibleCount() { return Math.max(1, (initialRows + extraRows) * columns()); }
+
+  // ==================== 加载更多 ====================
+  // opts.animate：点「加载更多」时给新露出来的卡片补一段入场动画
+  //（不能只靠 IntersectionObserver：它要等下一帧，而且新卡可能被滚动位置"跳过"）
+  function applyVisibility(opts) {
+    opts = opts || {};
+    var list = cards();
+    var limit = visibleCount();
+    var newly = [];
+    list.forEach(function (el, i) {
+      var willHide = i >= limit;
+      if (el.hidden && !willHide) newly.push(el);
+      el.hidden = willHide;
+    });
+    if (moreBtn) moreBtn.hidden = limit >= list.length;
+    if (opts.animate && newly.length && window.Motion && window.Motion.revealNow) {
+      // 新的一批按行依次出现，节奏比首屏稍慢一点，看得清
+      window.Motion.revealNow(newly, { step: 110, cap: 520 });
+    }
+  }
+
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function () {
+      extraRows += loadRows;
+      applyVisibility({ animate: true });
+    });
+  }
+
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () { applyVisibility(); }, 150);
+  });
+
+  // ==================== 最新 / 最早 / 最热 ====================
+  var latestOrder = cards();      // 服务端就是日期倒序
+  var stats = null;               // { views: Map, comments: Map }（只有走运行期取数时才有）
+  // 构建期已经把每篇的阅读/评论/点赞/收藏写进卡片属性（data/poststats.json），
+  // 这时排序不需要任何请求，没 JavaScript 的访客看到的精选也是排好的
+  var buildStats = !!cfg.buildStats;
+
+  function pathOf(card) {
+    try { return new URL(card.getAttribute('href'), location.origin).pathname; }
+    catch (e) { return card.getAttribute('href') || ''; }
+  }
+
+  function num(card, name) { return parseFloat(card.getAttribute('data-hb-' + name) || '0') || 0; }
+
+  function scoreOf(card) {
+    if (buildStats) return num(card, 'score');
+    if (!stats) return 0;
+    var p = pathOf(card);
+    var v = (stats.views && stats.views.get(p)) || 0;
+    var c = (stats.comments && stats.comments.get(p)) || 0;
+    return v * (cfg.viewsWeight || 1) + c * (cfg.commentsWeight || 10);
+  }
+
+  function dateOf(card) { return card.getAttribute('data-hb-date') || ''; }
+
+  function setSort(kind) {
+    currentSort = kind;
+    var list = cards();
+
+    var apply = function () {
+      var ordered;
+      if (kind === 'hot') {
+        ordered = list.slice().sort(function (a, b) { return scoreOf(b) - scoreOf(a) || dateOf(b).localeCompare(dateOf(a)); });
+      } else if (kind === 'earliest') {
+        ordered = list.slice().sort(function (a, b) { return dateOf(a).localeCompare(dateOf(b)); });
+      } else {
+        ordered = latestOrder.slice();
+      }
+      ordered.forEach(function (el) { grid.appendChild(el); });
+      // 重新排序 + 显隐一起做完，再让 FLIP 按最终位置做补间动画
+      applyVisibility();
+    };
+
+    if (window.Motion) window.Motion.flip(grid, apply, { selector: '[data-hb-card]' });
+    else apply();
+
+    tabs.forEach(function (btn) {
+      var active = btn.getAttribute('data-hb-sort') === kind;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    if (subEl) {
+      var tpl = kind === 'hot'
+        ? (cfg.labelSubHot || '共 %d 篇 · 按热度排序')
+        : (kind === 'earliest' ? (cfg.labelSubEarliest || '共 %d 篇 · 按发布时间从早到晚') : (cfg.labelSubLatest || '共 %d 篇 · 按时间排序'));
+      subEl.textContent = tpl.replace('%d', list.length);
+    }
+  }
+
+  tabs.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var kind = btn.getAttribute('data-hb-sort');
+      if (kind === 'hot' && !buildStats && !stats) return;   // 既没有构建期数据也没取到统计时不做反应
+      setSort(kind);
+    });
+  });
+
+  // ==================== 骨架态显隐 ====================
+  // 精选卡片的入场动画（data-reveal）已经由模板直接写在卡片上，
+  // 页面一解析完就由 motion.js 开始播 —— 不再等统计接口（那会让动画晚 1 秒以上）。
+  // 骨架态只负责"内容"的显隐：统计到位前卡片里是空的，到位后一次性显示内容，
+  // 因此也不会出现"先显示最新、再跳成最热"的闪烁。
+  var featuredAnimated = false;
+
+  function revealFeatured() {
+    if (featuredAnimated || !featured || !window.Motion) return;
+    featuredAnimated = true;
+    // 只为可能后来才插入的槽位兜底（正常情况模板里已经带了 data-reveal）
+    var slots = featured.querySelectorAll('[data-hb-slot]:not([data-reveal])');
+    if (slots.length) {
+      Array.prototype.forEach.call(slots, function (el) { el.setAttribute('data-reveal', ''); });
+      window.Motion.reveal(featured);
+    }
+  }
+
+  function reveal() {
+    if (!featured) return;
+    revealFeatured();
+    painted = true;
+  }
+
+  // 首屏卡片现在一解析完就可见（不再有骨架遮挡），所以从开始就算「已经显示过」，
+  // 这样统计一到就能播放「内容滑到新位置」的补位动画
+  var painted = true;
+
+  // ==================== 统计缓存 ====================
+  var CACHE_KEY = 'hbStats:v1:' + location.pathname;
+  function cacheMinutes() { return typeof cfg.cacheMinutes === 'number' ? cfg.cacheMinutes : 360; }
+
+  function readCache() {
+    try {
+      var raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (!obj || !obj.t) return null;
+      if (Date.now() - obj.t > cacheMinutes() * 60000) return null;
+      return { views: new Map(obj.v || []), comments: new Map(obj.c || []) };
+    } catch (e) { return null; }
+  }
+
+  function writeCache(s) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        t: Date.now(),
+        v: Array.from(s.views || []),
+        c: Array.from(s.comments || [])
+      }));
+    } catch (e) { /* 隐私模式等写不了，忽略 */ }
+  }
+
+  // ==================== 统计请求 ====================
+  // 带超时：统计接口偶尔会卡住不返回，不设超时的话下面的 then/catch 都不会执行，
+  // 精选区就会一直停在骨架态（看起来就是「动画迟迟不出现 / 时灵时不灵」）
+  var REQ_TIMEOUT = 2600;
+  function getJSON(url) {
+    var opts = { credentials: 'omit' };
+    var timer = null;
+    if (typeof AbortController === 'function') {
+      var ac = new AbortController();
+      opts.signal = ac.signal;
+      timer = setTimeout(function () { ac.abort(); }, REQ_TIMEOUT);
+    }
+    return fetch(url, opts).then(function (r) {
+      if (timer) clearTimeout(timer);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).catch(function (e) {
+      if (timer) clearTimeout(timer);
+      throw e;
+    });
+  }
+
+  function loadViews() {
+    var provider = cfg.provider, paths = cards().map(pathOf);
+    if (!provider || provider === 'none' || !cfg.serverUrl || !paths.length) return Promise.resolve(null);
+
+    if (provider === 'waline') {
+      // 浏览量：一次请求批量取回（顺序与传入的 path 一致）—— 最快的那一步，先拿它显示
+      return getJSON(cfg.serverUrl + '/article?path=' + encodeURIComponent(paths.join(',')))
+        .then(function (arr) {
+          var views = new Map();
+          paths.forEach(function (p, i) { views.set(p, Array.isArray(arr) ? (arr[i] || 0) : (arr || 0)); });
+          return { views: views };
+        });
+    }
+
+    if (provider === 'twikoo') {
+      // Twikoo 没有浏览量，直接进入评论数阶段
+      return Promise.resolve({ views: new Map() });
+    }
+
+    return Promise.resolve(null);
+  }
+
+  function loadComments(views) {
+    var provider = cfg.provider, paths = cards().map(pathOf);
+    var weight = cfg.commentsWeight || 0;
+    var probe = weight > 0 ? Math.max(0, cfg.commentProbe || 6) : 0;
+    if (!provider || !cfg.serverUrl || !paths.length || !probe) return Promise.resolve(null);
+
+    if (provider === 'waline') {
+      // 评论数只探测浏览量前几名，控制请求数；失败不影响主流程
+      var top = paths.slice().sort(function (a, b) { return (views.get(b) || 0) - (views.get(a) || 0); }).slice(0, probe);
+      var comments = new Map();
+      return Promise.all(top.map(function (p) {
+        return getJSON(cfg.serverUrl + '/comment?path=' + encodeURIComponent(p) + '&type=count')
+          .then(function (n) { comments.set(p, typeof n === 'number' ? n : 0); })
+          .catch(function () { /* 单条失败忽略 */ });
+      })).then(function () { return comments; });
+    }
+
+    if (provider === 'twikoo') {
+      return fetch(cfg.serverUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ event: 'GET_COMMENTS_COUNT', urls: paths })
+      }).then(function (r) { return r.json(); }).then(function (arr) {
+        var comments = new Map();
+        paths.forEach(function (p, i) { comments.set(p, Array.isArray(arr) ? (arr[i] || 0) : 0); });
+        return comments;
+      });
+    }
+
+    return Promise.resolve(null);
+  }
+
+  // ==================== 应用统计结果 ====================
+  function paintViews() {
+    if (!cfg.showViews) return;
+    cards().forEach(function (card) {
+      var el = card.querySelector('[data-hb-views]');
+      if (!el) return;
+      var n = buildStats
+        ? num(card, 'views')
+        : ((stats && stats.views && stats.views.get(pathOf(card))) || 0);
+      el.textContent = (cfg.labelViews || '%d 次浏览').replace('%d', n);
+      el.hidden = false;
+    });
+  }
+
+  function refillFeatured() {
+    if (cfg.featuredMode !== 'auto' || !stats || !featured) return;
+    var slots = Array.prototype.slice.call(featured.querySelectorAll('[data-hb-slot]'));
+    if (!slots.length) return;
+    var ranked = cards().slice().sort(function (a, b) { return scoreOf(b) - scoreOf(a); });
+
+    // 这次重排会不会真的换人？（顺序没变就不用做动画，避免每次拿数据都抖一下）
+    var willChange = slots.some(function (slot, i) {
+      var src = ranked[i];
+      return src && src.getAttribute('href') !== slot.getAttribute('href');
+    });
+
+    // 已经显示过（首屏卡片一出现就算）→ 用「内容滑到新位置 + 交叉淡入」的补位动画
+    var useMotion = willChange && painted && !!window.Motion;
+    var before = null;
+    if (useMotion) {
+      before = {};
+      slots.forEach(function (slot) {
+        var h = slot.getAttribute('href');
+        if (!h) return;
+        var r = slot.getBoundingClientRect();
+        before[h] = { x: r.left, y: r.top };
+      });
+    }
+
+    function swapContents() {
+      slots.forEach(function (slot, i) {
+        var src = ranked[i];
+        if (!src) return;
+        var title = text(src, '[data-hb-title]');
+        var desc = text(src, '[data-hb-desc]');
+        var date = text(src, '[data-hb-date]');
+        var cat = text(src, '[data-hb-cat]');
+        var tag = text(src, '[data-hb-tag]');
+        var href = src.getAttribute('href');
+        if (href) slot.setAttribute('href', href);
+        if (title) set(slot, '[data-hb-title]', title);
+        if (desc) set(slot, '[data-hb-desc]', desc);
+        if (date) set(slot, '[data-hb-date]', date);
+        if (cat) { set(slot, '[data-hb-cat]', cat); set(slot, '[data-hb-pill]', cat); }
+        if (tag) set(slot, '[data-hb-tag]', tag);
+
+        // 封面：LQIP 换成新文章的（直接读源卡片容器的背景图），高清图重新挂上延迟加载并淡入。
+        // 注意：只有「本来就是图片卡」的槽位才换；纯色文字卡（indigo / amber / outline）
+        // 不能被贴上图，否则会把莫兰迪底色盖掉、文字也没法看。
+        var srcImg = src.querySelector('img');
+        var slotImg = slot.querySelector('img');
+        if (srcImg && slotImg) {
+          var srcWrap = src.querySelector('.hb-a-img');
+          // hero / tall / overlay 的占位直接挂在卡片上，其余变体挂在图片容器上
+          var slotWrap = slot.querySelector('.hb-a-img, .hb-wide-img, .hb-top-img') || slot;
+          if (srcWrap && slotWrap) {
+            var lqipBg = window.getComputedStyle(srcWrap).backgroundImage;
+            if (lqipBg && lqipBg !== 'none') slotWrap.style.backgroundImage = lqipBg;
+          }
+          var next = srcImg.getAttribute('data-src') || srcImg.getAttribute('src') || '';
+          var nextSet = srcImg.getAttribute('data-srcset') || '';
+          slotImg.removeAttribute('src');
+          slotImg.removeAttribute('srcset');
+          slotImg.classList.remove('is-loaded');
+          // 视口里的槽位直接给 src（并提优先级）：否则要等懒加载观察器下一帧才发请求，
+          // 换封面这一下会把首屏大图的 LCP 推后。视口外的仍然走 data-src 懒加载。
+          var rect = slot.getBoundingClientRect();
+          var inView = rect.bottom > 0 && rect.top < (window.innerHeight || 800) + 200;
+          if (next) {
+            slotImg.setAttribute('data-src', next);
+            if (inView) {
+              slotImg.setAttribute('src', next);
+              slotImg.setAttribute('fetchpriority', 'high');
+            }
+          }
+          if (nextSet) slotImg.setAttribute('data-srcset', nextSet);
+          // 不覆盖 sizes：槽位自己的 sizes 才对得上它的宽度（首屏大图尤其重要）
+          slotImg.setAttribute('alt', title || '');
+          if (window.Motion) window.Motion.lazyImages(slot);
+        }
+      });
+    }
+
+    if (!useMotion) { swapContents(); return; }
+
+    // 先轻轻淡下去 → 换内容 → 内容从旧位置滑到新位置 → 淡回来
+    //
+    // 注意：这里刻意不写 fill: 'forwards'（fw 会把终值一直按住）。
+    // 全新浏览器第一次打开时统计请求慢，会在入场动画结束后才回来，此时首行卡片
+    // 已经没有 data-reveal、会被这里选中；一旦用 fill:'forwards'，淡出的 0.35 会一直生效，
+    // 如果后续恢复动作没成功（动画已结束/被取消），首行就永久停在半透明——冷加载时
+    // 图片还没下来（只剩极淡的 LQIP），看起来就是"整行空白"；刷新后走缓存路径不再触发这段
+    // 动画，所以只有新浏览器第一次打开才遇到。
+    // 不写 fill 时，动画跑完/被取消后元素自动回到 CSS 的 opacity:1，从根上不会卡住；
+    // 淡出+淡回用同一个动画，中间那 150ms 是保持的 0.35，避免两段动画交接时闪一下。
+    var fadeMs = 150;
+    var fading = slots.filter(function (el) { return !el.hasAttribute('data-reveal'); });
+    fading.forEach(function (el) {
+      el.animate(
+        [{ opacity: 1 }, { opacity: 0.35 }, { opacity: 0.35 }, { opacity: 1 }],
+        { duration: fadeMs + 260, easing: 'ease' }
+      );
+    });
+    setTimeout(function () {
+      swapContents();
+      window.Motion.flipByKey(before, function (el) { return el.getAttribute('href'); }, slots, { duration: 460 });
+      // 动画窗口过后，把"确实卡住"的槽位强行拉回可见（下面 releaseStuckSlots 的说明）
+      setTimeout(function () { releaseStuckSlots(); }, 400);
+    }, fadeMs);
+  }
+
+  /**
+   * 兜底：把视口内「透明且没有任何动画在跑」的精选卡强行恢复可见。
+   *
+   * 为什么需要它：换内容时会先淡出再淡回，如果浏览器把动画中途掐掉又没清干净
+   * （有个别浏览器/极端时序会这样），卡片就会永久停在半透明；而冷启动时图片还没下来，
+   * 看起来就是"整行空白"，刷新才恢复。这里只处理"已经不动了却还是透明"的元素——
+   * 正在正常播入场动画的卡片（animations 里还有 running 的）一律不碰，避免打断动效。
+   */
+  function releaseStuckSlots() {
+    if (!featured) return;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    Array.prototype.forEach.call(featured.querySelectorAll('[data-hb-slot]'), function (el) {
+      var rect = el.getBoundingClientRect();
+      var inView = rect.bottom > 0 && rect.top < vh;
+      if (!inView || !rect.width || !rect.height) return;
+      if (parseFloat(window.getComputedStyle(el).opacity) >= 1) return;
+      var busy = false;
+      if (typeof el.getAnimations === 'function') {
+        el.getAnimations().forEach(function (a) { if (a.playState === 'running') busy = true; });
+      }
+      if (busy) return;                     // 还在播，交给它自己结束
+      el.removeAttribute('data-reveal');    // 静止态回到 opacity:1
+      el.classList.remove('is-in');
+      if (typeof el.getAnimations === 'function') {
+        el.getAnimations().forEach(function (a) { try { a.cancel(); } catch (e) { /* 忽略 */ } });
+      }
+    });
+  }
+
+  function text(el, sel) { var n = el.querySelector(sel); return n ? n.textContent.trim() : ''; }
+  function set(el, sel, value) { var n = el.querySelector(sel); if (n) n.textContent = value; }
+
+  function applyStats() {
+    paintViews();
+    refillFeatured();
+    if (currentSort === 'hot') setSort('hot');
+  }
+
+  function hideHotTab() {
+    tabs.forEach(function (btn) {
+      if (btn.getAttribute('data-hb-sort') === 'hot') btn.hidden = true;
+    });
+  }
+
+  // ==================== 图片兜底 ====================
+  // 封面加载失败（图源在部分网络不可达等）时：
+  //   1) 若配置了 default_image，自动换成兜底图重试一次
+  //   2) 否则给 img 加 hb-img-failed（由 CSS 隐藏，露出莫兰迪渐变底）
+  root.addEventListener('error', function (e) {
+    var img = e.target;
+    if (!img || img.tagName !== 'IMG') return;
+    var fallback = cfg.fallbackImage;
+    if (fallback && img.getAttribute('src') !== fallback && img.getAttribute('data-hb-retried') !== '1') {
+      img.setAttribute('data-hb-retried', '1');
+      img.classList.remove('hb-img-failed');
+      img.setAttribute('src', fallback);
+      return;
+    }
+    img.classList.add('hb-img-failed');
+  }, true);
+
+  // ==================== 启动 ====================
+  applyVisibility();
+
+  // 动效：文章卡片进入视口时错开上移淡入；封面先显示 LQIP，高清图提前 200px 加载
+  if (window.Motion) {
+    window.Motion.reveal(root);
+    window.Motion.lazyImages(root);
+  }
+
+  // 兜底检查：不管走缓存还是走请求、不管动画有没有被浏览器掐断，
+  // 这几个时间点各检查一次"视口内透明且已静止"的精选卡，强行恢复可见。
+  [1600, 4000, 8000].forEach(function (ms) { setTimeout(releaseStuckSlots, ms); });
+
+  // 构建期统计（data/poststats.json）已经在卡片属性里：不读缓存、不发请求，
+  // 精选顺序模板就排好了，这里只补上浏览量文字与当前排序标签
+  if (buildStats) {
+    root.setAttribute('data-hb-stats', 'build');
+    paintViews();
+    reveal();
+    if (currentSort !== 'latest') setSort(currentSort);
+    return;
+  }
+
+  // 1) 先用缓存立刻按热度渲染（再次打开本页时零等待、无闪烁）
+  var cached = readCache();
+  if (cached) {
+    stats = cached;
+    root.setAttribute('data-hb-stats', 'cache');
+    applyStats();
+    reveal();
+  }
+
+  // 2) 并行取最新统计（解析完就发，不等 idle）
+  //    先拿浏览量 → 立刻显示正确顺序；评论数回来后再按新分数平滑重排一次
+  //    （精选卡此时已经显示，重排走 FLIP 补位动画，不会瞬移）
+  // 兜底：无论统计接口是慢是挂，2.8 秒后精选区一定要显示出来（宁可没有动画，
+  // 也不能让首屏一直停在骨架态）
+  setTimeout(function () {
+    if (painted) return;
+    root.setAttribute('data-hb-stats', 'timeout');
+    hideHotTab();
+    reveal();
+  }, 2800);
+
+  function refresh() {
+    loadViews().then(function (v) {
+      if (!v) {
+        if (!cached) { root.setAttribute('data-hb-stats', 'none'); hideHotTab(); }
+        reveal();
+        return;
+      }
+      stats = { views: v.views, comments: new Map() };
+      root.setAttribute('data-hb-stats', 'views');
+      applyStats();
+      reveal();
+
+      loadComments(v.views).then(function (comments) {
+        if (!comments || !comments.size) return;
+        stats = { views: v.views, comments: comments };
+        root.setAttribute('data-hb-stats', 'ready');
+        writeCache(stats);
+        applyStats();
+      }).catch(function () { /* 评论数拿不到就算了，浏览量排序仍然有效 */ });
+    }).catch(function () {
+      if (!cached) { root.setAttribute('data-hb-stats', 'error'); hideHotTab(); }
+      reveal();
+    });
+  }
+
+  refresh();
+})();

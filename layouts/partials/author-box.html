@@ -1,0 +1,39 @@
+{{- /* ============================================================
+  author-box.html — 文章底部作者框
+  与顶部署名、赞赏弹窗同源（都走 partials/zero/author-view.html）：
+  投稿作者的笔名、头像、简介、联系方式改动后，这里跟着一起变。
+  ============================================================ */ -}}
+{{- $v := partial "zero/author-view.html" . -}}
+{{- $profile := .Site.Params.author_profile -}}
+{{- $showLicense := ne .Site.Params.article.show_license false -}}
+{{- if and $v.isOwner $profile (eq $profile.show_cc_license false) -}}
+  {{- $showLicense = false -}}
+{{- end }}
+<div class="article-author" data-author="{{ $v.id }}" data-raw="{{ if $v.known }}0{{ else }}1{{ end }}">
+  <div class="author-avatar" data-initial="{{ substr $v.name 0 1 }}">
+    <img src="{{ $v.avatar | relURL }}" alt="{{ $v.name | default "作者" }}" width="64" height="64" loading="lazy" decoding="async"
+         onerror="var h=this.closest('.author-avatar');if(h)h.classList.add('is-fallback')">
+    {{- if $v.donate }}
+    <button class="author-donate-btn" id="donateBtn"><i class="fas fa-coffee"></i> <span>{{ i18n "article-donate" | default "赞赏" }}</span></button>
+    {{- end }}
+  </div>
+  <div class="author-info">
+    <div class="author-name">{{ $v.name }}</div>
+    {{- with $v.bio }}
+    <div class="author-bio">{{ . }}</div>
+    {{- end }}
+    {{- if $showLicense }}
+    {{- $art := .Site.Params.article | default dict -}}
+    {{- $licText := $art.license_text | default "CC BY-NC-SA 4.0" -}}
+    {{- $licURL := $art.license_url | default "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" -}}
+    <div class="author-license">
+      <a href="{{ $licURL }}" target="_blank" rel="noopener" title="{{ $licText }}">
+        <span>本站文章如无特别声明，遵循{{ $licText }}协议。</span>
+      </a>
+    </div>
+    {{- end }}
+    {{- with $v.contacts -}}
+    {{- partial "author-contacts.html" (dict "p" .) -}}
+    {{- end }}
+  </div>
+</div>

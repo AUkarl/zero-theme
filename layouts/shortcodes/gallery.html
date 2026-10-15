@@ -1,0 +1,22 @@
+{{- /*
+  gallery.html — 多图画廊布局短代码
+  用法: {{< gallery columns="3" >}}
+        ![图片1](img1.jpg)
+        ![图片2](img2.jpg)
+        ![图片3](img3.jpg)
+        {{< /gallery >}}
+  支持: 自定义列数、图片间距
+  校验: columns 取 1–6 之间的整数（非法值退回 3）；gap 只允许长度单位，
+        免得把奇怪的字符串拼进 style。正文里的图片本身由
+        layouts/_markup/render-image.html + partials/img-src.html 处理（同样只吃 http/https 与站内路径）。
+*/ -}}
+{{- $columns := int (.Get "columns" | default "3") -}}
+{{- if or (lt $columns 1) (gt $columns 6) -}}{{- $columns = 3 -}}{{- end -}}
+{{- $gap := "" -}}
+{{- with .Get "gap" -}}
+  {{- $clean := replaceRE `[^0-9a-zA-Z%]` "" (string .) -}}
+  {{- if findRE `^[0-9]+(px|em|rem|%)$` $clean -}}{{- $gap = $clean -}}{{- end -}}
+{{- end -}}
+<div class="gallery" style="--gallery-columns:{{ $columns }};{{ with $gap }}--gallery-gap:{{ . }};{{ end }}">
+  {{ .Inner | markdownify }}
+</div>

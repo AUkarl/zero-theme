@@ -1,0 +1,365 @@
+{{- /*
+  404.html — 404 错误页面
+  左侧现代诗 + 右侧宝贝回家公益插件
+*/ -}}
+<!DOCTYPE html>
+<html lang="zh-CN"{{ if eq .Site.Params.motion.reduced_motion_respect false }} data-motion-force{{ end }}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 · {{ or (partial "site-config.html" .).name .Site.Title }}</title>
+  {{- /* SEO：404 页面自动输出 noindex + description/canonical */ -}}
+  {{- partial "seo.html" . }}
+  {{- /* 预连接 + 非阻塞加载外部样式（Google Fonts 已移除，改用系统字体栈） */ -}}
+      <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    {{- $faURL := "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" -}}
+  <link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
+  <noscript>
+        <link rel="stylesheet" href="{{ $faURL }}">
+  </noscript>
+  {{- $commonCSS := resources.Get "css/common.css" | minify | fingerprint }}
+  <link rel="stylesheet" href="{{ $commonCSS.RelPermalink }}">
+  <style>
+    .error-page {
+      flex: 1;
+      display: flex;
+      align-items: stretch;
+      min-height: calc(100vh - var(--nav-height) - 80px);
+      padding: 0;
+    }
+
+    .error-poem,
+    .error-plugin {
+      width: 50%;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* ===== 左侧诗歌 ===== */
+    .error-poem {
+      align-items: flex-end;
+      text-align: right;
+      border-right: 1px solid var(--border);
+    }
+
+    .poem-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 24px;
+    }
+
+    .poem-body {
+      font-size: 0.95rem;
+      line-height: 2;
+      color: var(--text-secondary);
+      font-family: "Georgia", "Noto Serif SC", serif;
+    }
+
+    .poem-body p {
+      margin: 0;
+    }
+
+    .poem-author {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-top: 20px;
+      opacity: 0.7;
+    }
+
+    .poem-home-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 32px;
+      padding: 8px 24px;
+      background: var(--tag-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+
+    .poem-home-link:hover {
+      background: var(--tag-active-bg);
+      border-color: var(--text);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+
+    /* ===== 右侧宝贝回家 ===== */
+    .error-plugin {
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+    }
+
+    .bbhj-card {
+      max-width: 360px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .bbhj-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .bbhj-header-icon {
+      font-size: 1.3rem;
+    }
+
+    .bbhj-header-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .bbhj-body {
+      display: flex;
+      gap: 14px;
+      padding: 14px 16px;
+    }
+
+    .bbhj-photo {
+      flex-shrink: 0;
+      width: 100px;
+      height: 130px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #f0f0f0;
+    }
+
+    .bbhj-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .bbhj-info {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .bbhj-info .bbhj-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .bbhj-info .bbhj-detail {
+      color: var(--text-secondary);
+    }
+
+    .bbhj-info .bbhj-detail strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .bbhj-feature {
+      padding: 0 16px 12px;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .bbhj-feature strong {
+      color: var(--text);
+    }
+
+    .bbhj-footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .bbhj-footer a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 18px;
+      background: #e74c3c;
+      color: #fff;
+      border-radius: var(--radius);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+
+    .bbhj-footer a:hover {
+      background: #c0392b;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(231, 76, 60, 0.3);
+    }
+
+    .bbhj-loading {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    /* ===== 移动端：上下堆叠 ===== */
+    @media (max-width: 768px) {
+      .error-page {
+        flex-direction: column;
+        min-height: auto;
+      }
+
+      .error-poem,
+      .error-plugin {
+        width: 100%;
+        padding: 40px 20px;
+        border-right: none;
+      }
+
+      .error-poem {
+        border-bottom: 1px solid var(--border);
+        align-items: center;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  {{- /* 页面加载过渡动画（404 也是独立模板，单独引入一次） */ -}}
+  {{- partial "page-loader.html" . -}}
+
+  {{- /* 无障碍：跳过导航直达主内容 */ -}}
+  <a class="skip-link" href="#main">{{ i18n "skip-to-content" | default "跳到主要内容" }}</a>
+
+  <!-- ===== 导航 ===== -->
+  <nav class="site-nav" aria-label="{{ i18n "nav-main-label" | default "主导航" }}">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <img src="{{ (partial "site-config.html" .).logo | default "img/logo-nav.webp" | relURL }}" alt="Logo">
+        <span>{{ (partial "site-config.html" .).navName }}</span>
+      </div>
+      <div class="nav-controls" style="margin-left:auto;">
+        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ T "theme-toggle" }}" aria-label="{{ T "theme-toggle" }}"><i class="fas fa-sun" aria-hidden="true"></i></button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== 主内容 ===== -->
+  <main class="main" id="main">
+    <div class="error-page">
+
+      <!-- 左侧：现代诗 -->
+      <div class="error-poem">
+        <div class="poem-title">{{ T "error-poem-title" | default "偶然" }}</div>
+        <div class="poem-body">
+          <p>{{ T "error-poem-line1" | default "我是天空里的一片云，" }}</p>
+          <p>{{ T "error-poem-line2" | default "偶尔投影在你的波心——" }}</p>
+          <p>{{ T "error-poem-line3" | default "你不必讶异，更无须欢喜——" }}</p>
+          <p>{{ T "error-poem-line4" | default "在转瞬间消灭了踪影。" }}</p>
+          <p>&nbsp;</p>
+          <p>{{ T "error-poem-line6" | default "你我相逢在黑夜的海上，" }}</p>
+          <p>{{ T "error-poem-line7" | default "你有你的，我有我的，方向；" }}</p>
+          <p>{{ T "error-poem-line8" | default "你记得也好，最好你忘掉，" }}</p>
+          <p>{{ T "error-poem-line9" | default "在这交会时互放的光亮！" }}</p>
+          <p>{{ T "error-poem-line10" }}</p>
+        </div>
+        <div class="poem-author">{{ T "error-poem-author" | default "—— 徐志摩" }}</div>
+        <a href="{{ "/" | relURL }}" class="poem-home-link">
+          <i class="fas fa-home"></i>
+          <span>{{ T "error-back-home" | default "返回首页" }}</span>
+        </a>
+      </div>
+
+      <!-- 右侧：宝贝回家 -->
+      <div class="error-plugin">
+        <div class="bbhj-card" id="bbhjCard">
+          <div class="bbhj-header">
+            <span class="bbhj-header-title">{{ T "error-bbhj-title" | default "宝贝回家 · 寻找失踪儿童" }}</span>
+          </div>
+          <div class="bbhj-body" id="bbhjBody">
+            <div class="bbhj-loading">{{ T "error-bbhj-loading" | default "正在加载失踪儿童信息…" }}</div>
+          </div>
+          <div class="bbhj-feature" id="bbhjFeature"></div>
+          <div class="bbhj-footer">
+            <a id="bbhjLink" href="https://bbs.baobeihuijia.com/" target="_blank" rel="noopener">
+              <i class="fas fa-heart"></i> <span>{{ T "error-bbhj-btn" | default "查看完整信息 · 提供线索" }}</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== 底部 ===== -->
+  {{- partial "footer.html" . }}
+
+  <!-- ===== 滚动按钮 ===== -->
+  {{- partial "scroll-buttons.html" . }}
+
+  <!-- ===== 脚本 ===== -->
+  {{- $commonJS := resources.Get "js/common.js" | minify | fingerprint }}
+  <script src="{{ $commonJS.RelPermalink }}"></script>
+  <script>
+    (function() {
+      var PIC_BASE = 'https://qzonestyle.gtimg.cn/qzone_v6/lostchild/images/';
+      // 动态卡片里的标签只有这一处用到，直接写中文字面量
+      var LABEL = {
+        sex: '性别：', birth: '出生：', lost: '失踪：', place: '地点：',
+        feature: '特征：', fail: '数据加载失败，请访问', official: '宝贝回家官网'
+      };
+      var script = document.createElement('script');
+      script.src = 'https://qzonestyle.gtimg.cn/qzone_v6/lostchild/data.js';
+      script.onload = function() {
+        if (typeof jsondata === 'undefined' || !jsondata.data || !jsondata.data.length) return;
+        var list = jsondata.data;
+        var child = list[Math.floor(Math.random() * list.length)];
+        var body = document.getElementById('bbhjBody');
+        var feature = document.getElementById('bbhjFeature');
+        var link = document.getElementById('bbhjLink');
+        if (!body) return;
+        body.innerHTML =
+          '<div class="bbhj-photo">' +
+            '<img src="' + PIC_BASE + child.child_pic + '" alt="' + child.name + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+          '</div>' +
+          '<div class="bbhj-info">' +
+            '<div class="bbhj-name">' + child.name + '</div>' +
+            '<div class="bbhj-detail">' + LABEL.sex + '<strong>' + child.sex + '</strong></div>' +
+            '<div class="bbhj-detail">' + LABEL.birth + '<strong>' + child.birth_time + '</strong></div>' +
+            '<div class="bbhj-detail">' + LABEL.lost + '<strong>' + child.lost_time + '</strong></div>' +
+            '<div class="bbhj-detail">' + LABEL.place + '<strong>' + child.lost_place + '</strong></div>' +
+          '</div>';
+        if (feature && child.child_feature) {
+          feature.innerHTML = '<strong>' + LABEL.feature + '</strong>' + child.child_feature;
+        }
+        if (link && child.url) {
+          link.href = child.url;
+        }
+      };
+      script.onerror = function() {
+        var body = document.getElementById('bbhjBody');
+        if (body) body.innerHTML = '<div class="bbhj-loading">' + LABEL.fail + '<a href="https://bbs.baobeihuijia.com/" target="_blank" rel="noopener" style="color:#e74c3c;">' + LABEL.official + '</a></div>';
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
+
+</body>
+</html>

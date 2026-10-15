@@ -1,0 +1,135 @@
+{{- /* ============================================================
+  home/list.html — 主页模板（两种布局，由配置切换）
+  ------------------------------------------------------------
+  [home] layout = "bento"（默认）
+      → 新版：精选 Bento Grid + 全部文章等高网格（partials/home-bento*.html）
+  [home] layout = "grid"
+      → 旧版：文章卡片规整网格（本文件下方的原有实现，逻辑一行未改）
+  两个布局各自的样式与脚本也按该开关分别加载。
+
+  开关的来源：站点 data/home.json（后台「前端管理」写这个文件）优先，
+  没有这个文件时回落到 params.toml 的 [home]。
+  ============================================================ */ -}}
+
+
+{{- define "styles" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento-styles.html" . -}}
+{{- else -}}
+{{- $home := .Site.Params.home -}}
+{{- $widthRatio := $home.width_ratio | default 100 -}}
+{{- $homeCSS := resources.Get "css/home.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $homeCSS.RelPermalink }}">
+{{- partial "home-grid-vars.html" . }}
+<style>
+  /* 从配置注入的 CSS 变量 */
+  .main { max-width: {{ $widthRatio }}%; margin-left: auto; margin-right: auto; }
+</style>
+{{- end -}}
+{{- end -}}
+
+{{- define "main" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento.html" . -}}
+{{- else -}}
+{{- $home := $cfg.params -}}
+{{- $paginate := $home.paginate | default 20 -}}
+{{- /* 摘要截断字数：[home].summary_length */ -}}
+{{- $summaryLen := $home.summary_length | default 120 -}}
+{{- $showImages := (ne $home.show_images false) -}}
+{{- $showSummary := (ne $home.show_summary false) -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title" data-i18n="home-title">{{ i18n "home-title" | default "主页" }}</h1>
+    {{- if $cfg.showDesc }}
+    <p class="section-desc" data-i18n="home-desc">{{ $cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。" }}</p>
+    {{- end }}
+    <div class="garden-bar">
+      <div class="garden-tabs" role="tablist" aria-label="{{ i18n "home-sort-aria" | default "文章排序" }}">
+        <button type="button" class="garden-tab is-active" data-gsort="latest" aria-pressed="true">{{ i18n "hb-tab-latest" | default "最新" }}</button>
+        <button type="button" class="garden-tab" data-gsort="earliest" aria-pressed="false">{{ i18n "hb-tab-earliest" | default "最早" }}</button>
+        <button type="button" class="garden-tab" data-gsort="hot" aria-pressed="false">{{ i18n "hb-tab-hot" | default "最热" }}</button>
+      </div>
+    </div>
+    <div class="garden-wrapper">
+      <div class="garden-grid" id="gardenGrid"></div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+    <script type="application/json" id="gardenData">
+    {{- $pages := where (index hugo.Sites 0).RegularPages "Section" "posts" -}}
+    {{- /* 显式按日期倒序（最新 → 最旧），不依赖 Hugo 默认排序；
+           前端按此顺序从左到右、从上到下依次渲染卡片 */ -}}
+    {{- $pages = $pages.ByDate.Reverse -}}
+    {{- $ps := partial "zero/poststats.html" . -}}
+    {{- $data := slice -}}
+    {{- range $page := $pages -}}
+      {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" $page) -}}
+      {{- $cat := "" -}}
+      {{- with $page.Params.categories }}{{ $cat = index . 0 }}{{ end -}}
+      {{- $imgRaw := $page.Params.image | default $page.Params.img -}}
+      {{- if and $imgRaw (not (or (hasPrefix $imgRaw "http://") (hasPrefix $imgRaw "https://"))) }}{{ $imgRaw = $imgRaw | absURL }}{{ end -}}
+      {{- $imgInfo := partial "img-src.html" (dict "src" $imgRaw "page" $page "sizes" "(max-width: 768px) 92vw, (max-width: 1024px) 45vw, 28vw" "widths" (slice 400 800)) -}}
+      {{- $item := dict
+        "title" $page.Title
+        "desc" ($page.Description | default $page.Summary | plainify | truncate $summaryLen)
+        "date" ($page.Date.Format "2006-01-02")
+        "category" $cat
+        "tags" ($page.Params.tags | default slice)
+        "image" $page.Params.image
+        "img" $imgInfo
+        "permalink" $page.RelPermalink
+        "views" $sc.views
+        "comments" $sc.comments
+        "likes" $sc.likes
+        "stars" $sc.stars
+        "score" $sc.score
+        "pinned" $sc.pinned
+        "titleZh" "" "descZh" "" "categoryZh" "" "tagsZh" slice
+        "titleEn" "" "descEn" "" "categoryEn" "" "tagsEn" slice
+        "permalinkZh" "" "permalinkEn" ""
+      -}}
+      {{- /* 站点仅中文：直接写入中文数据（占位键保留，供前端兼容读取） */ -}}
+      {{- $item = merge $item (dict "titleZh" $page.Title "descZh" ($page.Description | default $page.Summary | plainify | truncate $summaryLen) "categoryZh" $cat "tagsZh" ($page.Params.tags | default slice) "permalinkZh" $page.RelPermalink) -}}
+      {{- $data = $data | append $item -}}
+    {{- end -}}
+    {{ $data | jsonify | safeJS }}
+    </script>
+    <!-- 主页配置注入 JS -->
+    <script>
+      window.homeConfig = {
+        paginate: {{ $paginate }},
+        showImages: {{ $showImages }},
+        showSummary: {{ $showSummary }},
+        /* 有 data/poststats.json 时「最热」用构建期算好的分数，不再请求评论系统 */
+        buildStats: {{ $ps.ready }},
+        labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }}
+      };
+    </script>
+  </section>
+</main>
+{{- end -}}
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento-scripts.html" . -}}
+{{- else -}}
+{{- $home := .Site.Params.home -}}
+<script>
+  /* 主页界面文案：站点只有中文，这里只留一份字典 */
+  window.i18nMap = {
+    zh: {
+      'home-title': '主页',
+      'home-desc': '{{ $cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。" }}',
+      'prev': '上一页', 'next': '下一页',
+      'page': '第', 'page-suffix': '页'
+    }
+  };
+</script>
+{{- $homeJS := resources.Get "js/home.js" | minify | fingerprint -}}
+<script src="{{ $homeJS.RelPermalink }}"></script>
+{{- end -}}
+{{- end -}}

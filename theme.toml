@@ -1,0 +1,22 @@
+# ============================================================
+# theme.toml — zero 主题元数据
+# ============================================================
+#
+# licenselink / homepage / demosite 指向本仓库与 Pages 演示站；
+# 换用户名或改名时同步这三处（提交 hugo-themes 画廊会校验这两个字段）。
+# demosite 是 Pages 项目名 zero-theme-demo，只有跑过一次 .github/workflows/demo.yml
+# （或在 Cloudflare Pages 直接连本仓库）发布后才可访问。
+
+name = "zero"
+license = "MIT"
+licenselink = "https://github.com/AUkarl/zero-theme/blob/main/LICENSE"
+description = "极简风格的中文 Hugo 个人站点主题：暗色模式、Bento 落地页与首页、时刻页卡片时间线、弹幕标签云归档、友链与在线申请、邮箱订阅、自建访问统计、多作者与用户中心；内置自建评论系统 zero-comment，并可切换 Waline / Giscus / Twikoo / Artalk。"
+homepage = "https://github.com/AUkarl/zero-theme"
+demosite = "https://zero-theme-demo.pages.dev"
+tags = ["blog", "minimal", "responsive", "dark-mode", "personal", "portfolio", "comments", "zero-comment", "waline", "giscus", "twikoo", "artalk", "moments", "analytics", "seo"]
+features = ["minimalist-design", "dark-mode", "landing-page", "bento-home", "moments-cards", "self-hosted-comments", "reactions", "friend-links", "email-subscribe", "self-hosted-analytics", "author-profiles", "user-center", "two-factor", "math-support", "shortcodes", "responsive", "seo", "cloudflare-pages"]
+min_version = "0.128.0"
+
+[author]
+  name = "zero theme contributors"
+  homepage = "https://github.com/AUkarl/zero-theme"

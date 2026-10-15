@@ -1,0 +1,128 @@
+{{- /* ============================================================
+  footer.html — 页脚（三栏布局）
+  左：版权 + 设计者 + powered by | 中：服务图标 + ICP 备案 | 右：两排社交图标
+
+  数据来源：data 目录里的 footer.json（后台 CMS 写）优先，没这个文件时回落
+  config 的 [footer] params。逐字段判优先级，data 只填了几项时其余照旧走 params。
+
+  ICP 备案（data 的 icpItems / params 的 icp_items）：
+  - 旧写法仍支持：icp = "xxx"（超链用 icp_default_link，默认工信部网站）
+  - 新写法：可写多条，每条可单独指定 link；
+    text 留空则该条不显示，link 留空则该条是纯文本。多条会自动居中成一行，
+    中间由 CSS 生成竖线分隔（读屏软件不会念出分隔符）。
+  powered by：powered_by_text 留空则不显示；powered_by_link 填了就是超链。
+
+  designer_text（「designed by …」那一行）永远只从 params 读、不被 data 覆盖：
+  data 目录里的 json 是后台账号登录后就能改的文件，署名不该跟着内容编辑权走。
+
+  无障碍：<footer role="contentinfo"> 是内容信息地标；
+  纯图标链接用 aria-label 提供可读名称，装饰图标 aria-hidden。
+  ============================================================ */ -}}
+{{- $footer := .Site.Params.footer | default dict -}}
+{{- $d := hugo.Data.footer -}}
+{{- /* 版权那一行的取法（后台 > params > 默认，{year} 已替换）见 partials/copyright.html，
+       落地页也用同一份，两边不会出现「页脚改了首页还是旧的」 */ -}}
+{{- $copyright := partial "copyright.html" . -}}
+{{- $pbShow := partial "cms/flag.html" (dict "data" $d "keys" (slice "showPoweredBy" "show_powered_by") "default" (ne $footer.show_powered_by false)) -}}
+{{- /* powered_by_text：未配置时用默认文案；明确留空则不显示这一行 */ -}}
+{{- $pbField := partial "cms/value.html" (dict "data" $d "keys" (slice "poweredByText" "powered_by_text")) -}}
+{{- $pbText := "" -}}
+{{- if $pbField.set -}}
+  {{- $pbText = $pbField.text -}}
+{{- else -}}
+  {{- $pbText = $footer.powered_by_text | default "powered by HuGo" -}}
+{{- end -}}
+{{- $plField := partial "cms/value.html" (dict "data" $d "keys" (slice "poweredByLink" "powered_by_link")) -}}
+{{- $pbLink := "" -}}
+{{- if $plField.set -}}
+  {{- $pbLink = $plField.text -}}
+{{- else -}}
+  {{- $pbLink = partial "cms/str.html" (dict "value" $footer.powered_by_link) -}}
+{{- end -}}
+{{- /* ICP：icpItems（data）优先，其次 icp_items（params），两者都没内容才退回旧的单条 icp */ -}}
+{{- $icpSrc := partial "cms/list.html" (dict "data" $d "keys" (slice "icpItems" "icp_items") "fallback" $footer.icp_items) -}}
+{{- $icpItems := slice -}}
+{{- range $icpSrc -}}
+  {{- if reflect.IsMap . -}}
+    {{- $text := partial "cms/str.html" (dict "value" .text) -}}
+    {{- if $text -}}
+      {{- $icpItems = $icpItems | append (dict "text" $text "link" (partial "cms/str.html" (dict "value" .link))) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $icpSrc -}}
+  {{- with $footer.icp -}}
+    {{- $icpItems = $icpItems | append (dict "text" . "link" ($footer.icp_default_link | default "https://beian.miit.gov.cn/")) -}}
+  {{- end -}}
+{{- end -}}
+<footer class="footer" role="contentinfo" aria-label="{{ i18n "site-footer-label" | default "站点页脚" }}">
+  {{- /* 左栏：版权 */ -}}
+  <div class="footer-left">
+    {{- with $copyright }}
+    <span class="copyright">&copy;{{ . }}</span>
+    {{- end }}
+    {{- /* 「designed by 知止」是主题作者的声明行：写死在这里，不做配置项、
+           也不受 data/footer.json 影响（署名的显示与否不该跟着内容编辑权走）。 */ -}}
+    <span class="designer">designed by 知止</span>
+    {{- if $pbShow -}}
+      {{- with $pbText -}}
+    <span class="powered-by">
+        {{- with $pbLink -}}
+      <a href="{{ . }}" target="_blank" rel="noopener">{{ $pbText }}</a>
+        {{- else -}}
+      {{ $pbText }}
+        {{- end -}}
+    </span>
+      {{- end -}}
+    {{- end }}
+  </div>
+
+  {{- /* 中栏：支持服务 + ICP 备案 */ -}}
+  <div class="footer-center">
+    {{- with $footer.services }}
+    <nav class="footer-services" aria-label="{{ i18n "footer-services-label" | default "支持服务" }}">
+      {{- range . }}
+      {{- $svc := . }}
+      {{- /* 图标二选一：img 填图片路径（站内相对路径或完整外链），否则用 icon 的 Font Awesome 类名。
+             图片默认"浅色原样、深色反色"（跟站点 logo 一致）；也可强制：
+               invert = true     始终反色
+               no_invert = true  从不反色（图片本身已经是浅色时用） */ -}}
+      {{- $imgCls := "footer-service-img" -}}
+      {{- if $svc.invert }}{{ $imgCls = printf "%s footer-service-img-invert" $imgCls }}{{ end -}}
+      {{- if $svc.no_invert }}{{ $imgCls = printf "%s footer-service-img-noinvert" $imgCls }}{{ end -}}
+      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}">{{ with $svc.img }}<img class="{{ $imgCls }}" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ else }}<i class="{{ $svc.icon }}" aria-hidden="true"></i>{{ end }} {{ $svc.name }}</a>
+      {{- end }}
+    </nav>
+    {{- end }}
+
+    {{- with $icpItems }}
+    <div class="footer-icp">
+      {{- range . }}
+        {{- if .link }}
+      <a href="{{ .link }}" target="_blank" rel="noopener">{{ .text }}</a>
+        {{- else }}
+      <span>{{ .text }}</span>
+        {{- end }}
+      {{- end }}
+    </div>
+    {{- end }}
+  </div>
+
+  {{- /* 右栏：两排社交图标 */ -}}
+  <div class="footer-right">
+    {{- with $footer.social_row1 }}
+    <div class="social-row">
+      {{- range . }}
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
+      {{- end }}
+    </div>
+    {{- end }}
+    {{- with $footer.social_row2 }}
+    <div class="social-row">
+      {{- range . }}
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
+      {{- end }}
+    </div>
+    {{- end }}
+  </div>
+</footer>

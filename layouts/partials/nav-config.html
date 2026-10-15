@@ -1,0 +1,20 @@
+{{- /* ============================================================
+  nav-config.html — 导航栏配置的合并取法
+  ------------------------------------------------------------
+  [nav] 这一段是新写法（主题配置文件里），顶层的 enable_theme_switch /
+  theme_switch_icon / theme_switch_weight / default_theme 是老写法（许多站点
+  现在还这么写着）。两边都认：[nav] 里填了就用它，没填退回顶层，再没有就用默认值。
+
+  布尔项一律用「只有明确写 false 才算关」的判法：default true 会把 false 当空值吃掉。
+  ============================================================ */ -}}
+{{- $n := .Site.Params.nav | default dict -}}
+{{- $p := .Site.Params -}}
+{{- return dict
+  "themeSwitch" (cond (isset $n "enable_theme_switch") (ne $n.enable_theme_switch false) (ne $p.enable_theme_switch false))
+  "switchIcon" ($n.theme_switch_icon | default ($p.theme_switch_icon | default "fas fa-sun"))
+  "switchWeight" (float ($n.theme_switch_weight | default ($p.theme_switch_weight | default 90)))
+  "defaultTheme" ($n.default_theme | default ($p.default_theme | default "auto"))
+  "logoHomeLink" (cond (isset $n "logo_home_link") (ne $n.logo_home_link false) true)
+  "sticky" (cond (isset $n "sticky") (ne $n.sticky false) true)
+  "blur" (cond (isset $n "blur") (ne $n.blur false) true)
+-}}

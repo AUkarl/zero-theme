@@ -1,0 +1,63 @@
+{{- /* ============================================================
+  moments-config.html — 时刻页配置的统一取法
+  ------------------------------------------------------------
+  优先级：站点 data/moments.json（后台「前端管理 → 时刻页」写的）
+          > params.toml 的 [moment]。
+
+  只管页面级的样子（横幅、顶部身份栏、每页条数、位不显示位置）。
+  每条形时刻自己的 正文 / 图片 / 位置 在 content/zh/moments/*.md 的 front matter 里，
+  评论系统用哪个由「设置 → 评论系统配置」的 momentCommentProvider 决定（那才是不重新
+  构建就能换的那一层），所以这里不碰 provider。
+
+  开关一律用 isset 判断：bool 的 false 会被 default 当成「没填」，那样关不掉。
+  ============================================================ */ -}}
+{{- $d := hugo.Data.moments | default dict -}}
+{{- $p := site.Params.moment | default dict -}}
+{{- $b := $p.banner | default dict -}}
+{{- $pr := $p.profile | default dict -}}
+
+{{- /* 布尔：data > params > 默认，三层各自判 isset */ -}}
+{{- $showBackground := true -}}
+{{- if isset $d "bannerShowBackground" }}{{ $showBackground = not (eq $d.bannerShowBackground false) }}
+{{- else if isset $b "show_background" }}{{ $showBackground = not (eq $b.show_background false) }}{{ end -}}
+
+{{- $showAvatar := true -}}
+{{- if isset $d "showAvatar" }}{{ $showAvatar = not (eq $d.showAvatar false) }}
+{{- else if isset $pr "show_avatar" }}{{ $showAvatar = not (eq $pr.show_avatar false) }}{{ end -}}
+
+{{- $showNickname := true -}}
+{{- if isset $d "showNickname" }}{{ $showNickname = not (eq $d.showNickname false) }}
+{{- else if isset $pr "show_nickname" }}{{ $showNickname = not (eq $pr.show_nickname false) }}{{ end -}}
+
+{{- /* 位置：默认显示（旧站点没写这个键时也照旧显示 front matter 里的 location） */ -}}
+{{- $showLocation := true -}}
+{{- if isset $d "showLocation" }}{{ $showLocation = not (eq $d.showLocation false) }}
+{{- else if isset $p "show_location" }}{{ $showLocation = not (eq $p.show_location false) }}{{ end -}}
+
+{{- /* 卡片底栏的「赞 / 评论」两个按钮：params 关掉就整个不出（data 里同名键优先） */ -}}
+{{- $showLike := true -}}
+{{- if isset $d "showLike" }}{{ $showLike = not (eq $d.showLike false) }}
+{{- else if isset $p "show_like" }}{{ $showLike = not (eq $p.show_like false) }}{{ end -}}
+
+{{- $showComment := true -}}
+{{- if isset $d "showComment" }}{{ $showComment = not (eq $d.showComment false) }}
+{{- else if isset $p "show_comment" }}{{ $showComment = not (eq $p.show_comment false) }}{{ end -}}
+
+{{- $paginate := int (cond (isset $d "paginate") $d.paginate ($p.paginate | default 10)) -}}
+{{- /* 滚动时提前预取几批，读起来才不卡在「加载中」 */ -}}
+{{- $batchPreload := int (cond (isset $d "batchPreload") $d.batchPreload ($p.batch_preload | default 2)) -}}
+
+{{- return dict
+  "paginate" $paginate
+  "batchPreload" $batchPreload
+  "showLocation" $showLocation
+  "defaultLocation" ($d.defaultLocation | default ($p.default_location | default ""))
+  "showLike" $showLike
+  "showComment" $showComment
+  "showBackground" $showBackground
+  "bannerImage" ($d.bannerImage | default ($b.background_image | default "img/bj.webp"))
+  "showAvatar" $showAvatar
+  "showNickname" $showNickname
+  "nickname" ($d.nickname | default ($pr.default_nickname | default ""))
+  "avatar" ($d.avatar | default ($pr.default_avatar | default ""))
+-}}

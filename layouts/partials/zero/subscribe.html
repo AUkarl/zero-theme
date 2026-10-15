@@ -1,0 +1,75 @@
+{{- /* ============================================================
+  zero/subscribe.html — 邮箱订阅表单（文章页 / 账号页 / /subscribe/ 页共用）
+  ------------------------------------------------------------
+  用法：{{- partial "zero/subscribe.html" (dict "p" . "zero" $zero) -}}
+    p        页面上下文（必填）
+    zero     partials/zero/api.html 的结果，省一次计算
+    label    按钮文字，默认「订阅」
+    lead     表单上方的一句说明（可选）
+    placeholder 输入框占位文案（可选）
+    field    = true 时把 input 和按钮装进同一个圆角框（.zsf-field），
+             文章操作条里要的就是这种「表单化外观」；不带这个参数照旧是两个平铺的元素
+
+  两层开关：
+    · 构建期 params.subscribeEnabled = false → 整块不输出
+    · 运行期 /api/config 的 subscribeEnabled = false → 由 js/zero-switches.js 藏起来
+      （模板先写成 hidden，配置回来才露出，关闭态不会闪一下）
+
+  没配 params.apiBaseURL 时这里什么都不输出：主题退回纯构建期行为。
+  文案直接写中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+{{- $p := .p -}}
+{{- $zero := .zero | default (partial "zero/api.html" $p) -}}
+{{- $on := (ne $p.Site.Params.subscribeEnabled false) -}}
+{{- if and $zero.enabled $on -}}
+  {{- $uid := printf "zsf%v" ($p.Scratch.Add "zeroSubscribeCount" 1) -}}
+  {{- /* 样式与脚本按表单引：zero-subscribe.js 用 data-zsfBound 判重，重复引也只绑一次 */ -}}
+  {{- $css := resources.Get "css/zero-subscribe.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+  {{- $sw := partial "zero/switch.html" (dict "zero" $zero "key" "subscribeEnabled") -}}
+  {{- $btnText := .label | default "订阅" -}}
+  {{- $ph := .placeholder | default "留下邮箱，新文章直接发给你" -}}
+  {{- with .lead }}
+<p class="zsf-lead">{{ . }}</p>
+  {{- end }}
+<form class="zero-subscribe-form{{ if .field }} zsf-is-field{{ end }}" id="{{ $uid }}"{{ $sw.attrs | safeHTMLAttr }}>
+  <label class="zsf-sr-only" for="{{ $uid }}-email">邮箱地址</label>
+  {{- if .field }}
+  {{- /* 一个输入框 + 一个按钮贴在同一个圆角框内：视觉上是一张表单，不是三颗并排的按钮 */ -}}
+  <span class="zsf-field">
+    <input type="email" id="{{ $uid }}-email" name="email" maxlength="200" autocomplete="email" required
+           placeholder="{{ $ph }}">
+    <button type="submit" class="zsf-btn">{{ $btnText }}</button>
+  </span>
+  {{- else }}
+  <input type="email" id="{{ $uid }}-email" name="email" maxlength="200" autocomplete="email" required
+         placeholder="{{ $ph }}">
+  <button type="submit" class="zsf-btn">{{ $btnText }}</button>
+  {{- end }}
+  <p class="zsf-msg" role="status" aria-live="polite"></p>
+  {{- /* 失败原因的中文说法直接写在这里（站点已改成纯中文，语言包这一轮要整体删掉），
+         字段名与 js/zero-subscribe.js 里 T.xxx 的读法一一对应。
+         /subscribe/ 页那个「已订阅状态查询」框自己带一份 partials/zero/subscribe-i18n.html，
+         那份不在这次的改动范围里。 */ -}}
+<script type="application/json" class="zsf-i18n">{{ dict
+  "busy" "提交中…"
+  "sent" "确认邮件已发出，请查收（含垃圾邮件箱）。"
+  "already" "这个邮箱已经在订阅名单里了。"
+  "badEmail" "邮箱格式不正确，请检查后再提交。"
+  "closed" "订阅功能已关闭。"
+  "failed" "订阅没有成功，请稍后再试。"
+  "mailUnconfigured" "服务未配置发信，请稍后再试或联系站长。"
+  "mailHint" "站长需在后台配置发信服务后才能收到确认邮件。"
+  "noService" "站点没有接通订阅服务，请联系站长。"
+  "unreachable" "连不上订阅服务，请稍后再试或联系站长。"
+  "tooMany" "操作太频繁了，请过一会儿再试。"
+  "querying" "查询中…"
+  "stNone" "这个邮箱不在订阅名单里。"
+  "stPending" "已提交但还没确认：去邮箱点一下确认链接才算订阅成功。"
+  "stConfirmed" "已订阅，新文章会发到这个邮箱。"
+  "stUnsubscribed" "此前已退订；想重新订阅就在上面再提交一次。"
+  | jsonify | safeJS }}</script>
+</form>
+  {{- $js := resources.Get "js/zero-subscribe.js" | minify | fingerprint -}}
+<script src="{{ $js.RelPermalink }}"></script>
+{{- end -}}

@@ -1,0 +1,702 @@
+/* ============================================================
+   account-me.css — 个人中心（/account/me/）面板样式
+   ------------------------------------------------------------
+   观感对齐 zero-cms 后台：浅暖绿侧栏 + 卡片 + 小圆角 chip。
+   只作用在 .zsme 之下，不进 zero.css，也不影响其它页面。
+
+   颜色一律走 --zsme-* 局部变量：:root 给浅色值，[data-theme="dark"]
+   与 prefers-color-scheme: dark 下的 [data-theme="auto"] 各补一份深色值
+   （和 links.css / archive.css 同一套写法）。这些变量只在本文件里定义，
+   不动全局；能对上全局变量的地方（边框、正文色）优先吃 --border / --text。
+   ============================================================ */
+
+:root {
+  --zsme-side: #eef2e6;
+  --zsme-side-border: #dbe4cd;
+  --zsme-ink: #3f5138;
+  --zsme-ink-soft: #6d7f66;
+  --zsme-card: #ffffff;
+  --zsme-surface: #ffffff;
+  --zsme-row: #fcfdfc;
+  --zsme-field-text: #1f2328;
+  --zsme-line: #e5e7eb;
+  --zsme-bg: #f6f7f9;
+  --zsme-accent: #2f7d4f;
+  --zsme-accent-soft: #eaf5ee;
+  --zsme-accent-border: #bfe0cb;
+  --zsme-on-accent: #ffffff;
+  --zsme-warn: #b45309;
+  --zsme-warn-soft: #fdf3e3;
+  --zsme-warn-border: #f2d9ac;
+  --zsme-bad: #b3261e;
+  --zsme-bad-soft: #fdeceb;
+  --zsme-bad-border: #f4c7c3;
+  --zsme-radius: 10px;
+}
+
+[data-theme="dark"] {
+  --zsme-side: #242b24;
+  --zsme-side-border: #3b4737;
+  --zsme-ink: #dce5d7;
+  --zsme-ink-soft: #a8b4a2;
+  --zsme-card: #2a2a2a;
+  --zsme-surface: #333a33;
+  --zsme-row: #2f352f;
+  --zsme-field-text: #eceee9;
+  --zsme-line: #454d44;
+  --zsme-bg: #1e1e1e;
+  --zsme-accent: #6ed39f;
+  --zsme-accent-soft: #24402f;
+  --zsme-accent-border: #3d6b52;
+  --zsme-on-accent: #10231a;
+  --zsme-warn: #e6b060;
+  --zsme-warn-soft: #3b3122;
+  --zsme-warn-border: #6d5729;
+  --zsme-bad: #ef8b82;
+  --zsme-bad-soft: #3a2624;
+  --zsme-bad-border: #6d3d38;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --zsme-side: #242b24;
+    --zsme-side-border: #3b4737;
+    --zsme-ink: #dce5d7;
+    --zsme-ink-soft: #a8b4a2;
+    --zsme-card: #2a2a2a;
+    --zsme-surface: #333a33;
+    --zsme-row: #2f352f;
+    --zsme-field-text: #eceee9;
+    --zsme-line: #454d44;
+    --zsme-bg: #1e1e1e;
+    --zsme-accent: #6ed39f;
+    --zsme-accent-soft: #24402f;
+    --zsme-accent-border: #3d6b52;
+    --zsme-on-accent: #10231a;
+    --zsme-warn: #e6b060;
+    --zsme-warn-soft: #3b3122;
+    --zsme-warn-border: #6d5729;
+    --zsme-bad: #ef8b82;
+    --zsme-bad-soft: #3a2624;
+    --zsme-bad-border: #6d3d38;
+  }
+}
+
+.zsme {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  max-width: 1080px;
+  margin: 0 auto;
+  color: var(--text, var(--zsme-field-text));
+}
+
+/* ---------------- 左侧栏 ---------------- */
+
+.zsme-side {
+  position: sticky;
+  top: 74px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--zsme-side);
+  color: var(--zsme-ink);
+  border: 1px solid var(--zsme-side-border);
+  border-radius: var(--zsme-radius);
+}
+
+.zsme-id {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.zsme-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-side-border);
+  flex: 0 0 auto;
+}
+
+.zsme-idtext {
+  min-width: 0;
+}
+
+.zsme-name {
+  margin: 0;
+  font-weight: 650;
+  font-size: 0.98rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zsme-mail {
+  margin: 2px 0 0;
+  font-size: 0.78rem;
+  color: var(--zsme-ink-soft);
+  word-break: break-all;
+}
+
+.zsme-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.zsme-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  border-radius: 999px;
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-side-border);
+  color: var(--zsme-ink);
+  white-space: nowrap;
+}
+
+/* 待审核一类的状态色也全部走变量，深色底上仍可读 */
+.zsme-chip.is-ok {
+  background: var(--zsme-accent-soft);
+  border-color: var(--zsme-accent-border);
+  color: var(--zsme-accent);
+}
+
+.zsme-chip.is-warn {
+  background: var(--zsme-warn-soft);
+  border-color: var(--zsme-warn-border);
+  color: var(--zsme-warn);
+}
+
+.zsme-chip.is-bad {
+  background: var(--zsme-bad-soft);
+  border-color: var(--zsme-bad-border);
+  color: var(--zsme-bad);
+}
+
+.zsme-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zsme-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  color: var(--zsme-ink);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.zsme-tab:hover {
+  background: var(--zsme-surface);
+  border-color: var(--zsme-side-border);
+}
+
+.zsme-tab.is-active {
+  background: var(--zsme-surface);
+  border-color: var(--zsme-accent);
+  color: var(--zsme-accent);
+  font-weight: 600;
+}
+
+.zsme-tab small {
+  color: var(--zsme-ink-soft);
+  font-weight: 400;
+}
+
+.zsme-sidefoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--zsme-side-border);
+}
+
+.zsme-minibtn {
+  font: inherit;
+  font-size: 0.76rem;
+  color: var(--zsme-ink-soft);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.zsme-minibtn:hover {
+  color: var(--zsme-accent);
+}
+
+/* ---------------- 右侧面板 ---------------- */
+
+.zsme-main {
+  min-width: 0;
+  padding: 16px 18px 20px;
+  background: var(--zsme-card);
+  color: var(--text, var(--zsme-field-text));
+  border: 1px solid var(--border, var(--zsme-line));
+  border-radius: var(--zsme-radius);
+}
+
+.zsme-pane {
+  min-width: 0;
+}
+
+.zsme-head {
+  margin-bottom: 12px;
+}
+
+.zsme-title {
+  margin: 0 0 4px;
+  font-size: 1.24rem;
+  font-weight: 650;
+  color: var(--text, var(--zsme-field-text));
+}
+
+.zsme-note {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--zsme-ink-soft);
+  line-height: 1.7;
+}
+
+.zsme-loading {
+  margin: 12px 0;
+  font-size: 0.88rem;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-card {
+  padding: 14px;
+  margin: 0 0 14px;
+  border: 1px solid var(--border, var(--zsme-line));
+  border-radius: var(--zsme-radius);
+  background: var(--zsme-card);
+}
+
+.zsme-card h2,
+.zsme-card h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: var(--text, var(--zsme-field-text));
+}
+
+.zsme-card h3 {
+  font-size: 0.92rem;
+}
+
+.zsme-sec + .zsme-sec {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--zsme-line);
+}
+
+.zsme-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.zsme-count {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-empty {
+  margin: 8px 0 0;
+  font-size: 0.86rem;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-warn {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  font-size: 0.84rem;
+  line-height: 1.7;
+  color: var(--zsme-warn);
+  background: var(--zsme-warn-soft);
+  border: 1px solid var(--zsme-warn-border);
+  border-radius: 8px;
+}
+
+.zsme-danger-text {
+  color: var(--zsme-bad);
+}
+
+/* 表单 */
+.zsme-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 12px;
+}
+
+/* 「登录时要这枚动态码」那一行：勾选 + 一句解释，跟字段块区分开 */
+.zsme-check {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.zsme-check label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.84rem;
+  color: var(--zsme-field-text);
+  cursor: pointer;
+}
+
+.zsme-check input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--zsme-accent);
+  cursor: pointer;
+}
+
+.zsme-check-hint {
+  font-size: 0.76rem;
+  line-height: 1.7;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-field.full {
+  grid-column: 1 / -1;
+}
+
+.zsme-field input,
+.zsme-field textarea,
+.zsme-field select {
+  font: inherit;
+  color: var(--zsme-field-text);
+  padding: 7px 9px;
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+  background: var(--zsme-surface);
+}
+
+.zsme-field input:disabled,
+.zsme-field textarea:disabled,
+.zsme-field input[readonly] {
+  color: var(--zsme-ink-soft);
+  background: var(--zsme-row);
+  cursor: not-allowed;
+}
+
+.zsme-field textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.zsme-field input:focus,
+.zsme-field textarea:focus,
+.zsme-field select:focus {
+  outline: 2px solid var(--zsme-accent-soft);
+  border-color: var(--zsme-accent);
+}
+
+.zsme-body {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: var(--zsme-ink-soft);
+}
+
+.zsme-body textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 9px;
+  font: 0.86rem/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--zsme-field-text);
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+  min-height: 260px;
+  resize: vertical;
+}
+
+/* 按钮 */
+.zsme-btn {
+  display: inline-block;
+  font: inherit;
+  font-size: 0.86rem;
+  padding: 6px 14px;
+  color: var(--zsme-field-text);
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.zsme-btn:hover {
+  border-color: var(--zsme-accent);
+  color: var(--zsme-accent);
+}
+
+.zsme-btn.primary {
+  background: var(--zsme-accent);
+  border-color: var(--zsme-accent);
+  color: var(--zsme-on-accent);
+}
+
+.zsme-btn.primary:hover {
+  filter: brightness(1.08);
+  color: var(--zsme-on-accent);
+}
+
+.zsme-btn.is-danger {
+  color: var(--zsme-bad);
+  border-color: var(--zsme-bad-border);
+  background: var(--zsme-bad-soft);
+}
+
+.zsme-btn.sm {
+  font-size: 0.78rem;
+  padding: 3px 9px;
+}
+
+.zsme-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.zsme-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+/* Markdown 工具条 */
+.zsme-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--zsme-line);
+}
+
+.zsme-tool {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  color: var(--zsme-field-text);
+  border: 1px solid var(--zsme-line);
+  border-radius: 6px;
+  background: var(--zsme-row);
+  cursor: pointer;
+}
+
+.zsme-tool:hover {
+  border-color: var(--zsme-accent);
+  color: var(--zsme-accent);
+}
+
+.zsme-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.76rem;
+  color: var(--zsme-ink-soft);
+  margin-top: 6px;
+}
+
+/* 列表 */
+.zsme-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zsme-list li {
+  padding: 10px 12px;
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+  background: var(--zsme-row);
+}
+
+.zsme-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.84rem;
+}
+
+.zsme-line a {
+  color: var(--zsme-accent);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.zsme-time {
+  margin-left: auto;
+  font-size: 0.76rem;
+  color: var(--zsme-ink-soft);
+  white-space: nowrap;
+}
+
+.zsme-text {
+  margin: 6px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--zsme-field-text);
+}
+
+.zsme-hint {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--zsme-ink-soft);
+  line-height: 1.7;
+}
+
+.zsme-editbox {
+  margin-top: 8px;
+}
+
+.zsme-editbox textarea {
+  width: 100%;
+  padding: 8px;
+  font: 0.86rem/1.7 inherit;
+  color: var(--zsme-field-text);
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+}
+
+/* 密钥展示：点一下即复制（见 assets/js/account-me.js 的 bindTotpSec） */
+.zsme-key {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  padding: 8px;
+  font: 0.8rem/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+  background: var(--zsme-row);
+  border: 1px dashed var(--zsme-side-border);
+  border-radius: 8px;
+  color: var(--zsme-ink);
+  cursor: pointer;
+}
+
+/* 多平台 / 赞赏图行 */
+.zsme-dyn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zsme-dynrow {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(120px, 1.4fr) minmax(140px, 2fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.zsme-dynrow input,
+.zsme-dynrow select {
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 0.84rem;
+  color: var(--zsme-field-text);
+  background: var(--zsme-surface);
+  border: 1px solid var(--zsme-line);
+  border-radius: 8px;
+}
+
+/* 面板底部那条提示（等同后台的 toast） */
+.zsme-msg {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  border-radius: 8px;
+  background: var(--zsme-accent-soft);
+  border: 1px solid var(--zsme-accent-border);
+  color: var(--zsme-accent);
+}
+
+.zsme-msg.is-err {
+  background: var(--zsme-bad-soft);
+  border-color: var(--zsme-bad-border);
+  color: var(--zsme-bad);
+}
+
+.zsme-aside-card {
+  grid-column: 1 / -1;
+  padding: 16px;
+  border: 1px solid var(--border, var(--zsme-line));
+  border-radius: var(--zsme-radius);
+  background: var(--zsme-card);
+  color: var(--text, var(--zsme-field-text));
+}
+
+/* 未登录 / 没接后端：只留提示卡，侧栏与面板容器不占位 */
+.zsme-guest .zsme-side,
+.zsme-guest .zsme-main {
+  display: none;
+}
+
+.zsme-aside-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.zsme-aside-card p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.8;
+  color: var(--zsme-ink-soft);
+}
+
+/* 小屏：侧栏变横条 tab */
+@media (max-width: 860px) {
+  .zsme {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .zsme-side {
+    position: static;
+  }
+  .zsme-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .zsme-dynrow {
+    grid-template-columns: 1fr 1fr;
+  }
+}

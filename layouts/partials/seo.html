@@ -1,0 +1,202 @@
+{{- /* ============================================================
+  seo.html — SEO 元数据
+  参数取法见 partials/seo-config.html：data/seo.json（后台「前端管理 → SEO」）
+  优先，params.toml 的 [seo] 兜底
+
+  输出：description / canonical / robots / Open Graph / Twitter Card
+        / JSON-LD（Article、BreadcrumbList、WebSite）
+
+  新增标签全部可用 [seo] 下的开关关闭，默认行为与旧版兼容。
+  ============================================================ */ -}}
+{{- $seo := partial "seo-config.html" . -}}
+{{- $is404 := eq .Kind "404" -}}
+
+{{- /* ---------- description：页面 description → .Description → 摘要 → 站点描述 → 默认描述 ---------- */ -}}
+{{- $descMax := $seo.description_length | default 160 -}}
+{{- $desc := "" -}}
+{{- with .Params.description }}{{ $desc = . }}{{ end -}}
+{{- if not $desc }}{{ with .Description }}{{ $desc = . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with .Summary }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ $desc = $seo.default_description | default (partial "site-config.html" .).name }}{{ end -}}
+{{- $desc = $desc | plainify | htmlUnescape | replaceRE `\s+` " " | strings.TrimSpace | truncate $descMax -}}
+
+{{- /* ---------- 分享图：页面 image/img → 配置默认 → 站点 logo ---------- */ -}}
+{{- $image := .Params.image | default .Params.img -}}
+{{- if not $image }}{{ $image = $seo.og_image_default }}{{ end -}}
+{{- if not $image }}{{ $image = (partial "site-config.html" .).favicon | default "img/logo-nav.webp" }}{{ end -}}
+{{- /* 抓得到就换成构建时处理过的 1200w WebP（外链也能处理），拿不到就退回原地址 */ -}}
+{{- $ogInfo := partial "img-src.html" (dict "src" $image "page" . "widths" (slice 1200) "lqip" false) -}}
+{{- if $ogInfo.ok -}}
+  {{- $image = $ogInfo.src | absURL -}}
+{{- else if not (or (hasPrefix $image "http://") (hasPrefix $image "https://")) -}}
+  {{- $image = $image | absURL -}}
+{{- end -}}
+{{- $keywords := .Params.keywords | default $seo.default_keywords | default (partial "site-config.html" .).keywords -}}
+{{- /* 作者署名：front matter 的 author 写的是「标识」，SEO 要的是名字。
+       顺序 = data/authors.yaml 里这个标识的 name → 站长的作者资料 → 标识本身；
+       文章没写 author 时用默认作者标识，再退回 params.author / [seo].site_author。 */ -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $authorsData := hugo.Data.authors | default dict -}}
+{{- $ownerId := trim (string ($siteCfg.defaultAuthor | default "")) " " -}}
+{{- $ownerName := "" -}}
+{{- with index $authorsData $ownerId -}}{{- $ownerName = string .name -}}{{- end -}}
+{{- if not $ownerName -}}{{- $ownerName = trim (string ($siteCfg.author | default "")) " " -}}{{- end -}}
+{{- $idList := slice -}}
+{{- $authorParam := .Params.author -}}
+{{- if $authorParam -}}
+  {{- if reflect.IsSlice $authorParam -}}
+    {{- range $one := $authorParam -}}{{- $t := trim (string $one) " " -}}{{- if $t -}}{{- $idList = $idList | append $t -}}{{- end -}}{{- end -}}
+  {{- else -}}
+    {{- $t := trim (string $authorParam) " " -}}{{- if $t -}}{{- $idList = $idList | append $t -}}{{- end -}}
+  {{- end -}}
+{{- else if $ownerId -}}
+  {{- $idList = slice $ownerId -}}
+{{- end -}}
+{{- $nameList := slice -}}
+{{- range $id := $idList -}}
+  {{- $n := "" -}}
+  {{- with index $authorsData $id -}}{{- $n = string .name -}}{{- end -}}
+  {{- if not $n -}}{{- $n = $ownerName -}}{{- end -}}
+  {{- if not $n -}}{{- $n = $id -}}{{- end -}}
+  {{- $nameList = $nameList | append $n -}}
+{{- end -}}
+{{- $author := delimit (uniq $nameList) ", " -}}
+{{- if not $author -}}{{- $author = $siteCfg.author | default $seo.site_author | default $ownerName -}}{{- end -}}
+
+{{- /* ---------- 标题 / 站点名 ---------- */ -}}
+{{- $pageTitle := .Title | default (partial "site-config.html" .).name -}}
+{{- $siteName := (partial "site-config.html" .).navName -}}
+
+{{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
+{{- if (ne $seo.enable_canonical false) }}
+<link rel="canonical" href="{{ .Permalink }}">
+{{- end }}
+
+{{- /* ---------- robots（默认 index,follow；404 页 noindex；可用页面 front matter 的 robots 覆盖） ---------- */ -}}
+{{- if (ne $seo.enable_robots false) -}}
+  {{- $robots := $seo.robots_default | default "index, follow" -}}
+  {{- if $is404 }}{{ $robots = "noindex, follow" }}{{ end -}}
+  {{- with .Params.robots }}{{ $robots = . }}{{ end -}}
+  {{- with $robots }}
+<meta name="robots" content="{{ . }}">
+  {{- end }}
+{{- end }}
+
+{{- /* ---------- 基础 meta ---------- */ -}}
+<meta name="description" content="{{ $desc }}">
+{{- if (ne $seo.enable_keywords false) }}
+  {{- with $keywords }}
+<meta name="keywords" content="{{ delimit . ", " }}">
+  {{- end }}
+{{- end }}
+{{- with $author }}
+<meta name="author" content="{{ . }}">
+{{- end }}
+
+{{- /* ---------- Open Graph ---------- */ -}}
+{{- if (ne $seo.enable_og false) }}
+<meta property="og:title" content="{{ $pageTitle }}">
+<meta property="og:description" content="{{ $desc }}">
+<meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:site_name" content="{{ $siteName }}">
+<meta property="og:locale" content="{{ replace (.Language.Lang | default "zh") "-" "_" }}">
+{{- range .Translations }}
+<meta property="og:locale:alternate" content="{{ replace (.Language.Lang | default "zh") "-" "_" }}">
+{{- end }}
+{{- with $image }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:alt" content="{{ $pageTitle }}">
+{{- end }}
+{{- if .IsPage }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+<meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
+{{- with $author }}<meta property="article:author" content="{{ . }}">{{ end }}
+{{- with .Params.categories }}<meta property="article:section" content="{{ if reflect.IsSlice . }}{{ index . 0 }}{{ else }}{{ . }}{{ end }}">{{ end }}
+{{- with .Params.tags }}{{ if reflect.IsSlice . }}{{ range . }}<meta property="article:tag" content="{{ . }}">{{ end }}{{ else }}<meta property="article:tag" content="{{ . }}">{{ end }}{{ end }}
+{{- end }}
+{{- end }}
+
+{{- /* ---------- Twitter Card ---------- */ -}}
+{{- if (ne $seo.enable_twitter false) }}
+<meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
+<meta name="twitter:title" content="{{ $pageTitle }}">
+<meta name="twitter:description" content="{{ $desc }}">
+{{- with $image }}
+<meta name="twitter:image" content="{{ . }}">
+<meta name="twitter:image:alt" content="{{ $pageTitle }}">
+{{- end }}
+{{- with $seo.twitter_site }}
+<meta name="twitter:site" content="{{ . }}">
+{{- end }}
+{{- with $seo.twitter_creator }}
+<meta name="twitter:creator" content="{{ . }}">
+{{- end }}
+{{- end }}
+
+{{- /* ---------- 结构化数据 ---------- */ -}}
+{{- if (ne $seo.enable_jsonld false) -}}
+  {{- $publisherLogo := $seo.publisher_logo | default (partial "site-config.html" .).logo | default "img/logo-nav.webp" -}}
+  {{- if not (or (hasPrefix $publisherLogo "http://") (hasPrefix $publisherLogo "https://")) -}}
+    {{- $publisherLogo = $publisherLogo | absURL -}}
+  {{- end -}}
+
+  {{- if .IsPage -}}
+    {{- $article := dict
+      "@context" "https://schema.org"
+      "@type" "Article"
+      "headline" $pageTitle
+      "description" $desc
+      "inLanguage" (.Language.Lang | default "zh")
+      "author" (dict "@type" "Person" "name" ($author | default $siteName))
+      "publisher" (dict "@type" "Organization" "name" $siteName "logo" (dict "@type" "ImageObject" "url" $publisherLogo))
+      "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00")
+      "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00")
+      "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+      "wordCount" .WordCount
+    -}}
+    {{- with $image }}{{ $article = merge $article (dict "image" (slice .)) }}{{ end -}}
+    {{- /* categories / tags 兼容「列表」与「单个字符串」两种写法 */ -}}
+    {{- with .Params.categories -}}
+      {{- $cat := . -}}
+      {{- if reflect.IsSlice . }}{{ $cat = index . 0 }}{{ end -}}
+      {{- $article = merge $article (dict "articleSection" $cat) -}}
+    {{- end -}}
+    {{- with .Params.tags -}}
+      {{- $kw := . -}}
+      {{- if reflect.IsSlice . }}{{ $kw = delimit . ", " }}{{ end -}}
+      {{- $article = merge $article (dict "keywords" $kw) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $article | jsonify | safeJS }}</script>
+
+    {{- /* 面包屑：站点 → 栏目 → 文章 */ -}}
+    {{- if (ne $seo.enable_breadcrumb false) -}}
+      {{- $pos := 1 -}}
+      {{- $items := slice (dict "@type" "ListItem" "position" $pos "name" $siteName "item" .Site.Home.Permalink) -}}
+      {{- if and .CurrentSection (not .CurrentSection.IsHome) -}}
+        {{- $pos = add $pos 1 -}}
+        {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) -}}
+      {{- end -}}
+      {{- $pos = add $pos 1 -}}
+      {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) -}}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BreadcrumbList" "itemListElement" $items | jsonify | safeJS }}</script>
+    {{- end -}}
+  {{- else -}}
+    {{- $site := dict
+      "@context" "https://schema.org"
+      "@type" "WebSite"
+      "name" $siteName
+      "url" .Site.BaseURL
+      "description" ($seo.default_description | default (partial "site-config.html" .).description | default "")
+      "inLanguage" (.Language.Lang | default "zh")
+    -}}
+    {{- if $seo.enable_search_action | default false -}}
+      {{- $site = merge $site (dict "potentialAction" (dict
+        "@type" "SearchAction"
+        "target" (printf "%sarchive/?q={search_term_string}" .Site.BaseURL)
+        "query-input" "required name=search_term_string")) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $site | jsonify | safeJS }}</script>
+  {{- end -}}
+{{- end -}}

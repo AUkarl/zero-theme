@@ -1,0 +1,210 @@
+/* ============================================================
+   zero-subscribe.css — 邮箱订阅表单（文章页 / 账号页 / /subscribe/ 页共用）
+   视觉沿用 zero-apply.css：同样的圆角、边框、主色，保证和友链表单是一家人。
+   ============================================================ */
+
+.zsf-lead {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--text-secondary, #666);
+}
+
+.zero-subscribe-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.zero-subscribe-form[hidden] {
+  display: none;
+}
+
+.zero-subscribe-form input[type="email"] {
+  flex: 1 1 220px;
+  min-width: 0;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  background: var(--input-bg, #fbfbfb);
+  color: var(--text, #333);
+}
+
+.zero-subscribe-form input[type="email"]:focus {
+  outline: none;
+  border-color: var(--logo-accent-text, #0d8368);
+  background: #fff;
+}
+
+.zsf-btn {
+  padding: 8px 20px;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--logo-accent-text, #0d8368);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.zsf-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.zsf-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.zsf-msg {
+  width: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #666);
+}
+
+.zsf-msg:empty {
+  display: none;
+}
+
+.zsf-msg.zsf-is-success {
+  color: var(--logo-accent-text, #0d8368);
+}
+
+.zsf-msg.zsf-is-error {
+  color: #d0453b;
+}
+
+.zsf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* --- /subscribe/ 页：状态查询与说明 --- */
+.zero-subscribe-page > * + * {
+  margin-top: 20px;
+}
+
+.zsp-block {
+  padding: 18px 20px;
+  border: 1px solid var(--border, #e2e2e2);
+  border-radius: 12px;
+  background: var(--card-bg, #fff);
+}
+
+.zsp-block h2 {
+  margin: 0 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border, #e5e5e5);
+  font-size: 1.05rem;
+}
+
+.zsp-block p,
+.zsp-block li {
+  font-size: 0.9rem;
+  line-height: 1.9;
+}
+
+.zsp-block ol,
+.zsp-block ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.zsp-note {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text-secondary, #999);
+}
+
+.zsp-content > :first-child {
+  margin-top: 0;
+}
+
+.zsp-block a {
+  color: var(--logo-accent-text, #0d8368);
+}
+
+.zero-subscribe-query {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.zero-subscribe-query input[type="email"] {
+  flex: 1 1 220px;
+  min-width: 0;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  background: var(--input-bg, #fbfbfb);
+  color: var(--text, #333);
+}
+
+.zs-query-btn {
+  padding: 8px 18px;
+  font: inherit;
+  color: var(--text, #333);
+  background: var(--tag-bg, #f5f5f5);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.zs-query-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.zs-state {
+  width: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #666);
+}
+
+.zs-state:empty {
+  display: none;
+}
+
+.zs-state.zsf-is-success {
+  color: var(--logo-accent-text, #0d8368);
+}
+
+.zs-state.zsf-is-error {
+  color: #d0453b;
+}
+
+/* --- 功能被关闭时的一句话（zero/closed.html） --- */
+.zero-closed {
+  margin: 24px 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--border, #ddd);
+  border-radius: 10px;
+  background: var(--tag-bg, #f8f8f8);
+  color: var(--text-secondary, #888);
+}
+
+.zero-closed[hidden] {
+  display: none;
+}
+
+.zero-closed p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}

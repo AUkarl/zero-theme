@@ -1,0 +1,94 @@
+{{- /* ============================================================
+  taxonomy/author.html — 作者页
+  ------------------------------------------------------------
+  /author/<作者标识>/ 是资料页：名字、头像、简介先由 data/authors.yaml 静态渲染
+  （搜索引擎抓得到），yaml 里没登记的新作者再由 /api/authors 在运行时补上昵称、
+  头像、简介与个人站点。
+  /author/ 本身是作者一览。
+  认证徽章已删除：资料页不再画对勾，作者身份靠「用户组：朋友 / 共创 / 站长」
+  那句文字（账号页与后台维护）和这份资料本身表达。
+  文案直接写中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $archiveCSS := resources.Get "css/archive.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $archiveCSS.RelPermalink }}">
+{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $id := .Data.Term | default .Title -}}
+{{- $data := hugo.Data.authors -}}
+{{- $p := dict -}}
+{{- with $data -}}{{- with index $data $id -}}{{- $p = . -}}{{- end -}}{{- end -}}
+{{- $profile := .Site.Params.author_profile -}}
+{{- $default := trim (string (.Site.Params.default_author | default "")) " " -}}
+{{- $name := "" -}}
+{{- with $p.name -}}{{- $name = string . -}}{{- end -}}
+{{- if and (not $name) $profile (eq (string $id) $default) -}}
+  {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
+{{- end -}}
+{{- $known := ne $name "" -}}
+{{- if not $name -}}{{- $name = $id -}}{{- end -}}
+{{- $avatar := (.Site.Params.authorAvatar | default "img/avatar.webp") | relURL -}}
+{{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
+{{- $bio := "" -}}
+{{- with (or $p.bio $p.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
+{{- if not $bio -}}
+  {{- if and $profile (eq (string $id) $default) -}}
+    {{- with $profile.bio_zh -}}{{- $bio = string . -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $site := "" -}}
+{{- with $p.website -}}{{- $site = string . -}}{{- end -}}
+<main class="main" id="main">
+  <section class="section">
+    <div class="author-profile" data-author-id="{{ $id }}" data-known="{{ if $known }}1{{ else }}0{{ end }}">
+      <div class="ap-head" data-initial="{{ substr $name 0 1 }}">
+        <img class="ap-avatar" src="{{ $avatar }}" alt="{{ $name }}"
+             onerror="var h=this.closest('.ap-head');if(h)h.classList.add('is-fallback')">
+        <div class="ap-title">
+          <h1 class="ap-name">
+            <span class="ap-name-text">{{ $name }}</span>
+          </h1>
+          <p class="ap-meta">
+            {{- printf "共 %d 篇文章" .Pages.Len -}}
+            <a class="ap-site" href="{{ $site }}" target="_blank" rel="noopener nofollow"{{ if not $site }} hidden{{ end }}>
+              <i class="fas fa-link"></i><span>{{ $site | replaceRE "^https?://" "" }}</span>
+            </a>
+          </p>
+        </div>
+      </div>
+      {{- with $bio -}}
+      <p class="ap-bio">{{ . }}</p>
+      {{- end -}}
+      {{- partial "author-contacts.html" (dict "p" $p) -}}
+    </div>
+
+    <div class="archive-list">
+      {{- range .Pages.ByDate.Reverse }}
+      <div class="archive-item">
+        <span class="archive-date">{{ .Date.Format "2006-01-02" }}</span>
+        <a href="{{ .RelPermalink }}" class="archive-title">{{ .Title }}</a>
+        {{- with .Params.categories }}
+        <span class="archive-category">{{ index . 0 }}</span>
+        {{- end }}
+      </div>
+      {{- end }}
+    </div>
+
+    <div class="ap-actions">
+      <a href="{{ "/author/" | relURL }}">
+        <i class="fas fa-users"></i><span>全部作者</span>
+      </a>
+      <a href="{{ "/home/" | relURL }}">
+        <i class="fas fa-arrow-left"></i><span>返回文章</span>
+      </a>
+    </div>
+  </section>
+</main>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- partial "zero/authors.html" . -}}
+{{- end -}}

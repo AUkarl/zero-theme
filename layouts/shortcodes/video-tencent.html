@@ -1,0 +1,14 @@
+{{- /* video-tencent.html — 腾讯视频嵌入
+   用法: {{< video-tencent vid="x2458vqp0fs" >}}（也兼容旧写法 id="…"）
+   校验: 地址走 http/https 白名单，vid 必填且只保留安全字符 */ -}}
+{{- $vid := replaceRE `[^A-Za-z0-9_-]` "" (string ((.Get "vid") | default (.Get "id") | default "")) -}}
+{{- if not $vid -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "video-tencent" "param" "vid") -}}
+{{- else -}}
+<div class="shortcode-embed tencent-video">
+  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
+    src="https://v.qq.com/txp/iframe/player.html?vid={{ $vid }}"
+    allowfullscreen allow="autoplay; encrypted-media"
+    loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+{{- end -}}

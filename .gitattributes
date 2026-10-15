@@ -1,0 +1,31 @@
+# 一律按 LF 存进仓库，检出也保持 LF：
+# 脚本要给 Linux 上的 GitHub Actions / Cloudflare 跑，CRLF 会让 shebang 与 bash 语法出错
+* text=auto eol=lf
+
+# 二进制不要做换行转换，也不要在 diff 里当文本展开
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp3 binary
+*.mp4 binary
+*.pdf binary
+
+# SVG 是文本，但 diff 没意义
+*.svg text diff=false
+
+# 这些文件按纯文本看，不要折叠缩进
+*.yml text
+*.yaml text
+*.toml text
+*.json text
+*.md text
+*.sh text
+*.sql text

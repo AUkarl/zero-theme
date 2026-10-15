@@ -1,0 +1,24 @@
+{{- /*
+  youtube.html — YouTube 视频嵌入短代码
+  用法: {{< youtube "dQw4w9WgXcQ" >}}
+  或:   {{< youtube id="dQw4w9WgXcQ" start="30" >}}
+  支持: 视频 ID、开始时间、隐私增强模式
+  校验: id 必填且只保留 [A-Za-z0-9_-]；start 只保留数字，避免拼进 URL 的奇怪字符
+*/ -}}
+{{- $id := replaceRE `[^A-Za-z0-9_-]` "" (string (.Get "id" | default (.Get 0) | default "")) -}}
+{{- $start := replaceRE `[^0-9]` "" (string (.Get "start" | default "")) -}}
+{{- $title := .Get "title" | default "YouTube video" -}}
+{{- if not $id -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "youtube" "param" "id") -}}
+{{- else -}}
+<div class="video-embed youtube-embed">
+  <iframe src="https://www.youtube-nocookie.com/embed/{{ $id }}{{ if $start }}?start={{ $start }}{{ end }}"
+    title="{{ $title }}"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    loading="lazy"
+    style="width:100%;aspect-ratio:16/9;height:auto;">
+  </iframe>
+</div>
+{{- end -}}

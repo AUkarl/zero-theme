@@ -1,0 +1,23 @@
+{{- /* ============================================================
+  zero/subscribe-i18n.html — 订阅相关文案的 i18n 载荷
+  用法：{{- partial "zero/subscribe-i18n.html" . -}}（. 必须是页面上下文）
+  就近放在表单容器里，js/zero-subscribe.js 用容器内的 .zsf-i18n 读取。
+  ============================================================ */ -}}
+<script type="application/json" class="zsf-i18n">{{ dict
+  "busy" (i18n "zero-subscribe-busy" | default "提交中…")
+  "sent" (i18n "zero-subscribe-sent" | default "确认邮件已发出，请查收（含垃圾邮件箱）")
+  "already" (i18n "zero-subscribe-already" | default "这个邮箱已经在订阅名单里了。")
+  "badEmail" (i18n "zero-subscribe-bad-email" | default "邮箱格式不正确，请检查后再提交。")
+  "closed" (i18n "zero-subscribe-closed" | default "订阅功能已关闭。")
+  "failed" (i18n "zero-subscribe-failed" | default "订阅没有成功，请稍后再试。")
+  "mailUnconfigured" (i18n "zero-subscribe-mail-unconfigured" | default "服务未配置发信，请稍后再试或联系站长。")
+  "mailHint" (i18n "zero-subscribe-mail-hint" | default "站长需在后台配置发信服务后才能收到确认邮件")
+  "noService" (i18n "zero-subscribe-no-service" | default "站点没有接通订阅服务，请联系站长。")
+  "unreachable" (i18n "zero-subscribe-unreachable" | default "连不上订阅服务，请稍后再试或联系站长。")
+  "tooMany" (i18n "zero-subscribe-too-many" | default "操作太频繁了，请过一会儿再试。")
+  "querying" (i18n "zero-subscribe-querying" | default "查询中…")
+  "stNone" (i18n "zero-subscribe-st-none" | default "这个邮箱不在订阅名单里。")
+  "stPending" (i18n "zero-subscribe-st-pending" | default "已提交但还没确认：去邮箱点一下确认链接才算订阅成功。")
+  "stConfirmed" (i18n "zero-subscribe-st-confirmed" | default "已订阅，新文章会发到这个邮箱。")
+  "stUnsubscribed" (i18n "zero-subscribe-st-unsubscribed" | default "此前已退订；想重新订阅就在上面再提交一次。")
+  | jsonify | safeJS }}</script>

@@ -1,0 +1,93 @@
+{{- /* ============================================================
+  baseof.html — Hugo 主题基础模板
+  所有页面的 HTML 骨架，定义 head / body 结构
+  子模板通过 block 机制注入具体内容
+
+  Landmark（无障碍地标）约定：
+  - <header role="banner">  站点头部（导航）
+  - <nav aria-label>        导航（见 partials/header.html）
+  - <main id="main">        主内容（各页面模板自己输出，跳过链接指向它）
+  - <footer role="contentinfo"> 页脚（见 partials/footer.html）
+  ============================================================ */ -}}
+{{- $zeroAPI := strings.TrimSuffix "/" (trim (.Site.Params.apiBaseURL | default "") " ") -}}
+<!DOCTYPE html>
+<html lang="zh-CN"{{ with $zeroAPI }} data-zero-api="{{ . }}"{{ end }}{{ if eq .Site.Params.motion.reduced_motion_respect false }} data-motion-force{{ end }}>
+<head>
+  {{- /* 标记「有 JS」，配合 motion.css 决定是否启用入场动画；
+         兜底：motion.js 是同步脚本，DOMContentLoaded 时还没起来就说明它没加载成功，
+         立刻撤掉标记，避免内容被 opacity:0 藏住 */ -}}
+  <script>
+    (function () {
+      var d = document.documentElement;
+      function fallback() {
+        if (!window.Motion) d.className = d.className.replace(/\bjs\b/, '');
+      }
+      d.className += ' js';
+      document.addEventListener('DOMContentLoaded', fallback);
+      setTimeout(fallback, 1500);
+    })();
+  </script>
+  {{- partial "head.html" . -}}
+  {{- /* 全站动效样式（很小，需在首屏前生效，避免闪一下）。[motion] enable=false 时整段不引 */ -}}
+  {{- if ne .Site.Params.motion.enable false -}}
+  {{- $motionCSS := resources.Get "css/motion.css" | minify | fingerprint -}}
+  <link rel="stylesheet" href="{{ $motionCSS.RelPermalink }}">
+  {{- end -}}
+  {{- /* 页面级样式（由子模板通过 define 注入） */ -}}
+  {{- block "styles" . }}{{ end -}}
+  {{- /* 页面级自定义 head 内容（custom.head_html 与 extra_css 已由 head.html 插一次，
+         这里不再重复，否则同一份样式表会被下载两遍） */ -}}
+  {{- block "head-extra" . }}{{ end -}}
+</head>
+<body>
+  {{- /* 页面加载过渡动画（可在 params.toml 的 [page_loader] 里关闭或改文案） */ -}}
+  {{- partial "page-loader.html" . -}}
+  {{- /* 跳过导航，直接到主内容（键盘/读屏用户） */ -}}
+  <a class="skip-link" href="#main">{{ i18n "skip-to-content" | default "跳到主要内容" }}</a>
+  {{- /* 根据页面类型选择不同布局 */ -}}
+  {{- if .IsHome -}}
+    {{- /* 首页（落地页）无导航栏 */ -}}
+    {{- block "main" . }}{{ end -}}
+  {{- else -}}
+    <header class="site-header" role="banner">
+      {{- partial "header.html" . -}}
+    </header>
+    {{- block "main" . }}{{ end -}}
+    {{- partial "footer.html" . -}}
+    {{- if or (ne .Site.Params.scroll_buttons.enable_top false) (ne .Site.Params.scroll_buttons.enable_bottom false) -}}
+      {{- partial "scroll-buttons.html" . -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* 全站动效工具（进入视口淡入 / FLIP 重排 / 图片模糊→清晰） */ -}}
+  {{- if ne .Site.Params.motion.enable false -}}
+  {{- $motionJS := resources.Get "js/motion.js" | minify | fingerprint -}}
+  <script src="{{ $motionJS.RelPermalink }}"></script>
+  {{- end -}}
+
+  {{- /* 公共 JS */ -}}
+  {{- $commonJS := resources.Get "js/common.js" | minify | fingerprint -}}
+  <script src="{{ $commonJS.RelPermalink }}"></script>
+
+  {{- /* zero-stack 运行时：后台配置改了什么，页面不用重新构建也能跟上 */ -}}
+  {{- partial "zero/boot.html" . -}}
+
+  {{- /* 页面级 JS（由子模板定义） */ -}}
+  {{- block "scripts" . }}{{ end -}}
+
+  {{- /* 数学公式支持（按需加载）：单篇 front matter 的 math > [article].math > 顶层 math */ -}}
+  {{- if or .Params.math .Site.Params.article.math .Site.Params.math -}}
+    {{- partial "math.html" . -}}
+  {{- end -}}
+
+  {{- /* 统计代码 */ -}}
+  {{- partial "analytics.html" . -}}
+
+  {{- /* 自定义 JS 文件 */ -}}
+  {{- range .Site.Params.custom.extra_js }}
+  <script src="{{ . | relURL }}"></script>
+  {{- end }}
+  {{- /* 自定义 footer HTML */ -}}
+  {{- with .Site.Params.custom.footer_html }}{{ . | safeHTML }}{{ end -}}
+</body>
+</html>

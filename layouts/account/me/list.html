@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  account/me/list.html — 个人中心 /account/me/（内容目录写法）
+  ------------------------------------------------------------
+  content/zh/account/me/index.md（或旧写法 _index.md）命中本模板；
+  另一种写法 content/zh/account/me.md 命中 single.html。两份模板都只做三件事：
+  引 CSS、渲染骨架 partials/account-me.html、调脚本 partials/account-me-shell.html，
+  面板结构、文案字典与接口清单都在那两份共享文件里，改一处就够。
+  ============================================================ */ -}}
+
+{{- define "styles" -}}
+{{- $meCSS := resources.Get "css/account-me.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $meCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- partial "account-me.html" . -}}
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- partial "account-me-shell.html" . -}}
+{{- end -}}

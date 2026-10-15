@@ -1,0 +1,153 @@
+{{- /* ============================================================
+  _default/single.html — 文章详情页
+  展示 Markdown 文章正文、目录、字数统计、作者信息
+  支持评论和赞赏弹窗
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $articleCSS := resources.Get "css/article.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $articleCSS.RelPermalink }}">
+{{- $shortcodesCSS := resources.Get "css/shortcodes.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $shortcodesCSS.RelPermalink }}">
+{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $art := .Site.Params.article | default dict -}}
+{{- /* 目录：站点总开关 [article].show_toc 与这篇文章自己的 toc（后台「目录 TOC」勾选框写进
+       frontmatter）都没写成 false，且正文里确实有能进目录的标题，才出右侧目录栏。
+       没出目录栏时给外层加 zero-no-toc，article.css 把正文按原来的行宽居中。 */ -}}
+{{- $toc := and (ne $art.show_toc false) (ne .Params.toc false) .TableOfContents -}}
+<main class="main" id="main">
+  <article class="article-wrapper{{ if not $toc }} zero-no-toc{{ end }}">
+    {{- /* 左侧正文 */ -}}
+    <div class="article-content">
+      {{- /* 文章头部：每一件显示什么都由 params.toml 的 [article] 决定（列表见主题配置文件） */ -}}
+      {{- /* 顶层 show_author = false 时全局不出现任何作者信息（署名行与文末作者框都不出） */ -}}
+      {{- $showAuthor := ne .Site.Params.show_author false -}}
+      <header class="article-header">
+        {{- if ne $art.show_category_badge false -}}
+          {{- with .Params.categories }}
+        <span class="article-category">{{ index . 0 }}</span>
+          {{- end }}
+        {{- end -}}
+        <h1 class="article-title">{{ .Title }}</h1>
+        {{- if .Params.subtitle }}
+        <p class="article-subtitle">{{ .Params.subtitle }}</p>
+        {{- end }}
+        <div class="article-meta">
+          {{- if ne $art.show_date false }}
+          <span><i class="far fa-calendar-alt"></i> {{ .Date.Format ($art.date_format | default "2006-01-02") }}</span>
+          {{- end -}}
+          {{- /* 修改时间：取 .Lastmod，也就是 front matter 的 lastmod（后台「修改时间」那个框写它）；
+                 与发布日期相同就不重复显示，[article].show_updated = false 整项不输出。 */ -}}
+          {{- if and (ne $art.show_updated false) (.Lastmod.After .Date) }}
+          <span><i class="far fa-edit"></i> {{ i18n "article-updated-label" | default "修改于 " }}{{ .Lastmod.Format ($art.date_format | default "2006-01-02") }}</span>
+          {{- end -}}
+          {{- if and (ne $art.show_meta_category false) .Params.categories }}
+          <span><i class="far fa-folder"></i> {{ i18n "article-category-label" | default "分类：" }}{{ index .Params.categories 0 }}</span>
+          {{- end -}}
+          {{- if ne $art.show_word_count false }}
+          <span><i class="far fa-file-alt"></i> {{ i18n "article-wordcount-label" | default "字数：" }}<span id="wordCount">{{ .WordCount }}</span></span>
+          {{- end -}}
+          {{- if ne $art.show_reading_time false }}
+          <span><i class="far fa-clock"></i> {{ i18n "article-reading-about" | default "阅读时间：约 " }}<span id="readTime" data-speed="{{ $art.reading_speed | default 250 }}">{{ .ReadingTime }}</span>{{ i18n "article-minutes" | default " 分钟" }}</span>
+          {{- end -}}
+          {{- if ne $art.show_views false -}}
+            {{- if and .Site.Params.comment.enable (eq (.Site.Params.comment.article.provider | default "") "waline") (ne .Site.Params.comment.article.waline_pageview false) -}}
+          <span><i class="far fa-eye"></i> {{ i18n "article-views-label" | default "浏览：" }}<span class="waline-pageview-count">-</span></span>
+            {{- else -}}
+              {{- /* 没有 Waline 就走构建期统计（后台定时导出的 data/poststats.json） */ -}}
+              {{- $sc := partial "zero/post-score.html" (dict "ps" (partial "zero/poststats.html" .) "page" .) -}}
+              {{- if gt $sc.views 0 }}<span><i class="far fa-eye"></i> {{ i18n "article-views-label" | default "浏览：" }}{{ $sc.views }}</span>{{ end -}}
+            {{- end -}}
+          {{- end -}}
+        </div>
+        {{- if $showAuthor }}{{- partial "author-byline.html" . -}}{{- end -}}
+        {{- if and .Params.tags (ne $art.show_tags false) }}
+        <div class="article-tags">
+          {{- range .Params.tags }}
+          <a href="{{ "tags/" | relLangURL }}{{ . | urlize }}/" class="article-tag">#{{ . }}</a>
+          {{- end }}
+        </div>
+        {{- end }}
+      </header>
+
+      {{- /* 正文内容 */ -}}
+      <div class="article-body" id="articleBody">
+        {{ .Content }}
+      </div>
+
+      {{- /* 文章底部 */ -}}
+      <footer class="article-footer">
+        {{- /* 上一篇/下一篇导航（article.show_prev_next = false 整块不显示） */ -}}
+        {{- if ne $art.show_prev_next false }}
+        <div class="article-nav">
+          {{- if .PrevInSection }}
+          <a href="{{ .PrevInSection.RelPermalink }}" class="nav-link-item prev">
+            <span class="direction"><i class="fas fa-arrow-left"></i> <span data-i18n="article-prev">{{ i18n "article-prev" | default "上一篇" }}</span></span>
+            <span class="title">{{ .PrevInSection.Title }}</span>
+          </a>
+          {{- else }}
+          <a href="#" class="nav-link-item prev" style="visibility:hidden;">
+            <span class="direction"><i class="fas fa-arrow-left"></i> <span data-i18n="article-prev">{{ i18n "article-prev" | default "上一篇" }}</span></span>
+            <span class="title"></span>
+          </a>
+          {{- end }}
+          {{- if .NextInSection }}
+          <a href="{{ .NextInSection.RelPermalink }}" class="nav-link-item next">
+            <span class="direction"><span data-i18n="article-next">{{ i18n "article-next" | default "下一篇" }}</span> <i class="fas fa-arrow-right"></i></span>
+            <span class="title">{{ .NextInSection.Title }}</span>
+          </a>
+          {{- else }}
+          <a href="#" class="nav-link-item next" style="visibility:hidden;">
+            <span class="direction"><span data-i18n="article-next">{{ i18n "article-next" | default "下一篇" }}</span> <i class="fas fa-arrow-right"></i></span>
+            <span class="title"></span>
+          </a>
+          {{- end }}
+        </div>
+        {{- end }}
+
+        {{- /* 作者信息 */ -}}
+        {{- if and $showAuthor (ne $art.show_author_box false) -}}
+          {{- partial "author-box.html" . -}}
+        {{- end -}}
+
+        {{- /* 点赞 / 收藏 / 订阅（zero-stack 自建后端；顺序与显隐见 article.actions_order） */ -}}
+        {{- partial "zero/actions.html" . -}}
+
+        {{- /* 评论区 */ -}}
+        {{- if ne .Params.comments false -}}
+          {{- partial "comments/loader.html" . -}}
+        {{- end -}}
+      </footer>
+    </div>
+
+    {{- /* 右侧目录：$toc 在本块开头算（站点开关 + 这篇文章的 toc + 正文确有标题） */ -}}
+    {{- if $toc -}}
+      {{- partial "toc.html" . -}}
+    {{- end -}}
+  </article>
+</main>
+
+{{- /* 赞赏弹窗：只有这篇文章作者配了赞赏码才输出，避免留下打不开的空弹窗 */ -}}
+{{- if (partial "zero/author-view.html" .).donate -}}
+  {{- partial "donate-modal.html" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $profileCfg := .Site.Params.author_profile -}}
+{{- /* 图片点击放大查看（只在同一篇文章的图片之间左右切换）；[article].image_zoom = false 时整段不加载 */ -}}
+{{- if ne (.Site.Params.article | default dict).image_zoom false -}}
+{{- $lbJS := resources.Get "js/lightbox.js" | minify | fingerprint -}}
+<script src="{{ $lbJS.RelPermalink }}"
+        data-close="{{ i18n "lightbox-close" | default "关闭" }}"
+        data-prev="{{ i18n "lightbox-prev" | default "上一张" }}"
+        data-next="{{ i18n "lightbox-next" | default "下一张" }}"
+        data-view="{{ i18n "lightbox-view" | default "查看大图" }}"></script>
+{{- end -}}
+{{- $articleJS := resources.Get "js/article.js" | minify | fingerprint -}}
+<script src="{{ $articleJS.RelPermalink }}"></script>
+{{- partial "zero/authors.html" . -}}
+{{- end -}}

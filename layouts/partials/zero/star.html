@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  zero/star.html — 收藏 ★（主题侧实现，见 assets/js/zero-star.js）
+  ------------------------------------------------------------
+  用法：{{- partial "zero/star.html" (dict "p" . "zero" $zero "slug" .RelPermalink) -}}
+    p      页面上下文（必填）
+    zero   partials/zero/api.html 的结果，省一次计算
+    slug   收藏挂到哪个地址上，默认取 p.RelPermalink（时刻卡片传 /moments/<文件名>/）
+
+  两层开关，缺一不可：
+    · 构建期 params.starEnabled = false → 整块不输出
+    · 运行期 /api/config 的 starEnabled = false → 由 js/zero-switches.js 藏起来
+      （模板先写成 hidden，配置回来才露出，所以「后台关掉收藏」不会闪一下）
+
+  按钮里的文字（收藏 / 已收藏）与计数由 zero-star.js 生成，顺序是
+  「★ 图标 → 计数 → 文字」，和文章操作条左边那颗点赞胶囊对齐。
+  未登录点收藏：给一句读得懂的中文 + 一个去 /account/ 的链接，不硬跳转。
+  文案在这里写中文字面量（站点已改成纯中文，不再走 i18n）。
+  ============================================================ */ -}}
+{{- $p := .p -}}
+{{- $zero := .zero | default (partial "zero/api.html" $p) -}}
+{{- if and $zero.enabled (ne $p.Site.Params.starEnabled false) -}}
+  {{- $slug := .slug | default $p.RelPermalink -}}
+  {{- $sw := partial "zero/switch.html" (dict "zero" $zero "key" "starEnabled") -}}
+  {{- /* 脚本直接引：zero-star.js 按宿主标记判重，重复加载也只是第二次立刻返回 */ -}}
+  {{- $js := resources.Get "js/zero-star.js" | minify | fingerprint -}}
+<script src="{{ $js.RelPermalink }}" defer></script>
+<span class="zero-star"{{ $sw.attrs | safeHTMLAttr }}
+      data-star-api="{{ $zero.base }}"
+      data-star-slug="{{ $slug }}"
+      data-star-label="收藏"
+      data-star-active="已收藏"
+      data-star-title="{{ .title | default "收藏这篇文章" }}"
+      {{ if .bare }}data-star-hide-text="1"{{ end }}
+      data-star-login="登录后才能收藏，点下面的链接去账号页登录一下。"
+      data-star-login-link="去登录"
+      data-star-account="{{ "account/" | relURL }}"></span>
+{{- end -}}

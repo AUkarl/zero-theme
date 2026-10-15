@@ -1,0 +1,17 @@
+{{- /* ============================================================
+  cms/text.html — 取一段文案：后台写了就用后台的，没写用 params
+  ------------------------------------------------------------
+  用法：
+    {{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "desc_zh") "fallback" $cfg.desc_zh) -}}
+  返回 trim 过的字符串（空串就是「没有这段文字」，调用方自己决定要不要显示）。
+
+  后台明确写空（"" ）时结果就是空串，不会退回 params 的旧文案 —— 这跟 zero-cms
+  里「清空输入框 = 删掉这句话」的预期一致；同理 params 侧的 desc_zh 只在
+  data 没写这个键时才起作用。
+  ============================================================ */ -}}
+{{- $f := partial "cms/value.html" (dict "data" .data "keys" .keys) -}}
+{{- $out := partial "cms/str.html" (dict "value" .fallback) -}}
+{{- if $f.set -}}
+  {{- $out = $f.text -}}
+{{- end -}}
+{{- return $out -}}

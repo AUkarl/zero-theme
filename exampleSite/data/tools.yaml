@@ -1,0 +1,11 @@
+- name: "VS Code"
+  desc: "代码编辑器"
+  url: "https://code.visualstudio.com/"
+  icon: "fa-solid fa-code"
+  category: "开发"
+
+- name: "Figma"
+  desc: "设计工具"
+  url: "https://www.figma.com/"
+  icon: "fa-solid fa-pen-nib"
+  category: "设计"

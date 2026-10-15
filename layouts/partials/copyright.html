@@ -1,0 +1,17 @@
+{{- /* ============================================================
+  copyright.html — 页脚 / 落地页共用的那一行版权文字
+  ------------------------------------------------------------
+  来源优先级：后台「前端管理 → 页脚」写的 data/footer.json
+              > [footer].copyright_text > 主题默认。
+  返回已经把 {year} 换成当前年份的字符串；明确留空就返回空串（调用方据此不渲染这一行）。
+  define 块之间不共享变量，所以单独成一个 partial 让 footer.html 与 index.html 各取一次。
+  ============================================================ */ -}}
+{{- $footer := .Site.Params.footer | default dict -}}
+{{- $crField := partial "cms/value.html" (dict "data" hugo.Data.footer "keys" (slice "copyrightText" "copyright_text")) -}}
+{{- $copyright := "" -}}
+{{- if $crField.set -}}
+  {{- $copyright = $crField.text -}}
+{{- else -}}
+  {{- $copyright = $footer.copyright_text | default "2023-{year} Example" -}}
+{{- end -}}
+{{- return replace $copyright "{year}" (string now.Year) -}}

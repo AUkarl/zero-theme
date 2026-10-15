@@ -1,0 +1,227 @@
+{{- /* ============================================================
+  moments/list.html — 时刻页模板（只有一种形态：朋友圈式卡片）
+    · 内容文件（content/**\/moments/*.md）渲染成卡片：图片九宫格 / 音乐 / 视频 / 链接
+    · 时刻是纯 Git 内容：后台不再存时刻，页面也不请求 /api/moments，
+      时间线只渲染 Hugo 构建出来的卡片（js/shuo.js 里已删掉 D1 合并逻辑）
+    · 每条卡片都能点赞 + 收藏 + 评论：点赞与收藏走 /api/reactions（kind=like / star），
+      评论走 [moment] comment_provider 选的那一家
+    · 卡片接口用的 slug 一律是 /moments/<文件名去扩展名>/，与语言前缀无关，
+      这样计数不会因为 URL 拼装方式不同而分裂成两份
+    · 想在后台换评论系统不必重新构建：zero-moments.js 会读运行期配置重绘
+    · 后台关掉 momentsEnabled 时整页只留一句「时刻功能已关闭」（js/zero-switches.js）
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $momentsCSS := resources.Get "css/shuo.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $momentsCSS.RelPermalink }}">
+{{- /* 卡片正文支持和文章一样的短代码，所以短代码样式也要加载 */ -}}
+{{- $shortcodeCSS := resources.Get "css/shortcodes.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $shortcodeCSS.RelPermalink }}">
+{{- /* 卡片底栏那颗赞要吃和文章操作条同一组 --zero-*- 变量（激活色、深浅色两套） */ -}}
+{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- $mCfg := .Site.Params.moment | default dict -}}
+{{- /* 页面配置：data/moments.json（后台「前端管理 → 时刻页」）优先，params 只作回落 */ -}}
+{{- $mc := partial "moments-config.html" . -}}
+{{- $m := partial "moments/provider.html" . -}}
+{{- /* 选了 zero 却没填后端地址时当作没配：不加载组件、不发请求 */ -}}
+{{- $effective := $m.provider -}}
+{{- if and (eq $effective "zero") (not $m.zero.enabled) -}}{{- $effective = "" -}}{{- end -}}
+{{- /* 后台开关 momentsEnabled：时间线先写成 hidden，拿到 /api/config 才露出；
+       关掉时由 zero-switches.js 显示下面的「功能已关闭」提示，页面不会闪。 */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $swM := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled") -}}
+
+<main class="main" id="main">
+  {{- /* ====== 顶部横幅 ====== */ -}}
+  {{- if $mc.showBackground -}}
+  <div class="moments-header-banner" style="background-image: url('{{ $mc.bannerImage | relURL }}');">
+  {{- else -}}
+  <div class="moments-header-banner moments-header-no-bg">
+  {{- end -}}
+    <div class="moments-header-overlay"></div>
+    <div class="moments-header-content">
+      {{- if $mc.showAvatar }}
+      <div class="moments-header-avatar">
+        <img src="{{ ($mc.avatar | default "img/avatar.webp") | relURL }}" alt="avatar">
+      </div>
+      {{- end }}
+      <div class="moments-header-info">
+        {{- if $mc.showNickname }}
+        <div class="moments-header-nickname">{{ $mc.nickname | default (partial "site-config.html" .).name }}</div>
+        {{- end }}
+      </div>
+    </div>
+  </div>
+
+  {{- /* ====== 卡片时间线 ====== */ -}}
+  <section class="section"{{ $swM.attrs | safeHTMLAttr }}>
+    {{- /* 给运行期接管留标记：后台换了 momentCommentProvider 不必重新构建站点 */ -}}
+    <div class="shuo-wrapper" id="shuoWrapper"
+         data-zero-moments data-build-provider="{{ $effective }}"
+         data-unavailable="该评论系统暂时不可用"
+         data-short-base="{{ partial "zero/short-base.html" }}"
+         data-component-src="{{ partial "zero/component-url.html" }}">
+      {{- if eq $effective "zero" }}
+      {{- /* 页头不再放独立的 <zero-login>：LoginModal 的账号 chip /「退出」已经删掉，
+             而每张卡片都挂着 <zero-comment>，评论区自带登录入口（auth 由组件自己 init），
+             按契约 show-entry 只给「没有评论区」的页面用 */}}
+      {{- end }}
+      <div id="shuoList"></div>
+    </div>
+  </section>
+  {{- partial "zero/closed.html" (dict "zero" $zero "key" "momentsEnabled" "text" "时刻功能已关闭。") -}}
+</main>
+
+{{- /* ====== 注入内容文件里的说说数据 ====== */ -}}
+{{- $moments := where .Site.RegularPages "Section" "moments" -}}
+{{- $moments = $moments.ByDate.Reverse -}}
+{{- $.Scratch.Set "shuoItems" (slice) -}}
+{{- range $p := $moments -}}
+  {{- /* 配图走构建时处理：LQIP + WebP（拿不到就留原链）。
+         尺寸按这一条有几张图来定：单图给大图（否则会被取成 30vw 的糊图），
+         2/4 张给半宽，其余按九宫格小图。 */ -}}
+  {{- $n := len ($p.Params.images | default slice) -}}
+  {{- $sizes := "(max-width: 768px) 30vw, 180px" -}}
+  {{- if eq $n 1 -}}{{- $sizes = "(max-width: 768px) 62vw, 420px" -}}
+  {{- else if or (eq $n 2) (eq $n 4) -}}{{- $sizes = "(max-width: 768px) 31vw, 200px" -}}
+  {{- end -}}
+  {{- $imgs := slice -}}
+  {{- range $img := ($p.Params.images | default slice) -}}
+    {{- $imgs = $imgs | append (partial "img-src.html" (dict "src" $img "page" $p "sizes" $sizes "widths" (slice 400 800))) -}}
+  {{- end -}}
+  {{- /* 链接卡片：支持 link 写成 map（url/title/desc/image），也兼容直接写一个地址字符串 */ -}}
+  {{- $lk := $p.Params.link -}}
+  {{- $linkURL := "" -}}{{- $linkTitle := "" -}}{{- $linkDesc := "" -}}{{- $linkImg := "" -}}
+  {{- if reflect.IsMap $lk -}}
+    {{- $linkURL = $lk.url | default "" -}}
+    {{- $linkTitle = $lk.title | default "" -}}
+    {{- $linkDesc = $lk.desc | default "" -}}
+    {{- $linkImg = $lk.image | default "" -}}
+  {{- else -}}
+    {{- $linkURL = $lk | default "" -}}
+  {{- end -}}
+  {{- $.Scratch.Add "shuoItems" (dict
+    "id" ($p.File.UniqueID | default "0")
+    "slug" (printf "/moments/%s/" ($p.File.ContentBaseName | default ($p.File.UniqueID | default "0")))
+    "text" ($p.Content | plainify)
+    "contentHtml" $p.Content
+    "images" $imgs
+    "music" ($p.Params.music | default "")
+    "musicTitle" ($p.Params.music_title | default "")
+    "musicCover" ($p.Params.music_cover | default "")
+    "video" ($p.Params.video | default "")
+    "videoPoster" ($p.Params.video_poster | default "")
+    "link" (dict "url" $linkURL "title" $linkTitle "desc" $linkDesc "image" $linkImg)
+    "time" ($p.Date | time.Format "2006-01-02 15:04")
+    "iso" ($p.Date.Format "2006-01-02T15:04:05Z07:00")
+    "location" (cond $mc.showLocation ((string ($p.Params.location | default "")) | default $mc.defaultLocation) "")
+    "nickname" (cond (ne $mc.nickname "") $mc.nickname ($p.Site.Params.aboutName | default (partial "site-config.html" $p).name))
+    "avatarUrl" (($mc.avatar | default ($p.Site.Params.aboutAvatar | default "img/avatar.webp")) | relURL)
+  ) -}}
+{{- end -}}
+<script type="application/json" id="shuoData">
+{{- $.Scratch.Get "shuoItems" | jsonify | safeJS -}}
+</script>
+
+{{- /* ====== 配置注入 ====== */ -}}
+{{- $z := partial "zero/api.html" . -}}
+{{- /* 各评论服务的连接参数：[moment.waline] / [moment.twikoo] / [moment.artalk] 优先，
+       没写就退回旧的扁平写法（moment.waline_server_url 等），再退回文章页那一家 */ -}}
+{{- $mWal := $mCfg.waline | default dict -}}
+{{- $mTwi := $mCfg.twikoo | default dict -}}
+{{- $mAr := $mCfg.artalk | default dict -}}
+{{- $aCfg := .Site.Params.comment.article | default dict -}}
+{{- $walURL := $mWal.server_url | default ($mCfg.waline_server_url | default ($aCfg.waline_server_url | default "")) -}}
+<script>
+  window.momentConfig = {
+    paginate: {{ $mc.paginate }},
+    batchPreload: {{ $mc.batchPreload }},
+    showLike: {{ $mc.showLike }},
+    showComment: {{ $mc.showComment }},
+    commentEnabled: {{ if and .Site.Params.comment.enable (ne $effective "") }}true{{ else }}false{{ end }},
+    commentProvider: "{{ $effective }}",
+    walineServerUrl: "{{ $walURL }}",
+    walineEmoji: {{ ($mWal.emoji | default ($mCfg.waline_emoji | default (slice "https://cdn.jsdelivr.net/npm/@waline/emojis/weibo"))) | jsonify | safeJS }},
+    twikooEnvId: "{{ $mTwi.env_id | default ($mCfg.twikoo_env_id | default "") }}",
+    twikooRegion: "{{ $mTwi.region | default ($mCfg.twikoo_region | default "") }}",
+    artalkServer: "{{ $mAr.server | default ($mCfg.artalk_server | default "") }}",
+    artalkSite: "{{ $mAr.site | default ($mCfg.artalk_site | default "default") }}",
+    /* zero 后端：地址 + 组件脚本 + 短链前缀，接管脚本换 provider 时也要用同一套 */
+    zeroApiBase: "{{ $z.base }}",
+    componentSrc: "{{ partial "zero/component-url.html" }}",
+    shortBase: "{{ partial "zero/short-base.html" }}",
+    authorName: "{{ $mc.nickname | default (.Site.Params.aboutName | default (partial "site-config.html" .).name) }}",
+    authorAvatar: "{{ ($mc.avatar | default (.Site.Params.aboutAvatar | default "img/avatar.webp")) | relURL }}",
+    /* 点赞：waline 那套用它的计数器（reaction0），zero 那套用 /api/reactions */
+    likeEnabled: {{ if and $mc.showLike .Site.Params.comment.enable (or (eq $effective "zero") (and (eq $effective "waline") (ne $walURL ""))) }}true{{ else }}false{{ end }},
+    likeType: "{{ $mWal.reaction_type | default ($mCfg.waline_reaction_type | default "reaction0") }}",
+    /* 收藏：主题侧的 zero-star.js 认这两个字段（构建期 params + 运行期 starEnabled 两层） */
+    starEnabled: {{ if and $z.enabled (ne .Site.Params.starEnabled false) }}true{{ else }}false{{ end }},
+    starApi: "{{ $z.base }}",
+    lang: "zh-CN",
+    i18n: {
+      like: "赞",
+      liked: "已赞",
+      comment: "评论",
+      star: "收藏",
+      starred: "已收藏",
+      starTitle: "收藏这条时刻",
+      starLogin: "登录后才能收藏，点下面的链接去账号页登录一下。",
+      starLoginLink: "去登录",
+      starAccount: "{{ "account/" | relURL }}",
+      justNow: "刚刚",
+      minutesAgo: "分钟前",
+      hoursAgo: "小时前",
+      yesterday: "昨天",
+      daysAgo: "天前",
+      noMoments: "还没有发布时刻",
+      loading: "评论加载中…",
+      loadError: "评论加载失败，请刷新页面重试",
+      view: "查看大图"
+    }
+  };
+</script>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $mCfg := .Site.Params.moment | default dict -}}
+{{- $m := partial "moments/provider.html" . -}}
+{{- $z := partial "zero/api.html" . -}}
+{{- $provider := $m.provider -}}
+{{- if and (eq $provider "zero") (not $m.zero.enabled) -}}{{- $provider = "" -}}{{- end -}}
+{{- /* 构建期那一家评论系统的资源（zero 由组件脚本按需加载，这里不用引） */ -}}
+{{- if and .Site.Params.comment.enable (ne $provider "") -}}
+  {{- if eq $provider "twikoo" }}
+<script src="https://cdn.jsdelivr.net/npm/twikoo@1/dist/twikoo.all.min.js"></script>
+  {{- else if eq $provider "waline" }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@waline/client@latest/dist/waline.css">
+  {{- else if eq $provider "artalk" }}
+<link href="https://cdn.jsdelivr.net/npm/artalk@2/dist/Artalk.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/artalk@2/dist/Artalk.js"></script>
+  {{- end -}}
+{{- end -}}
+{{- /* 收藏 ★：必须在 shuo.js 之前加载，卡片是脚本现场造的，
+       shuo.js 渲染完一批就调 window.ZeroStar.scan() 挂按钮 */ -}}
+{{- if and $z.enabled (ne .Site.Params.starEnabled false) -}}
+  {{- $starJS := resources.Get "js/zero-star.js" | minify | fingerprint -}}
+<script src="{{ $starJS.RelPermalink }}"></script>
+{{- end -}}
+{{- $shuoJS := resources.Get "js/shuo.js" | minify | fingerprint -}}
+<script src="{{ $shuoJS.RelPermalink }}"></script>
+{{- /* 图片点击放大查看（只在同一条时刻的图片之间切换） */ -}}
+{{- $lbJS := resources.Get "js/lightbox.js" | minify | fingerprint -}}
+<script src="{{ $lbJS.RelPermalink }}"
+        data-close="关闭"
+        data-prev="上一张"
+        data-next="下一张"
+        data-view="查看大图"></script>
+{{- /* 运行期接管：后台改了 momentCommentProvider 时按新的那家重绘卡片 */ -}}
+{{- $z := partial "zero/api.html" . -}}
+{{- if $z.enabled }}
+  {{- $takeover := resources.Get "js/zero-moments.js" | minify | fingerprint -}}
+<script src="{{ $takeover.RelPermalink }}"></script>
+{{- end }}
+{{- end -}}

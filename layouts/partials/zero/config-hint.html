@@ -1,0 +1,8 @@
+{{- /* ============================================================
+  zero/config-hint.html — 「选了 zero 但没填 apiBaseURL」的提示框
+  评论区（comments/loader.html）与时刻页（moments/list.html）共用，
+  目的是让配置缺失表现为一句可读的提示，而不是一片空白。
+  ============================================================ */ -}}
+<aside class="zero-config-hint">
+  <p>{{ i18n "zero-api-not-configured" | default "已选择 zero 评论系统，但还没设置 params.apiBaseURL，请在站点配置里填写 zero-api 的部署地址。" }}</p>
+</aside>

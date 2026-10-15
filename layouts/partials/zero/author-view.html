@@ -1,0 +1,68 @@
+{{- /* ============================================================
+  zero/author-view.html — 解析「这篇文章的作者」
+  ------------------------------------------------------------
+  用法：{{- $v := partial "zero/author-view.html" . -}}
+  返回 dict：id / name / avatar / bio / donate / contacts / isOwner
+  顶部署名、底部作者框、赞赏弹窗都读这一份，保证三处说的是同一个人。
+
+  取值顺序：data/authors.yaml[author] > author_profile（仅默认作者）> 站点参数。
+  投稿作者没登记的字段一律留空，不借用站长的简介、联系方式与赞赏码。
+  ============================================================ */ -}}
+{{- /* 默认作者与署名都可能来自后台「基本信息」（data/site.json），params 只是回落 */ -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $raw := .Params.author | default $siteCfg.defaultAuthor -}}
+{{- if reflect.IsSlice $raw -}}{{- $raw = index $raw 0 -}}{{- end -}}
+{{- $id := trim (string $raw) " " -}}
+{{- $isOwner := eq $id (trim (string ($siteCfg.defaultAuthor | default "")) " ") -}}
+{{- $entry := dict -}}
+{{- with hugo.Data.authors -}}{{- with index . $id -}}{{- $entry = . -}}{{- end -}}{{- end -}}
+{{- $profile := .Site.Params.author_profile -}}
+
+{{- $name := "" -}}
+{{- $known := false -}}
+{{- with $entry.name -}}{{- $name = string . -}}{{- if ne $name "" -}}{{- $known = true -}}{{- end -}}{{- end -}}
+{{- if and (not $name) $isOwner $profile -}}
+  {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
+{{- end -}}
+{{- if and (not $name) $isOwner -}}
+  {{- with $siteCfg.author -}}{{- $name = string . -}}{{- end -}}
+{{- end -}}
+{{- if not $name -}}{{- $name = $id -}}{{- end -}}
+
+{{- $avatar := "" -}}
+{{- with $entry.avatar -}}{{- $avatar = string . -}}{{- end -}}
+{{- if and (not $avatar) $isOwner $profile -}}
+  {{- with $profile.avatar -}}{{- $avatar = string . -}}{{- end -}}
+{{- end -}}
+{{- if not $avatar -}}{{- $avatar = string (.Site.Params.authorAvatar | default "img/avatar.webp") -}}{{- end -}}
+
+{{- /* 简介：bio 是主题配置文件里的键名，bio_zh 是旧站点与 data/authors.yaml 里常见的写法，两边都认 */ -}}
+{{- $bio := "" -}}
+{{- with (or $entry.bio $entry.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
+{{- if and (not $bio) $isOwner $profile -}}
+  {{- with (or $profile.bio $profile.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
+{{- end -}}
+
+{{- $list := slice -}}
+{{- with $entry.donate -}}
+  {{- if reflect.IsSlice . -}}{{- $list = . -}}{{- else -}}{{- $list = slice . -}}{{- end -}}
+{{- end -}}
+{{- if and (not $list) $isOwner $profile $profile.donate -}}
+  {{- if reflect.IsSlice $profile.donate -}}{{- $list = $profile.donate -}}{{- else -}}{{- $list = slice $profile.donate -}}{{- end -}}
+{{- end -}}
+{{- if not $list -}}
+  {{- with .Site.Params.donate -}}
+    {{- if reflect.IsSlice . -}}{{- $list = . -}}{{- else -}}{{- $list = slice . -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $contacts := dict -}}
+{{- if or $entry.social $entry.email -}}
+  {{- $contacts = $entry -}}
+{{- else if and $isOwner $profile $profile.contacts -}}
+  {{- $contacts = dict "social" $profile.contacts -}}
+{{- else if and $isOwner .Site.Params.social -}}
+  {{- $contacts = dict "social" .Site.Params.social -}}
+{{- end -}}
+
+{{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}

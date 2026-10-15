@@ -1,0 +1,150 @@
+{{- /* ============================================================
+  header.html — 导航栏
+  包含 Logo、导航链接、主题/语言切换按钮
+  支持 show_logo / show_site_name 开关
+
+  导航项来源：data 目录里的 nav.json（后台 CMS 写）优先，没这个文件时
+  回落 config 的 menus.*.toml。两条来源在 partials/nav/items.html 里
+  收成同一种字段形状，这里只有一条渲染路径；取值规则见那个文件。
+
+  无障碍约定：
+  - 外层 <header role="banner"> 由 baseof.html 提供
+  - <nav aria-label="…"> 是导航地标
+  - 当前页链接带 aria-current="page"
+  - 抽屉按钮带 aria-expanded / aria-controls（common.js 负责同步状态）
+  - 纯装饰图标一律 aria-hidden="true"
+  ============================================================ */ -}}
+<nav class="site-nav" aria-label="{{ i18n "nav-main-label" | default "主导航" }}">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      {{- /* 给 logo 写上宽高：否则图片加载完会撑动导航、把整页内容顶一下（CLS）。
+             取不到尺寸（SVG / 外链）时就不写，靠 CSS 的 height 兜底。 */ -}}
+      {{- $site := partial "site-config.html" . -}}
+      {{- $logoPath := $site.logo | default "img/logo-nav.webp" -}}
+      {{- $logoDim := try (imageConfig (printf "static%s" ($logoPath | relURL))) -}}
+      {{- /* logo_home_link=false 时两处都退化成纯图片 / 纯文字，点了不跳转 */ -}}
+      {{- $homeHref := cond $site.logoHomeLink ("home/" | relLangURL) "" -}}
+      {{- if $site.showLogo -}}
+        {{- with $site.logo -}}
+      <a{{ with $homeHref }} href="{{ . }}"{{ end }}><img src="{{ . | relURL }}" alt="{{ $site.navName }}"{{ with $logoDim.Value }} width="{{ $logoDim.Value.Width }}" height="{{ $logoDim.Value.Height }}"{{ end }}></a>
+        {{- else -}}
+      <a{{ with $homeHref }} href="{{ . }}"{{ end }}><img src="{{ "img/logo-nav.webp" | relURL }}" alt="{{ $site.navName }}"{{ with $logoDim.Value }} width="{{ $logoDim.Value.Width }}" height="{{ $logoDim.Value.Height }}"{{ end }}></a>
+        {{- end -}}
+      {{- end -}}
+      {{- if $site.showName -}}
+      <span data-i18n="nav-site-name">{{ $site.navName }}</span>
+      {{- end -}}
+    </div>
+    <button type="button" class="nav-toggle" aria-label="{{ i18n "nav-menu" | default "菜单" }}" aria-expanded="false" aria-controls="navLinks"><i class="fas fa-bars" aria-hidden="true"></i></button>
+    <div class="nav-links" id="navLinks">
+      <button type="button" class="nav-close" aria-label="{{ i18n "nav-close" | default "关闭菜单" }}">&times;</button>
+      {{- /* ------------------------------------------------------------
+           导航项支持的字段（nav.json 与 menus.*.toml 一一对应）：
+             name        显示文字（可为空，配合 iconOnly 做纯图标）
+             url         站内路径或外链
+             weight      排序（数字越小越靠前）
+             identifier / parent   父子关系 → 自动渲染成「点击展开的子菜单」
+             external  = true               外部链接（新标签页打开）
+             icon      = "fa-solid fa-xxx"  Font Awesome 图标
+             image     = "/img/x.svg"       自定义图片（与 icon 二选一）
+             iconOnly  = true               只显示图标，文字转为无障碍标签
+             position  = "controls"         放到右侧图标区（与主题开关按 weight 统一排序）
+             zeroAccount = true             标记账号入口：common.js 按登录态把图标换成头像
+           菜单来源的同一批字段写在 [main.params] 里，用下划线拼法（icon_only / zero_account）。
+           ------------------------------------------------------------ */ -}}
+      {{- $navCfg := partial "nav-config.html" . -}}
+      {{- $themeWeight := $navCfg.switchWeight -}}
+      {{- $themeIcon := $navCfg.switchIcon -}}
+      {{- /* ------------------------------------------------------------
+           后台开关（GET /api/config）也管导航入口：「时刻」「友链」「邮箱订阅」
+           这三项在后台关掉时不该出现在导航里。开关值只有客户端知道，所以模板
+           先把这些项写成 hidden（见 partials/zero/switch.html），由
+           js/zero-switches.js 拿到配置后才露出 —— 关掉的功能不会闪一下。
+           键名的认法见 partials/zero/nav-switch.html（菜单用 zero_switch、
+           data 项用 zeroSwitch 显式指定，没写则按链接路径猜）。
+           没配 params.apiBaseURL 的纯静态站不加 hidden，导航照旧全显示。
+           ------------------------------------------------------------ */ -}}
+      {{- $zeroNav := partial "zero/api.html" . -}}
+      {{- $nav := partial "nav/items.html" . -}}
+      {{- range $nav -}}
+        {{- if not .controls -}}
+          {{- $name := .name -}}
+          {{- $icon := .icon -}}
+          {{- $image := .image -}}
+          {{- $external := .external -}}
+          {{- $iconOnly := .iconOnly -}}
+          {{- $href := .url -}}
+          {{- if and $href (not $external) -}}{{- $href = $href | relLangURL -}}{{- end -}}
+          {{- /* 当前页高亮：先按地址比（data 项只有地址可比），菜单项再问一次
+                 HasMenuCurrent，让 menus.*.toml 的父子关系也能参与 —— 与改造前一致 */ -}}
+          {{- $isCurrent := false -}}
+          {{- if and $href (not $external) -}}
+            {{- $isCurrent = eq (strings.TrimSuffix "/" $href) (strings.TrimSuffix "/" $.RelPermalink) -}}
+            {{- if not $isCurrent -}}
+              {{- with .menuEntry -}}
+                {{- $isCurrent = $.HasMenuCurrent "main" . -}}
+              {{- end -}}
+            {{- end -}}
+          {{- end -}}
+          {{- if .isParent -}}
+      <div class="nav-item nav-item-sub">
+        <button type="button" class="nav-link nav-parent{{ if $iconOnly }} nav-link-icon{{ end }}" aria-expanded="false" aria-haspopup="true" data-nav-parent{{ if $iconOnly }} title="{{ $name }}" aria-label="{{ $name }}"{{ end }}>{{ with $icon }}<i class="{{ . }}" aria-hidden="true"></i>{{ end }}{{ with $image }}<img class="nav-icon-img" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ end }}{{ if not $iconOnly }}<span class="nav-label" data-i18n="nav-{{ $name }}">{{ $name }}</span>{{ end }}<i class="fas fa-chevron-down nav-caret" aria-hidden="true"></i></button>
+        <div class="nav-submenu" hidden>
+          {{- range .children -}}
+            {{- $chref := .url -}}
+            {{- if and $chref (not .external) -}}{{- $chref = $chref | relLangURL -}}{{- end -}}
+            {{- $csw := partial "zero/switch.html" (dict "zero" $zeroNav "key" .switchKey) -}}
+          <a class="nav-submenu-link" href="{{ $chref }}"{{ if .external }} target="_blank" rel="noopener"{{ end }}{{ $csw.attrs | safeHTMLAttr }}>{{ with .icon }}<i class="{{ . }}" aria-hidden="true"></i>{{ end }}{{ with .image }}<img class="nav-icon-img" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ end }}<span class="nav-label" data-i18n="nav-{{ .name }}">{{ .name }}</span></a>
+          {{- end }}
+        </div>
+      </div>
+          {{- else -}}
+            {{- $nsw := partial "zero/switch.html" (dict "zero" $zeroNav "key" .switchKey) -}}
+      <a class="nav-link{{ if $external }} blog-link{{ end }}{{ if $isCurrent }} active{{ end }}{{ if $iconOnly }} nav-link-icon{{ end }}"{{ if $href }} href="{{ $href }}"{{ end}}{{ $nsw.attrs | safeHTMLAttr }}{{ if $external }} target="_blank" rel="noopener"{{ end }}{{ if $iconOnly }} title="{{ $name }}" aria-label="{{ $name }}"{{ end }}{{ if $isCurrent }} aria-current="page"{{ end }}{{ if not $external }} data-section="{{ $name }}"{{ end }}>{{ with $icon }}<i class="{{ . }}" aria-hidden="true"></i>{{ end }}{{ with $image }}<img class="nav-icon-img" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ end }}{{ if not $iconOnly }}<span class="nav-label" data-i18n="nav-{{ $name }}">{{ $name }}</span>{{ end }}</a>
+          {{- end -}}
+        {{- end -}}
+      {{- end }}
+      <div class="nav-controls">
+        {{- /* 右侧图标区：position="controls" 的导航项 + 主题开关 + 语言开关，统一按 weight 排序 */ -}}
+        {{- $ctrlItems := slice -}}
+        {{- range $nav -}}
+          {{- if .controls -}}
+            {{- $ctrlItems = $ctrlItems | append (dict "kind" "menu" "weight" .weight "entry" .) -}}
+          {{- end -}}
+        {{- end -}}
+        {{- if $navCfg.themeSwitch -}}
+          {{- $ctrlItems = $ctrlItems | append (dict "kind" "theme" "weight" $themeWeight) -}}
+        {{- end -}}
+        {{- $acctSeen := false -}}
+        {{- range sort $ctrlItems "weight" -}}
+          {{- if eq .kind "menu" -}}
+            {{- $e := .entry -}}
+            {{- $ehref := $e.url -}}
+            {{- if and $ehref (not $e.external) -}}{{- $ehref = $ehref | relLangURL -}}{{- end -}}
+            {{- /* id=navAccount 只给第一个账号项：common.js 用 getElementById 找它换头像，
+                   后台勾出两个账号项时重复 id 会让整页 HTML 站不住 */ -}}
+            {{- $ctrlId := "" -}}
+            {{- if and $e.zeroAccount (not $acctSeen) -}}
+              {{- $ctrlId = "navAccount" -}}
+              {{- $acctSeen = true -}}
+            {{- end -}}
+            {{- $esw := partial "zero/switch.html" (dict "zero" $zeroNav "key" $e.switchKey) -}}
+        <a class="ctrl-btn nav-ctrl-link{{ if $e.zeroAccount }} nav-account{{ end }}"{{ with $ctrlId }} id="{{ . }}" title="{{ i18n "zero-nav-login" | default "登录" }}" aria-label="{{ i18n "zero-nav-login" | default "登录" }}"{{ end }} href="{{ $ehref }}"{{ $esw.attrs | safeHTMLAttr }}{{ if $e.external }} target="_blank" rel="noopener"{{ end }}{{ if not $e.zeroAccount }} title="{{ $e.name }}" aria-label="{{ $e.name }}"{{ end }}>{{ with $e.icon }}<i class="{{ . }}" aria-hidden="true"></i>{{ end }}{{ with $e.image }}<img class="nav-icon-img" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ end }}{{ if not $e.iconOnly }}<span class="nav-label" data-i18n="nav-{{ $e.name }}">{{ $e.name }}</span>{{ end }}</a>
+          {{- else if eq .kind "theme" -}}
+        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ i18n "theme-toggle" | default "切换主题" }}" aria-label="{{ i18n "theme-toggle" | default "切换主题" }}"><i class="{{ $themeIcon }}" aria-hidden="true"></i></button>
+          {{- end -}}
+        {{- end }}
+      </div>
+    </div>
+  </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+</nav>
+{{- /* 站点名的可替换文案：common.js 会把 [data-i18n] 节点按语言重写，
+       本站只有中文，所以只登记中文一份；值用 jsonify 输出，站点名里带引号也不会弄坏脚本。 */ -}}
+<script>
+(function(){
+  if(!window.i18nMap) window.i18nMap = {};
+  if(!window.i18nMap['zh']) window.i18nMap['zh'] = {};
+  window.i18nMap['zh']['nav-site-name'] = {{ (partial "site-config.html" .).navName | jsonify | safeJS }};
+})();
+</script>

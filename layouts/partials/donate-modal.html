@@ -1,0 +1,31 @@
+{{- /* ============================================================
+  donate-modal.html — 赞赏弹窗
+  与 author-box.html 同源（partials/zero/author-view.html）：
+  只弹当前这篇文章作者自己的赞赏码，站长回落 author_profile.donate。
+  ============================================================ */ -}}
+{{- $v := partial "zero/author-view.html" . -}}
+{{- $qr := $v.donate -}}
+{{- /* 最多几张码：文章页那篇的作者自己的码先按 [article].donate_max_qr 截，
+       再被 [author_profile].donate_max 这道全局上限压一次，取两者里小的那个 */ -}}
+{{- $artMax := .Site.Params.article.donate_max_qr | default 6 -}}
+{{- $proMax := (.Site.Params.author_profile | default dict).donate_max | default $artMax -}}
+{{- $maxQR := cond (lt $proMax $artMax) $proMax $artMax -}}
+
+<div class="donate-modal" id="donateModal">
+  <div class="donate-modal-content">
+    <button class="close-btn" id="donateClose">&times;</button>
+    <div class="donate-title" data-i18n="donate-title">{{ i18n "donate-title" | default "支持作者" }}</div>
+    <div class="donate-desc" data-i18n="donate-desc">{{ i18n "donate-desc" | default "如果您觉得这篇文章对您有帮助，欢迎扫码赞赏，您的支持是我持续创作的动力" }}</div>
+    <div class="donate-qr-grid" id="donateQrGrid">
+      {{- range first $maxQR $qr -}}
+      {{- $src := . -}}
+      {{- $label := i18n "donate-title" | default "赞赏" -}}
+      {{- if reflect.IsMap . -}}{{- $src = .qr -}}{{- $label = .name | default $label -}}{{- end -}}
+      <div class="donate-qr-item">
+        <img src="{{ $src | relURL }}" alt="{{ $label }}" loading="lazy" decoding="async">
+        <span class="qr-label">{{ $label }}</span>
+      </div>
+      {{- end -}}
+    </div>
+  </div>
+</div>

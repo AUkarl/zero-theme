@@ -1,0 +1,66 @@
+{{- /* ============================================================
+  zero/actions.html — 文章页的点赞 / 收藏 / 订阅条
+  位置：正文之后、评论区之前（见 _default/single.html）
+
+  每一块都是紧凑胶囊，只出图标和数字，文字含义交给 title 提示；
+  订阅不在这里收邮箱，只做一个跳 /subscribe/ 的按钮 —— 表单在文章页里太宽，
+  会把这一行挤成两行。样式在 assets/css/zero.css（.zero-actions 那一段）。
+
+  显示哪几块、什么顺序：params.toml 的 [article] actions_order
+  （例 actions_order = ["star", "like"] 就把收藏放前面；删掉某项即不输出那块）。
+  标题提示语同一区：actions_title_like / actions_title_star / actions_label_subscribe。
+
+  两层开关，缺一不可：
+    · 构建期 params.likeEnabled / params.starEnabled / params.subscribeEnabled
+      —— 写成 false 就整块不输出（连隐藏的痕迹都不留）
+    · 运行期 GET /api/config 的同名开关
+      —— 后台改开关不必重建站点；模板先写成 hidden，js/zero-switches.js 拿到
+         配置后才露出，所以「关掉的功能」不会闪一下再消失
+  订阅入口还多一层：/subscribe/ 页被后台关掉时（subscribeEnabled=false）这里同样隐藏。
+
+  点赞用组件包里的 <zero-like kind="like">（匿名指纹也能计一次数）；
+  收藏不用 <zero-like kind="star">：那个组件允许匿名指纹收藏，
+  未登录的人点完在「我的收藏」里找不到东西，所以走主题自己的 zero-star.js。
+  两颗按钮的外观（空心→实心、同一个激活色与弹跳）也保持一致，见 zero.css。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $art := .Site.Params.article | default dict -}}
+{{- $order := $art.actions_order | default (slice "like" "star" "subscribe") -}}
+{{- $likeTitle := $art.actions_title_like | default "觉得有用就点个赞" -}}
+{{- $starTitle := $art.actions_title_star | default "收藏这篇，回头再看" -}}
+{{- $subLabel := $art.actions_label_subscribe | default "订阅" -}}
+{{- $subTitle := $art.actions_title_subscribe | default "订阅本站更新" -}}
+{{- $want := dict
+  "like" (and $zero.enabled (ne .Site.Params.likeEnabled false))
+  "star" (and $zero.enabled (ne .Site.Params.starEnabled false))
+  "subscribe" (and $zero.enabled (ne .Site.Params.subscribeEnabled false))
+-}}
+{{- $any := false -}}
+{{- range $order }}{{ if index $want . }}{{ $any = true }}{{ end }}{{ end -}}
+{{- if $any -}}
+<div class="zero-actions">
+  {{- range $name := $order -}}
+    {{- if index $want $name -}}
+      {{- if eq $name "like" -}}
+        {{- $swLike := partial "zero/switch.html" (dict "zero" $zero "key" "likeEnabled") -}}
+  <div class="zero-action-block za-like zero-like-item"{{ $swLike.attrs | safeHTMLAttr }}>
+    <zero-like class="zero-action-widget" api-base="{{ $zero.base }}" post-slug="{{ $.RelPermalink }}" kind="like" show-count title="{{ $likeTitle }}"></zero-like>
+  </div>
+      {{- else if eq $name "star" -}}
+  <div class="zero-action-block za-star zero-star-item">
+        {{- /* bare：只留图标与计数，「收藏 / 已收藏」的文字进 title。
+               这里在 range 里，. 是顺序表的那一项（字符串），页面要用 $ 取 */ -}}
+        {{- partial "zero/star.html" (dict "p" $ "zero" $zero "bare" true "title" $starTitle) -}}
+  </div>
+      {{- else if eq $name "subscribe" -}}
+        {{- $swSub := partial "zero/switch.html" (dict "zero" $zero "key" "subscribeEnabled") -}}
+  <div class="zero-action-block za-subscribe zero-subscribe-item"{{ $swSub.attrs | safeHTMLAttr }}>
+    <a class="za-sub-link" href="{{ "subscribe/" | relURL }}" title="{{ $subTitle }}">
+      <i class="fas fa-envelope-open-text" aria-hidden="true"></i><span>{{ $subLabel }}</span>
+    </a>
+  </div>
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+</div>
+{{- end -}}

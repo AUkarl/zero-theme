@@ -1,0 +1,17 @@
+{{- /* video-bilibili.html — B站视频嵌入
+   用法: {{< video-bilibili bvid="BV1xx411c7mD" page="1" >}}
+   校验: bvid 必填且只保留 [A-Za-z0-9_-]，缺了就给一句提示，不渲染空 iframe */ -}}
+{{- $raw := .Get "bvid" -}}
+{{- $bvid := replaceRE `[^A-Za-z0-9_-]` "" (string ($raw | default "")) -}}
+{{- $page := .Get "page" | default "1" -}}
+{{- if not $bvid -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "video-bilibili" "param" "bvid") -}}
+{{- else -}}
+<div class="shortcode-embed bilibili-video">
+  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
+    src="//player.bilibili.com/player.html?bvid={{ $bvid }}&page={{ $page }}&high_quality=1&danmaku=0"
+    allowfullscreen allow="autoplay; encrypted-media"
+    loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+    scrolling="no" frameborder="0"></iframe>
+</div>
+{{- end -}}

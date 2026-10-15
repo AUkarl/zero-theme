@@ -1,0 +1,198 @@
+{{- /* ============================================================
+  account-me-shell.html — 个人中心的脚本段（文案字典 + 控制器）
+  ------------------------------------------------------------
+  由 layouts/account/me/list.html 与 single.html 的 define "scripts" 共同调用：
+  两种内容写法（account/me/_index.md 与 account/me.md）落到的模板不同，
+  但面板、字典与控制器必须是同一份，所以整段收在这里，只改一处。
+  以页面为上下文调用：{{ partial "account-me-shell.html" . }}
+  面板骨架在 partials/account-me.html。
+
+  后端接口（全部要求登录，账号靠 ?u=@<account_slug> 定位，默认自己）：
+    GET   /api/account/overview                     身份卡与面板汇总
+    GET|PATCH|DELETE /api/account/comments[/:id]    我的评论（PATCH body {content}）
+    GET   /api/account/reactions?kind=like|star     收藏与点赞
+    POST  /api/account/reactions/:id/withdraw       撤回
+    GET|POST|PATCH|DELETE /api/account/friend-application  友链申请
+    GET|POST|PATCH|DELETE /api/account/drafts[/:id] 我的投稿
+    POST  /api/account/drafts/:id/submit            投稿进审核队列
+    POST  /api/account/drafts/:id/withdraw-request  撤回申请
+    GET|POST /api/account/author-request            作者认证
+    POST  /api/account/password                     改密码（current + 第二凭据）
+    GET|POST /api/account/delete-request            注销申请（confirm 由前端自动带上）
+    GET|POST /api/security · POST /api/security/totp/setup|enable|disable   身份验证器
+    PATCH /api/user/profile {name,bio,website,image}  我的资料
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- if $zero.enabled -}}
+{{- /* 站点后台地址：params.cmsBaseURL 优先；没配就按环境给常量
+       （hugo server 本地开发 = zero-cms 的 vite 端口 5173，正式构建 = 同域 /admin/）。
+       这份常量与 account-me.js 里的 CMS_ONLINE 成对，改一处要改两处。 */ -}}
+{{- $cmsFromParams := trim (.Site.Params.cmsBaseURL | default "") " " -}}
+{{- $cmsFallback := cond hugo.IsServer "http://127.0.0.1:5173/" "/admin/" -}}
+{{- $cms := $cmsFromParams | default $cmsFallback -}}
+<script type="application/json" class="zero-me-i18n">{{ dict
+  "cmsBaseURL" (trim (.Site.Params.cmsBaseURL | default "") " ")
+  "cmsURL" $cms
+  "loading" (i18n "zero-me-busy" | default "正在加载…")
+  "net" (i18n "zero-me-network" | default "网络出错了，请稍后再试。")
+  "needLogin" (i18n "zero-me-need-login" | default "请先登录后再打开个人中心。")
+  "adminEnter" (i18n "zero-me-admin-enter" | default "这个账号是站点管理员，请到站点后台管理；正在跳转…")
+  "saved" (i18n "zero-me-saved" | default "已保存。")
+  "busy" (i18n "zero-me-busy" | default "正在处理…")
+  "fill" (i18n "zero-me-fill" | default "请把必填项填完整。")
+  "empty" (i18n "zero-me-empty" | default "这里还是空的。")
+
+  "tabProfile" (i18n "zero-me-tab-profile" | default "我的资料")
+  "tabComments" (i18n "zero-me-tab-comments" | default "我的评论")
+  "tabReactions" (i18n "zero-me-tab-reactions" | default "收藏与点赞")
+  "tabFriend" (i18n "zero-me-tab-friend" | default "友链设置")
+  "tabDrafts" (i18n "zero-me-tab-drafts" | default "我的投稿")
+  "tabAuthor" (i18n "zero-me-tab-author" | default "作者认证")
+  "tabSecurity" (i18n "zero-me-tab-security" | default "账号安全")
+  "tabDelete" (i18n "zero-me-tab-delete" | default "账号注销")
+
+  "noteProfile" (i18n "zero-me-note-profile" | default "昵称、头像与个人站点。头像留空会按邮箱走头像服务。")
+  "noteComments" (i18n "zero-me-note-comments" | default "改过的评论会重新过一遍审核；删除会连同下面的回复一起摘掉。")
+  "noteReactions" (i18n "zero-me-note-reactions" | default "收藏与点赞都可以撤回，撤回后文章上的计数会少 1。")
+  "noteFriend" (i18n "zero-me-note-friend" | default "这里的表单与友链页的公开申请一致，审核结果直接显示在下面。")
+  "noteDrafts" (i18n "zero-me-note-drafts" | default "写完点「提交投稿」进审核队列；已发布的要提撤回申请，站主同意后才删文件。")
+  "noteAuthor" (i18n "zero-me-note-author" | default "笔名与社交平台资料供站主核验，通过后文章署名旁会显示认证徽章。")
+  "noteSecurity" (i18n "zero-me-note-security-v2" | default "邮箱验证、两步验证（身份验证器）与修改密码都在这里。改密码要同时交当前密码和 6 位动态码。")
+  "noteDelete" (i18n "zero-me-note-delete" | default "注销要站主审核。通过后账号与你的数据都会被删除，无法找回。")
+
+  "labelName" (i18n "zero-account-label-name" | default "昵称")
+  "labelBio" (i18n "zero-account-label-bio" | default "个人简介")
+  "labelWebsite" (i18n "zero-account-label-website" | default "个人站点")
+  "labelImage" (i18n "zero-me-label-image" | default "头像地址")
+  "labelSlug" (i18n "zero-me-label-slug" | default "账号标识")
+  "labelEmail" (i18n "zero-account-label-email" | default "注册邮箱")
+  "btnSave" (i18n "zero-account-btn-save" | default "保存资料")
+  "siteBad" (i18n "zero-account-site-bad" | default "链接需以 http(s):// 开头。")
+  "groupAdmin" (i18n "zero-me-group-admin" | default "用户组：站长")
+  "groupCoauthor" (i18n "zero-me-group-coauthor" | default "用户组：共创")
+  "groupFriend" (i18n "zero-me-group-friend" | default "用户组：朋友")
+
+  "stApproved" (i18n "zero-account-st-approved" | default "已通过")
+  "stPending" (i18n "zero-account-st-pending" | default "待审核")
+  "stSpam" (i18n "zero-account-st-spam" | default "被拦截")
+  "stRejected" (i18n "zero-account-st-rejected" | default "已驳回")
+  "stDraft" (i18n "zero-account-st-draft" | default "草稿")
+  "stWithdrawn" (i18n "zero-me-st-withdrawn" | default "已撤回")
+  "stWithdraw" (i18n "zero-me-st-withdraw-request" | default "撤回申请中")
+  "btnEdit" (i18n "zero-account-btn-edit" | default "编辑")
+  "btnDelete" (i18n "zero-account-btn-delete" | default "删除")
+  "btnCancel" (i18n "zero-account-btn-cancel" | default "取消")
+  "btnOk" (i18n "zero-account-btn-ok" | default "保存")
+  "btnWithdraw" (i18n "zero-me-btn-withdraw" | default "撤回")
+  "delCommentConfirm" (i18n "zero-account-del-confirm" | default "删除这条评论？它下面的回复会一并删除。")
+  "editOk" (i18n "zero-account-edit-ok" | default "已保存，若命中审核会重新排队。")
+  "edited" (i18n "zero-account-edited" | default "已编辑")
+  "noComments" (i18n "zero-account-no-comments" | default "还没有发过评论。")
+  "kindLike" (i18n "zero-me-kind-like" | default "点赞")
+  "kindStar" (i18n "zero-me-kind-star" | default "收藏")
+  "noReactions" (i18n "zero-me-no-reactions" | default "还没有点赞过文章。")
+  "noStars" (i18n "zero-account-no-stars" | default "还没有收藏任何文章。")
+  "notArchived" (i18n "zero-account-not-archived" | default "未同步标题")
+
+  "fName" (i18n "zero-apply-name" | default "站点名称")
+  "fUrl" (i18n "zero-apply-url" | default "站点地址")
+  "fDesc" (i18n "zero-apply-desc" | default "一句话简介")
+  "fAvatar" (i18n "zero-apply-avatar" | default "头像 / Logo 地址")
+  "fRss" (i18n "zero-apply-rss" | default "RSS 地址")
+  "fEmail" (i18n "zero-apply-email" | default "站长邮箱")
+  "fReason" (i18n "zero-apply-reason" | default "想说的话")
+  "fNote" (i18n "zero-account-f-note" | default "站主备注")
+  "fNew" (i18n "zero-account-f-new" | default "新建申请")
+  "fSubmit" (i18n "zero-account-f-submit" | default "提交")
+  "fOk" (i18n "zero-account-f-ok" | default "已提交，等待站主审核。")
+  "fWithdrawConfirm" (i18n "zero-account-f-del-confirm" | default "撤回这条友链申请？")
+  "noFriends" (i18n "zero-account-no-friends" | default "还没有提交过友链申请。")
+
+  "dTitle" (i18n "zero-account-d-title" | default "标题")
+  "dSlug" (i18n "zero-account-d-slug" | default "文件名（可留空，按标题生成）")
+  "dCategory" (i18n "zero-account-d-category" | default "分类")
+  "dTags" (i18n "zero-account-d-tags" | default "标签（逗号分隔）")
+  "dSummary" (i18n "zero-account-d-summary" | default "摘要")
+  "dCover" (i18n "zero-account-d-cover" | default "封面图地址")
+  "dBody" (i18n "zero-account-d-body" | default "正文（Markdown）")
+  "dNew" (i18n "zero-account-d-new" | default "新投稿")
+  "dSaveDraft" (i18n "zero-account-d-save-draft" | default "存为草稿")
+  "dSubmit" (i18n "zero-account-d-submit" | default "提交投稿")
+  "dWithdraw" (i18n "zero-me-d-withdraw" | default "申请撤回")
+  "dWords" (i18n "zero-me-d-words" | default "字数")
+  "dEdit" (i18n "zero-me-d-edit" | default "改稿")
+  "dNote" (i18n "zero-account-d-note" | default "站主意见")
+  "dPath" (i18n "zero-account-d-path" | default "已发布到")
+  "dDelConfirm" (i18n "zero-account-d-del-confirm" | default "删除这篇投稿？")
+  "dWithdrawAsk" (i18n "zero-me-d-withdraw-ask" | default "撤回原因（可留空）")
+  "noDrafts" (i18n "zero-account-no-drafts" | default "还没有投稿。")
+
+  "aPen" (i18n "zero-account-a-pen" | default "笔名")
+  "aBio" (i18n "zero-account-a-bio" | default "作者介绍")
+  "aAvatar" (i18n "zero-me-a-avatar" | default "作者头像地址")
+  "aSite" (i18n "zero-me-a-site" | default "个人站点")
+  "aSocial" (i18n "zero-me-a-social" | default "联系方式（最多 8 个平台）")
+  "aDonate" (i18n "zero-me-a-donate" | default "赞赏图片（最多 3 张）")
+  "aReason" (i18n "zero-account-a-reason" | default "申请说明")
+  "aSubmit" (i18n "zero-account-a-submit" | default "提交认证申请")
+  "aOk" (i18n "zero-account-a-ok" | default "已提交，等待站主核验。")
+  "aVerified" (i18n "zero-account-a-verified" | default "认证已通过，文章署名旁会显示认证徽章。")
+  "aPending" (i18n "zero-account-a-pending" | default "已有申请在审核中，站主核验后会通知结果。")
+  "aNone" (i18n "zero-account-a-none" | default "还没有通过认证。")
+  "aLocked" (i18n "zero-me-a-locked" | default "作者认证入口还没对你开放，先在文章里留言或联系站主开通。")
+  "aSocialMax" (i18n "zero-me-a-social-max" | default "最多 8 个平台")
+  "aHandle" (i18n "zero-me-a-handle" | default "作者标识")
+
+  "verifiedBadge" (i18n "zero-account-verified-badge" | default "已认证作者")
+  "mailOk" (i18n "zero-account-verified" | default "邮箱已验证")
+  "mailBad" (i18n "zero-account-unverified" | default "邮箱未验证")
+  "totpOn" (i18n "zero-me-sec-on" | default "已开启")
+
+  "secMail" (i18n "zero-me-sec-mail" | default "邮箱验证")
+  "secMailVerified" (i18n "zero-me-sec-mail-verified" | default "注册邮箱 {email} 已验证，无需再操作。")
+  "secMailUnverified" (i18n "zero-me-sec-mail-unverified" | default "注册邮箱 {email} 还没验证。点下面按钮发验证邮件，收到 6 位码后填回来即可。")
+  "secMailSend" (i18n "zero-me-sec-mail-send" | default "发送验证邮件")
+  "secMailSent" (i18n "zero-me-sec-mail-sent" | default "验证邮件已发到 {email}，10 分钟内有效。")
+  "secMailCode" (i18n "zero-me-sec-mail-code" | default "6 位验证码")
+  "secMailConfirm" (i18n "zero-me-sec-mail-confirm" | default "确认验证")
+  "secMailOk" (i18n "zero-me-sec-mail-ok" | default "邮箱已验证。")
+  "secTotp" (i18n "zero-me-sec-totp" | default "两步验证（身份验证器 TOTP）")
+  "secTotpOn" (i18n "zero-me-sec-totp-on" | default "验证器已开启，登录时需要补 6 位动态码。")
+  "secTotpAtLogin" (i18n "zero-me-sec-totp-at-login" | default "登录时要这枚动态码")
+  "secTotpAtLoginHint" (i18n "zero-me-sec-totp-at-login-hint" | default "关掉后这个账号登录只填邮箱与密码。站点那条「管理员登录方式」只管后台管理员，管不到这里。")
+  "secTotpOff" (i18n "zero-me-sec-totp-off" | default "验证器未开启。生成密钥后用身份验证器扫码，再填当前 6 位码启用。")
+  "secSetup" (i18n "zero-me-sec-setup" | default "生成密钥")
+  "secEnable" (i18n "zero-me-sec-enable" | default "确认启用")
+  "secDisable" (i18n "zero-me-sec-disable" | default "关闭验证器")
+  "secManual" (i18n "zero-me-sec-manual" | default "手动输入密钥")
+  "secTotpLink" (i18n "zero-me-sec-totp-link" | default "验证器链接（otpauth://）")
+  "secCopySecret" (i18n "zero-me-sec-copy-secret" | default "复制密钥")
+  "secCopyLink" (i18n "zero-me-sec-copy-link" | default "复制验证器链接")
+  "secTotpCode" (i18n "zero-me-sec-totp-code" | default "验证器上的 6 位动态码")
+  "secTotpOffCode" (i18n "zero-me-sec-totp-off-code" | default "当前动态码")
+  "secTotpOffPw" (i18n "zero-me-sec-totp-off-pw" | default "或当前密码")
+  "secPassword" (i18n "zero-me-sec-password" | default "修改密码")
+  "secPwNeed" (i18n "zero-me-sec-pw-need" | default "修改密码必须同时交两样凭据：当前密码 + 身份验证器的 6 位动态码。")
+  "secPwNoTotp" (i18n "zero-me-sec-pw-no-totp" | default "本账号还没启用身份验证器，请先在上面完成绑定。")
+  "secCur" (i18n "zero-account-label-password" | default "当前密码")
+  "secNew" (i18n "zero-account-new-password" | default "新密码")
+  "secChange" (i18n "zero-account-btn-password" | default "修改密码")
+  "secOk" (i18n "zero-account-password-ok" | default "密码已更新，其它设备需要重新登录。")
+  "pwShort" (i18n "zero-account-pw-short" | default "新密码至少 8 位。")
+  "copied" (i18n "zero-me-copied" | default "已复制到剪贴板")
+
+  "delReason" (i18n "zero-me-del-reason" | default "注销原因（可留空）")
+  "delSubmit" (i18n "zero-me-del-submit-v2" | default "确认注销")
+  "delConfirmBtn" (i18n "zero-me-del-confirm-btn" | default "提交申请")
+  "delAsk2" (i18n "zero-me-del-ask-2" | default "确定要提交注销申请？这一步之后才会真正发给站主。")
+  "delAsk" (i18n "zero-me-del-ask-v2" | default "注销是不可撤销的：站主通过后，你的评论、收藏与点赞、投稿、认证资料、友链申请与登录会话都会被删除，无法找回。\n\n确认提交注销申请？")
+  "delOk" (i18n "zero-me-del-ok" | default "注销申请已提交，等待站主审核。")
+  "delPending" (i18n "zero-me-del-pending" | default "注销申请正在等站主审核")
+  "delApproved" (i18n "zero-me-del-approved" | default "站主已同意，账号数据会被删除")
+  "delRejected" (i18n "zero-me-del-rejected" | default "站主驳回了注销申请")
+  "delAdmin" (i18n "zero-me-del-admin" | default "管理员账号不能在自助页面注销，请先在后台移交管理员。")
+  "delWillDelete" (i18n "zero-me-del-will" | default "注销会一并删除")
+  | jsonify | safeJS }}</script>
+{{- $meJS := resources.Get "js/account-me.js" | minify | fingerprint -}}
+<script src="{{ $meJS.RelPermalink }}"></script>
+{{- end -}}

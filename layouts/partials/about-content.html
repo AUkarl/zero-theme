@@ -1,0 +1,67 @@
+{{- /* ============================================================
+  about-content.html — 关于页内容归一化：data 目录的 about.json 优先，回落 [about] params
+  ------------------------------------------------------------
+  用法：{{- $a := partial "about-content.html" . -}}
+  返回 (dict "desc" "tagline" "bio" "site" "declaration" "contacts"
+              "show_desc" "show_bio" "show_site" "show_declaration" "show_social")
+    bio / site / declaration 一律是字符串切片：params 侧的 [[about.bio]] 是表格数组
+    （每项一个 text_zh），后台写的是字符串数组，收成一种形状后渲染处不必分支。
+    contacts 每项：label / text / url / external。
+
+  为什么单独做一个 partial：about/list.html 的 main 块和 scripts 块都要用同一份内容，
+  Hugo 的 block 之间不共享变量，写在 main 里带不到脚本块，两处各写一遍取值迟早不一致。
+
+  区块开关（show_bio / show_site / show_declaration / show_social）仍以 params 为准，
+  about.json 里恰好写了同名字段时才接管：后台表单没有这些项时行为跟改造前一致。
+  ============================================================ */ -}}
+{{- $cfg := .Site.Params.about | default dict -}}
+{{- $d := hugo.Data.about -}}
+{{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "descZh") "fallback" ($cfg.desc | default $cfg.desc_zh)) -}}
+{{- $tagline := partial "cms/text.html" (dict "data" $d "keys" (slice "tagline" "taglineZh") "fallback" ($cfg.tagline | default $cfg.tagline_zh)) -}}
+{{- $bio := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "bio") "fallback" $cfg.bio))) -}}
+{{- $site := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "site") "fallback" $cfg.site))) -}}
+{{- $decl := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "declaration" "declarations") "fallback" $cfg.declaration))) -}}
+{{- /* 联系方式：后台写了 contacts 就整组用后台的（labelKey 那套 i18n 键机制随之作废，
+       模板从来只读 label 显示分组名）；没写则照旧读 params 的 [[aboutContacts]] */ -}}
+{{- $cField := partial "cms/value.html" (dict "data" $d "keys" (slice "contacts" "aboutContacts")) -}}
+{{- $cFromData := and $cField.set (reflect.IsSlice $cField.value) (gt (len $cField.value) 0) -}}
+{{- $cList := slice -}}
+{{- if $cFromData -}}
+  {{- $cList = $cField.value -}}
+{{- else -}}
+  {{- with .Site.Params.aboutContacts -}}
+    {{- if reflect.IsSlice . -}}{{- $cList = . -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $contacts := slice -}}
+{{- range $cList -}}
+  {{- if reflect.IsMap . -}}
+    {{- $label := partial "cms/str.html" (dict "value" (or .label .group)) -}}
+    {{- $text := partial "cms/str.html" (dict "value" (or .text .value)) -}}
+    {{- $curl := partial "cms/str.html" (dict "value" (or .url .link)) -}}
+    {{- /* 旧模板对 params 侧一律加 target="_blank"（连没写 external 的也是），
+           没写 about.json 时输出要保持一致，所以这条只在 params 来源上保留；
+           data 来源按契约里的 external 决定，mailto 之类可以不当外链 */ -}}
+    {{- $ext := true -}}
+    {{- if $cFromData -}}
+      {{- $ef := partial "cms/value.html" (dict "data" . "keys" (slice "external")) -}}
+      {{- if $ef.set -}}{{- $ext = $ef.on -}}{{- end -}}
+    {{- end -}}
+    {{- if or $label $text $curl -}}
+      {{- $contacts = $contacts | append (dict "label" $label "text" $text "url" $curl "external" $ext) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return (dict
+  "desc" $desc
+  "tagline" $tagline
+  "bio" $bio
+  "site" $site
+  "declaration" $decl
+  "contacts" $contacts
+  "show_desc" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showDesc" "show_desc") "default" (ne $cfg.show_desc false)))
+  "show_bio" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showBio" "show_bio") "default" (ne $cfg.show_bio false)))
+  "show_site" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showSite" "show_site") "default" (ne $cfg.show_site false)))
+  "show_declaration" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showDeclaration" "show_declaration") "default" (ne $cfg.show_declaration false)))
+  "show_social" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showSocial" "show_social") "default" (ne $cfg.show_social false)))
+) -}}

@@ -1,0 +1,532 @@
+/* ============================================================
+   zero.css — zero-stack 自建组件（评论 / 点赞 / 订阅 / 时刻流）的容器样式
+   组件本身在 shadow DOM 内自带配色，这里只负责与主题版面对齐：
+   宽度、间距、以及未配置后端时的提示块。
+
+   深色模式：本文件自带一套 --zero-* 变量，:root 给浅色值，
+   [data-theme="dark"] 与 prefers-color-scheme: dark 下的 [data-theme="auto"]
+   给深色值（和 common.css 的三处分支同一套写法），操作条 / 收藏 / 订阅框
+   全部只吃变量，不再写死颜色。
+   ============================================================ */
+
+/* ---------- 深色模式变量（新增的一律成对写） ---------- */
+:root {
+  --zero-action-bg: #f7f7f8;          /* 操作条每一块打底 */
+  --zero-action-border: #e5e5e5;
+  --zero-action-fg: #333333;
+  --zero-action-muted: #777777;       /* 块里的文字标签 / 提示语 */
+  --zero-chip-bg: #ffffff;            /* 点赞那颗胶囊（与组件包里的默认配色一致） */
+  --zero-chip-border: #e2e2e2;
+  --zero-chip-fg: #666666;
+  --zero-react-fg: #e0245e;           /* 点赞激活色（心） */
+  --zero-star-fg: #e0a100;            /* 收藏激活色（星）：与点赞同一套形状与动画，只换颜色 */
+  --zero-field-bg: #ffffff;           /* 订阅那个「输入框 + 按钮」的圆角框 */
+  --zero-field-border: #dcdcdc;
+  --zero-input-bg: #fbfbfb;
+  --zero-input-fg: #333333;
+  /* zero-subscribe.css / zero-apply.css 早就在引用 --input-bg 这个名字，
+     但主题里一直没人定义过它（所以永远取到 #fbfbfb 那个兜底值，深色下是一块白）。
+     这里补上，同一个页面里引了 zero.css 的表单就自动跟着深色变量走。 */
+  --input-bg: #fbfbfb;
+  --zero-accent-bg: #0d8368;          /* 主按钮底色（订阅 / 提交申请） */
+  --zero-accent-fg: #ffffff;
+  --zero-ok-fg: #0d8368;
+  --zero-error-fg: #d0453b;
+}
+
+[data-theme="dark"] {
+  --zero-action-bg: #232323;
+  --zero-action-border: #3a3a3a;
+  --zero-action-fg: #e6e6e6;
+  --zero-action-muted: #a3a3a3;
+  --zero-chip-bg: #1b1b1b;
+  --zero-chip-border: #4a4a4a;
+  --zero-chip-fg: #cfcfcf;
+  --zero-react-fg: #f472b6;
+  --zero-star-fg: #fbbf24;
+  --zero-field-bg: #1b1b1b;
+  --zero-field-border: #4a4a4a;
+  --zero-input-bg: #1b1b1b;
+  --zero-input-fg: #e6e6e6;
+  --input-bg: #1b1b1b;
+  --zero-accent-bg: #7beec7;
+  --zero-accent-fg: #06251b;
+  --zero-ok-fg: #7beec7;
+  --zero-error-fg: #f87171;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --zero-action-bg: #232323;
+    --zero-action-border: #3a3a3a;
+    --zero-action-fg: #e6e6e6;
+    --zero-action-muted: #a3a3a3;
+    --zero-chip-bg: #1b1b1b;
+    --zero-chip-border: #4a4a4a;
+    --zero-chip-fg: #cfcfcf;
+    --zero-react-fg: #f472b6;
+  --zero-star-fg: #fbbf24;
+    --zero-field-bg: #1b1b1b;
+    --zero-field-border: #4a4a4a;
+    --zero-input-bg: #1b1b1b;
+    --zero-input-fg: #e6e6e6;
+    --input-bg: #1b1b1b;
+    --zero-accent-bg: #7beec7;
+    --zero-accent-fg: #06251b;
+    --zero-ok-fg: #7beec7;
+    --zero-error-fg: #f87171;
+    }
+}
+
+/* 评论区与正文同宽，避免 Custom Element 默认 inline 导致换行错乱 */
+zero-comment,
+zero-moments,
+zero-subscribe,
+zero-like {
+  display: block;
+}
+
+/* ============================================================
+   文章页操作条：点赞 / 收藏 / 订阅
+   三颗紧凑胶囊排在同一条线上，只出图标与数量；窄屏允许换行。
+     <div class="zero-actions">
+       <div class="zero-action-block za-like zero-like-item">
+         <zero-like show-count></zero-like></div>
+       <div class="zero-action-block za-star zero-star-item">
+         <span class="zero-star"><button class="zst-btn">★ 计数</button></span></div>
+       <div class="zero-action-block za-subscribe zero-subscribe-item">
+         <a class="za-sub-link" href="/subscribe/">✉ 订阅</a></div>
+     </div>
+   用 flex + 不撑满：三颗胶囊按自身宽度排在一条线上，后台关掉某一项时那一块整块
+   hidden，剩下的自动补位；窄屏宁可换行也不把图标挤扁。
+   ============================================================ */
+.zero-actions {
+  position: relative;   /* 收藏那句提示的浮层以整条操作条为基准定位 */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 28px 0 8px;
+  padding: 14px 0;
+  border-top: 1px solid var(--zero-action-border, #ddd);
+  border-bottom: 1px solid var(--zero-action-border, #ddd);
+}
+
+/* 每一块只是一层容器，外观交给里面那颗胶囊自己画，避免出现「框中框」 */
+.zero-action-block {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--zero-action-fg, #333);
+}
+
+/* 订阅入口：只做一颗跳 /subscribe/ 的按钮，形状与点赞/收藏胶囊对齐 */
+.za-sub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.75rem;
+  border: 1px solid var(--zero-action-border, #e2e2e2);
+  border-radius: 999px;
+  background: var(--zero-action-bg, #fff);
+  color: var(--zero-action-fg, #666);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.za-sub-link:hover {
+  color: var(--accent-color, #0d8368);
+  border-color: currentColor;
+}
+.za-sub-link i {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* ---------- 点赞：组件包里那颗按钮（♡ 未点 / ♥ 已点 + 计数）----------
+   胶囊的底、边、字走宿主同一组 --zero-chip-* 变量（自定义属性穿透 shadow DOM），
+   和右边那颗收藏胶囊吃的是同一套配色，深色下一起换肤。
+   不要再加 invert/hue-rotate 校正：那层滤镜会把激活的粉红一起转掉，
+   点过之后看上去像没变色。 */
+.zero-actions zero-like {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+/* ---------- 收藏 ★（主题侧，assets/js/zero-star.js） ----------
+   外观与 <zero-like> 那颗胶囊完全一致：同为胶囊、同一圈边框、同一个激活色，
+   未点时是空心 ☆，点下去变实心 ★ 并弹一下。
+   内部顺序：图标 → 计数 → 文字。 */
+.zero-star {
+  display: inline-flex;
+  flex-wrap: wrap;      /* 未登录的那句提示另起一行，别把收藏胶囊挤扁 */
+  align-items: center;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.zero-star[hidden],
+.zero-action-block[hidden] {
+  display: none;
+}
+
+.zst-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.75rem;
+  border: 1px solid var(--zero-chip-border, #e2e2e2);
+  border-radius: 999px;
+  background: var(--zero-chip-bg, #fff);
+  color: var(--zero-chip-fg, #666);
+  font: inherit;
+  font-size: 0.85rem;
+  /* 与 <zero-like> 影子 DOM 里那颗按钮同值：不写死行高时，胶囊高度会跟着正文的
+     line-height:1.7 长，两颗按钮差出 8px。这里是「点赞 / 收藏 / 订阅 同高」的锚点。 */
+  line-height: 1.4;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.zst-btn:hover {
+  color: var(--zero-star-fg, #e0a100);
+  border-color: var(--zero-star-fg, #e0a100);
+}
+
+/* 已收藏：只换色 + 图标变实心，和左边那颗点赞胶囊一个画法（不再填琥珀底、不再加粗） */
+.zst-btn.is-active {
+  color: var(--zero-star-fg, #e0a100);
+  border-color: var(--zero-star-fg, #e0a100);
+}
+
+/* 点下去那一下的弹跳：与 <zero-like> 影子 DOM 里同名同参数的关键帧保持一致 */
+.zst-btn.is-pop .zst-icon {
+  animation: zero-react-pop 0.26s ease;
+}
+
+@keyframes zero-react-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+.zst-btn:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.zst-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+  /* 与 <zero-like> 影子 DOM 里 .icon 同值：固定格子宽，两颗胶囊才能等宽 */
+  display: inline-block;
+  width: 1.1em;
+  text-align: center;
+}
+
+.zst-count {
+  min-width: 1.2em;
+  text-align: left;
+}
+
+.zst-msg {
+  /* 时刻卡片里：那句提示（带链接）排在按钮下面一行，胶囊不会被顶宽 */
+  flex: 1 1 100%;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--zero-action-muted, #999);
+}
+
+.zst-msg:empty {
+  display: none;
+}
+
+/* 文章操作条里换个画法：浮层挂在整条操作条下方，不参与这一行的排版。
+   写在流内时它 flex:1 1 100%，会把订阅那颗挤到第二行（未登录点收藏就乱）。 */
+.zero-actions .zero-star {
+  flex-wrap: nowrap;
+}
+.zero-actions .zst-msg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  flex: none;
+  z-index: 6;
+  margin-top: 8px;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--zero-chip-border, #e2e2e2);
+  border-radius: 8px;
+  background: var(--zero-chip-bg, #fff);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* 未登录点收藏：一句说明 + 一个去 /account/ 的链接（见 zero-star.js showLoginNotice） */
+.zst-msg .zst-login-link {
+  color: var(--zero-accent-bg, #0d8368);
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ---------- 订阅：输入框 + 按钮贴在同一个圆角框里 ----------
+   只作用于操作条（.za-subscribe），/subscribe/ 页与账号页仍是原来平铺的样子。
+   选择器比 zero-subscribe.css 里的原始规则更具体，不靠 !important 也能压住。 */
+.za-subscribe .zero-subscribe-form {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.za-subscribe .zsf-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--zero-field-border, #dcdcdc);
+  border-radius: 999px;
+  background: var(--zero-field-bg, #fff);
+}
+
+.za-subscribe .zsf-field input[type="email"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--zero-input-fg, #333);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.za-subscribe .zsf-field input[type="email"]::placeholder {
+  color: var(--zero-action-muted, #999);
+}
+
+/* 原来的 :focus 把背景写死成 #fff，深色下会跳成一块白，这里改回变量 */
+.za-subscribe .zsf-field input[type="email"]:focus {
+  outline: 2px solid var(--zero-accent-bg, #0d8368);
+  outline-offset: -2px;
+  border: none;
+  background: transparent;
+}
+
+.za-subscribe .zsf-field .zsf-btn {
+  flex: 0 0 auto;
+  padding: 6px 18px;
+  color: var(--zero-accent-fg, #fff);
+  background: var(--zero-accent-bg, #0d8368);
+}
+
+.za-subscribe .zsf-msg {
+  margin-top: 6px;
+  color: var(--zero-action-muted, #666);
+  font-size: 0.78rem;
+}
+
+.za-subscribe .zsf-msg.zsf-is-success {
+  color: var(--zero-ok-fg, #0d8368);
+}
+
+.za-subscribe .zsf-msg.zsf-is-error {
+  color: var(--zero-error-fg, #d0453b);
+}
+
+/* 窄屏不换行成整行：三颗都是紧凑胶囊，flex-wrap 自己会排，占满一整行反而难看 */
+
+/* 后端地址没填时的说明块：只提示站点所有者，不显示给访客 */
+.zero-config-hint {
+  margin: 24px 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--border, #ddd);
+  border-radius: 8px;
+  background: var(--tag-bg, #f8f8f8);
+  color: var(--text-secondary, #999);
+  font-size: 14px;
+}
+
+/* ============================================================
+   文章署名（多作者）与作者资料页
+   静态部分只吃 data/authors.yaml；昵称 / 头像 / 简介 / 个人站点
+   由 zero-authors.js 按 /api/authors 的结果在运行时补齐。
+   认证徽章已删除：主题侧不再画 .author-badge，作者身份由「用户组：朋友 /
+   共创 / 站长」那句文字（账号页与后台维护）加上作者资料页本身来表达。
+   ============================================================ */
+.author-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 10px 0 2px;
+  font-size: 0.88rem;
+  color: var(--text-secondary, #777);
+}
+
+.byline-label {
+  letter-spacing: 0.04em;
+}
+
+.byline-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.byline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text, #222);
+  text-decoration: none;
+}
+
+.byline-link:hover .byline-name {
+  text-decoration: underline;
+}
+
+.byline-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--tag-bg, #f2f2f2);
+}
+
+/* --- 头像取不到时的首字母占位 ---
+   作者认证只存邮箱派生的 Cravatar 地址（?d=404：没头像就返回 404），
+   所以图片会失败。zero-authors.js 给失败的图所在容器加 is-fallback，
+   这里用 data-initial 的首字画一颗同尺寸的圆头像，不留破图。 */
+.byline-item.is-fallback .byline-avatar,
+.author-avatar.is-fallback img,
+.ap-head.is-fallback .ap-avatar {
+  display: none;
+}
+
+.byline-item.is-fallback::before,
+.author-avatar.is-fallback::before,
+.ap-head.is-fallback::before {
+  content: attr(data-initial);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tag-bg, #f2f2f2);
+  color: var(--text, #222);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.author-avatar.is-fallback::before,
+.ap-head.is-fallback::before {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--border, #e5e5e5);
+  font-size: 1.6rem;
+}
+
+/* --- 作者资料页 --- */
+.author-profile {
+  max-width: 800px;
+  margin: 0 auto 26px;
+  padding: 18px 20px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: var(--radius, 12px);
+  background: var(--card-bg, #fff);
+}
+
+.ap-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ap-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--tag-bg, #f2f2f2);
+}
+
+.ap-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 1.12rem;
+}
+
+.ap-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #777);
+}
+
+.ap-site {
+  color: var(--text-secondary, #777);
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.ap-site:hover {
+  color: var(--text, #222);
+}
+
+.ap-site[hidden] {
+  display: none;
+}
+
+.ap-bio {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: var(--text-secondary, #777);
+}
+
+.ap-rich {
+  color: var(--text, #222);
+}
+
+.ap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.ap-actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 22px;
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: var(--radius, 12px);
+  background: var(--tag-bg, #f7f7f7);
+  color: var(--text, #222);
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .author-profile {
+    padding: 16px;
+  }
+
+  .ap-avatar {
+    width: 52px;
+    height: 52px;
+  }
+}

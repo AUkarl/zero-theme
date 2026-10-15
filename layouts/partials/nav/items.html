@@ -1,0 +1,88 @@
+{{- /* ============================================================
+  nav/items.html — 导航项归一化：data 目录的 nav.json 优先，回落 menus.*.toml
+  ------------------------------------------------------------
+  用法：{{- $nav := partial "nav/items.html" . -}}
+  返回顶层项切片，每项字段固定（子项挂在 children 上）：
+    name        显示文字
+    url         原始链接（未过 relLangURL，由 header.html 处理）
+    weight      排序权重（统一 float，方便和主题开关一起排）
+    icon        Font Awesome 类名
+    image       自定义图片路径（与 icon 二选一）
+    identifier  非空 = 该项可作为父项
+    parent      指向父项的 identifier；空 = 顶层项
+    controls    true = 右侧图标区（position 为 controls）
+    external    true = 外链，新标签页打开
+    iconOnly    true = 只显示图标，文字转成 title + aria-label
+    zeroAccount true = 账号入口（common.js 用 #navAccount 换头像）
+    switchKey   受哪个后台开关键控制（"" 表示不受控制）
+    isParent    true = 有子项，渲染成点击展开的子菜单
+    children    子项切片
+    menuEntry   仅菜单来源有：原始 *menu.MenuEntry，供 HasMenuCurrent 判断高亮
+
+  为什么要归一化：后台写的是一堆扁平 JSON 对象，menus.*.toml 交给模板的是
+  *menu.MenuEntry（父子树、weight 排序都由 Hugo 做完了）。两种形状各写一遍
+  渲染逻辑迟早走偏，所以在这里收成同一种 map，header.html 只保留一条渲染路径。
+
+  顺序：菜单侧沿用 Hugo 已排好的顺序，不再重排，保证没写 nav.json 时页面
+  和改造前一模一样；data 侧按 weight 排序（JSON 数组本身不保证顺序）。
+  ============================================================ */ -}}
+{{- $d := hugo.Data.nav -}}
+{{- $raw := slice -}}
+{{- if reflect.IsSlice $d -}}
+  {{- $raw = $d -}}
+{{- else if reflect.IsMap $d -}}
+  {{- with $d.items -}}
+    {{- if reflect.IsSlice . -}}
+      {{- $raw = . -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $items := slice -}}
+{{- if $raw -}}
+  {{- /* data 优先：先逐条归一化，再用 identifier / parent 组两级树 */ -}}
+  {{- $all := slice -}}
+  {{- range $raw -}}
+    {{- if reflect.IsMap . -}}
+      {{- $all = $all | append (partial "nav/entry-data.html" (dict "item" .)) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $ids := slice -}}
+  {{- range $all -}}
+    {{- with .identifier -}}
+      {{- $ids = $ids | append . -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $all -}}
+    {{- $id := string .identifier -}}
+    {{- $pid := string .parent -}}
+    {{- if or (eq $pid "") (not (in $ids $pid)) (eq $pid $id) -}}
+      {{- /* parent 指向不存在的 identifier 时按顶层项渲染：
+             后台一次误填不该把整个入口从导航里吃掉 */ -}}
+      {{- $kids := slice -}}
+      {{- if and $id (in $ids $id) -}}
+        {{- range where $all "parent" $id -}}
+          {{- if ne (string .identifier) $id -}}
+            {{- $kids = $kids | append . -}}
+          {{- end -}}
+        {{- end -}}
+        {{- $kids = sort $kids "weight" -}}
+      {{- end -}}
+      {{- $items = $items | append (merge . (dict "children" $kids "isParent" (gt (len $kids) 0))) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $items = sort $items "weight" -}}
+{{- else -}}
+  {{- range .Site.Menus.main -}}
+    {{- if not .Parent -}}
+      {{- $kids := slice -}}
+      {{- if .HasChildren -}}
+        {{- range .Children -}}
+          {{- $kids = $kids | append (partial "nav/entry-menu.html" (dict "entry" .)) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $it := partial "nav/entry-menu.html" (dict "entry" .) -}}
+      {{- $items = $items | append (merge $it (dict "children" $kids "isParent" (gt (len $kids) 0))) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $items -}}

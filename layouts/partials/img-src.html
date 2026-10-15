@@ -1,0 +1,155 @@
+{{- /* ============================================================
+  img-src.html — 把一张图片（外链 / 站内 / 页面资源）变成可用的响应式资源
+  ------------------------------------------------------------
+  入参（dict）：
+    src      图片地址（front matter 里写什么就传什么，不用改写作习惯）
+    page     当前页面（可选，用于查找 page bundle 里的图片）
+    sizes    sizes 属性（可选）
+    widths   候选宽度（可选，默认 400 800 1200，超出原图宽度的会被丢掉）
+    quality  WebP 质量（默认 78）
+    lqip     是否生成 20px 的模糊占位（默认 true）
+
+  返回（dict）：
+    ok      true = 拿到了图片并处理成功；false = 用回原始外链
+    src     主图地址（最大的那一档）
+    srcset  "a.webp 400w, b.webp 800w, ..."
+    sizes   sizes 属性
+    lqip    "data:image/webp;base64,..."（1 行内联，约 100~200 字节）
+    width/height  原图尺寸（用于写 width/height 占位）
+    orig    原始地址（兜底用）
+
+  缓存与部署：
+    · 外链用 resources.GetRemote 抓取，maxAge 设成一年 → 落到 Hugo 的
+      filecache（.cache/），Cloudflare Pages 会把 .cache 缓存到下一次构建，
+      所以同一个链接只会真正下载一次
+    · 站内图用 os.ReadFile + resources.FromString 读进来（static/ 下的图
+      也能被处理），路径里带上文件大小，文件换了自动重新处理
+    · 处理结果的 WebP 只在构建产物里，不进 Git
+  ============================================================ */ -}}
+{{- $src := .src | default "" -}}
+{{- $page := .page -}}
+{{- $sizes := .sizes | default "100vw" -}}
+{{- $widths := .widths | default (slice 400 800 1200) -}}
+{{- /* 全局图片管线参数在 params.toml 的 [image]：调用方传了 quality / lqip 就以调用方为准 */ -}}
+{{- /* 这个 partial 用 dict 当入参，取 params 要走全局 site */ -}}
+{{- $img := site.Params.image | default dict -}}
+{{- $quality := int (.quality | default ($img.quality | default 78)) -}}
+{{- $wantLqip := .lqip -}}
+{{- if eq $wantLqip nil -}}{{- $wantLqip = ne $img.lqip_width 0 -}}{{- end -}}
+{{- $lqipW := int ($img.lqip_width | default 20) -}}
+{{- $lqipQ := int ($img.lqip_quality | default 25) -}}
+{{- $maxAge := printf "%dh" (int ($img.max_age_hours | default 8760)) -}}
+{{- /* 远程抓取开关：某些图源在本地网络不可达（例如 picsum.photos 在国内连不上），
+       抓取会让 `hugo server` 一直卡在 "Start building sites …"。
+       params 写 [image].remote_fetch = false 即可跳过抓取（老写法顶层 remote_image_fetch
+       照样认，[image] 里的值优先），图片退回原始外链：页面照常显示，只是不做本地 WebP 优化。 */ -}}
+{{- $allowRemote := true -}}
+{{- if isset $img "remote_fetch" }}{{ $allowRemote = ne $img.remote_fetch false }}{{ else if eq site.Params.remote_image_fetch false }}{{ $allowRemote = false }}{{ end -}}
+{{- /* 超时按「抓取失败」处理（回退原始外链）。默认 20 秒，写在 [image].remote_timeout。 */ -}}
+{{- $reqTimeout := $img.remote_timeout | default (site.Params.remote_image_timeout | default "20s") -}}
+
+{{- $out := dict "ok" false "src" $src "orig" $src "srcset" "" "sizes" $sizes "lqip" "" "width" 0 "height" 0 -}}
+
+{{- if $src -}}
+  {{- $isRemote := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") -}}
+  {{- $exts := slice ".jpg" ".jpeg" ".png" ".gif" ".webp" ".bmp" ".tif" ".tiff" ".avif" -}}
+  {{- $res := false -}}
+
+  {{- if $isRemote -}}
+    {{- $url := $src -}}
+    {{- if hasPrefix $url "//" -}}{{- $url = printf "https:%s" $url -}}{{- end -}}
+    {{- if $allowRemote -}}
+    {{- with try (resources.GetRemote $url (dict "maxAge" $maxAge "timeout" $reqTimeout)) -}}
+      {{- with .Value -}}
+        {{- if eq .MediaType.MainType "image" -}}{{- $res = . -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- end -}}
+  {{- else if in $exts (lower (path.Ext $src)) -}}
+    {{- $clean := strings.TrimPrefix "/" (strings.TrimPrefix "./" $src) -}}
+    {{- /* 1) page bundle 资源 */ -}}
+    {{- with $page -}}
+      {{- with .Resources.GetMatch $clean -}}
+        {{- if eq .MediaType.MainType "image" -}}{{- $res = . -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- /* 2) assets/ */ -}}
+    {{- if not $res -}}
+      {{- with resources.Get $clean -}}
+        {{- if eq .MediaType.MainType "image" -}}{{- $res = . -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- /* 3) static/（Hugo 不能直接把 static 当资源，这里读进来再处理） */ -}}
+    {{- if and (not $res) (hasPrefix $src "/") -}}
+      {{- $staticPath := printf "static%s" $src -}}
+      {{- if fileExists $staticPath -}}
+        {{- $raw := os.ReadFile $staticPath -}}
+        {{- if $raw -}}
+          {{- $size := 0 -}}
+          {{- with os.Stat $staticPath -}}{{- $size = .Size -}}{{- end -}}
+          {{- $ext := lower (path.Ext $src) -}}
+          {{- with try (resources.FromString (printf "img/__src/%s-%d%s" (path.BaseName $src) $size $ext) $raw) -}}
+            {{- with .Value -}}
+              {{- if eq .MediaType.MainType "image" -}}{{- $res = . -}}{{- end -}}
+            {{- end -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if $res -}}
+    {{- /* 主图取最大的那一档，同时生成 srcset
+         输出文件名只用 ASCII（来源标识 + 短哈希 + 宽度），避免中文/空格文件名
+         在部分环境下 URL 编码出错 */ -}}
+    {{- $hash := substr (sha256 $src) 0 6 -}}
+    {{- $source := "img" -}}
+    {{- if $isRemote -}}
+      {{- $u := $src -}}
+      {{- if hasPrefix $u "//" -}}{{- $u = printf "https:%s" $u -}}{{- end -}}
+      {{- $host := "" -}}
+      {{- with urls.Parse $u -}}{{- $host = .Host -}}{{- end -}}
+      {{- $host = replaceRE `^www\.` "" $host -}}
+      {{- $host = replaceRE `[^a-zA-Z0-9]+` "-" $host -}}
+      {{- $host = strings.TrimSuffix "-" (strings.TrimPrefix "-" $host) -}}
+      {{- if $host -}}{{- $source = $host -}}{{- end -}}
+    {{- end -}}
+    {{- $slug := printf "%s-%s" $source $hash -}}
+
+    {{- $candidates := slice -}}
+    {{- range $w := $widths -}}
+      {{- if le $w $res.Width -}}{{- $candidates = $candidates | append $w -}}{{- end -}}
+    {{- end -}}
+    {{- if not $candidates -}}{{- $candidates = slice $res.Width -}}{{- end -}}
+
+    {{- $srcset := slice -}}
+    {{- $main := "" -}}
+    {{- range $w := $candidates -}}
+      {{- $v := $res.Resize (printf "%dx webp q%d" $w $quality) -}}
+      {{- $v = resources.Copy (printf "img/x/%s-%dw.webp" $slug $w) $v -}}
+      {{- $srcset = $srcset | append (printf "%s %dw" $v.RelPermalink $w) -}}
+      {{- $main = $v.RelPermalink -}}
+    {{- end -}}
+
+    {{- $lqip := "" -}}
+    {{- if $wantLqip -}}
+      {{- $small := $res.Resize (printf "%dx webp q%d" $lqipW $lqipQ) -}}
+      {{- $lqip = printf "data:image/webp;base64,%s" (base64Encode $small.Content) -}}
+    {{- end -}}
+
+    {{- $out = dict
+      "ok" true
+      "src" $main
+      "srcset" (delimit $srcset ", ")
+      "sizes" $sizes
+      "lqip" $lqip
+      "width" $res.Width
+      "height" $res.Height
+      "orig" $src
+    -}}
+  {{- else if $isRemote -}}
+    {{- /* 主动关掉抓取（[image].remote_fetch = false）不是故障，不出告警；真的抓失败了才提醒 */ -}}
+    {{- if $allowRemote -}}{{- warnf "img-src: 抓取失败，已退回原始链接 → %s" $src -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

@@ -1,0 +1,79 @@
+{{- /* ============================================================
+  zero/apply.html — 友链在线申请表单（替换原来只能看不能用的「提交示例」）
+  只在配了 params.apiBaseURL 时渲染，提交走 /api/friends/apply，
+  站主在 zero-cms 审核通过后会自动写进 data/links.yaml 并触发站点重建。
+  表单是否可用还由后台的 friendApplyEnabled / friendsEnabled 开关决定
+  （运行时判定，不重建站点，见 assets/js/zero-apply.js）。
+
+  字段与顺序（.za-grid 是三列栅格，两行各三个 + 最后一行简介独占整行）：
+    第一行：1 站点名称 name（必填）  2 站点地址 url（必填）  3 站长邮箱 email（必填）
+    第二行：4 RSS 链接 rssUrl        5 头像链接 avatar       6 站内链接 friendLink
+    第三行：7 简介 description（.za-full 横跨全部列）
+  窄屏由 zero-apply.css 逐级降到两列 / 一列。
+  必填三项除了 required 还各带一句中文 title，浏览器弹出的是人话而不是英文校验串。
+  name 属性一律用后端认的名字；reason 这类表单里没有的字段由
+  zero-apply.js 在 payload 里补空串，后端不会因为缺字段报 400。
+  文案全部是中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- if $zero.enabled -}}
+<form class="zero-apply" id="zeroApplyForm" hidden>
+  <p class="za-lead">填写下面的表单提交申请，站主审核通过后会自动收录进友链。</p>
+
+  <div class="za-grid">
+    <label class="za-field">
+      <span>站点名称 <em>*</em></span>
+      <input type="text" name="name" maxlength="60" required autocomplete="organization"
+             placeholder="你的网站叫什么" title="站点名称是必填项">
+    </label>
+    <label class="za-field">
+      <span>站点地址 <em>*</em></span>
+      <input type="url" name="url" maxlength="300" required placeholder="https://" autocomplete="url"
+             title="站点地址是必填项，要带 http:// 或 https://">
+    </label>
+    <label class="za-field">
+      <span>站长邮箱 <em>*</em></span>
+      <input type="email" name="email" maxlength="120" required autocomplete="email"
+             placeholder="example@mail.com" title="站长邮箱是必填项，用来发审核结果">
+      <small>审核结果和其他通知都发到这个邮箱。</small>
+    </label>
+    <label class="za-field">
+      <span>RSS 链接</span>
+      <input type="url" name="rssUrl" maxlength="300" placeholder="https://">
+      <small>填了才会出现在「朋友动态」里。</small>
+    </label>
+    <label class="za-field">
+      <span>头像链接</span>
+      <input type="url" name="avatar" maxlength="300" placeholder="https://">
+    </label>
+    <label class="za-field">
+      <span>我方链接（你把本站放到的地址）</span>
+      <input type="url" name="friendLink" maxlength="300" placeholder="https://">
+    </label>
+    <label class="za-field za-full">
+      <span>简介</span>
+      <input type="text" name="description" maxlength="200" placeholder="一句话介绍你的网站">
+    </label>
+  </div>
+
+  {{- /* 蜜罐：真人看不见，脚本填了就直接丢掉 */ -}}
+  <div class="za-hp" aria-hidden="true">
+    <label>请勿填写<input type="text" name="hp" tabindex="-1" autocomplete="off"></label>
+  </div>
+
+  <p class="za-msg" id="zeroApplyMsg" role="status" aria-live="polite"></p>
+  <button type="submit" class="za-btn" id="zeroApplyBtn">提交申请</button>
+</form>
+
+<script type="application/json" class="zero-apply-i18n">{{ dict
+  "closed" "本站暂未开放友链申请。"
+  "sending" "正在提交…"
+  "network" "网络出错了，请稍后再试。"
+  "fill" "站点名称、站点地址、站长邮箱都要填。"
+  "urlBad" "站点地址要以 http:// 或 https:// 开头。"
+  "ok" "已提交，等待站主审核。"
+  | jsonify | safeJS }}</script>
+
+  {{- $applyJS := resources.Get "js/zero-apply.js" | minify | fingerprint -}}
+<script src="{{ $applyJS.RelPermalink }}"></script>
+{{- end -}}

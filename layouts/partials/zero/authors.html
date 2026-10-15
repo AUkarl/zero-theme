@@ -1,0 +1,9 @@
+{{- /* ============================================================
+  zero/authors.html — 作者署名运行时脚本
+  只在配了 apiBaseURL 时挂上；脚本自己会判断页面上有没有署名块。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- if $zero.enabled -}}
+{{- $authorsJS := resources.Get "js/zero-authors.js" | minify | fingerprint -}}
+<script src="{{ $authorsJS.RelPermalink }}"></script>
+{{- end -}}

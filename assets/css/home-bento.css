@@ -1,0 +1,677 @@
+/* ============================================================
+   home-bento.css — 新版主页（精选 Bento Grid + 全部文章等高网格）
+   ------------------------------------------------------------
+   只在 [home] layout = "bento" 时加载，所有规则都限制在 #home-bento
+   容器内，不会影响旧布局（.garden-*）和其它页面。
+   布局/尺寸对齐参考稿：
+     精选：1 列 → sm 2 列 → lg 4 列；bento 行高 210px（<1024px 时 200px）
+     全部：列数由 --hb-acols 给出（随断点 1 → 2 → 配置值，模板里算好），
+           卡片固定高 --hb-card-h，封面占 --hb-acard-img
+   上面这几个 --hb-* 变量都能在 [home.bento] 里改，由 home-bento-styles.html 覆盖。
+   颜色/圆角沿用主题变量（--card-bg/--border/--text/…），因此暗色模式同样可用。
+   ============================================================ */
+
+#home-bento {
+  --hb-radius: 16px;
+  --hb-gap: 20px;
+  --hb-shadow: var(--shadow);
+  --hb-shadow-hover: 0 18px 36px -14px rgba(0, 0, 0, 0.22);
+  --hb-card-h: 360px;
+  --hb-acard-img: 52%;
+  --hb-acols: 1;
+
+  /* 无图卡片的莫兰迪色：低饱和、四张色相明显不同（明暗模式都用这一套浅色） */
+  --hb-morandi-1: #e5c3b7;   /* 陶土粉 */
+  --hb-morandi-2: #e8d79a;   /* 奶黄 */
+  --hb-morandi-3: #c9d8b4;   /* 橄榄绿 */
+  --hb-morandi-4: #c3d3dc;   /* 雾蓝 */
+  --hb-morandi-ink: #463c34; /* 暖褐灰文字 */
+  /* 无封面图 / 图片加载中或失败时的底：暖色莫兰迪渐变（不是一个纯色块） */
+  --hb-placeholder: linear-gradient(135deg, #f0e8dd 0%, #e3d7c8 50%, #d8ccbe 100%);
+}
+
+/* 平滑滚动（仅新版主页需要，#featured / #articles 锚点跳转） */
+html { scroll-behavior: smooth; }
+
+#home-bento {
+  margin: 0 auto;
+  /* 顶部/左右避让由主题的 .main 负责（padding-top 已含导航高度），这里只留底部间距 */
+  padding: 0 0 96px;
+}
+
+/* 锚点跳转时不要被固定导航挡住标题（#featured / #articles） */
+#home-bento #featured,
+#home-bento #articles {
+  scroll-margin-top: calc(var(--nav-height) + 24px);
+}
+
+/* ===== 顶部简介 ===== */
+#home-bento .hb-intro { padding: 8px 0 40px; }
+
+#home-bento .hb-eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  margin: 0 0 12px;
+}
+
+/* 主标题：尺寸/字重沿用主题的 .section-title（模板里同时挂了该类），
+   这里只补齐行高与间距，保证和其它页面一致 */
+#home-bento .hb-title {
+  line-height: 1.25;
+  margin: 0;
+}
+
+/* 简介：竖线 + 字号沿用主题的 .section-desc（模板里同时挂了该类） */
+#home-bento .hb-desc {
+  margin: 12px 0 0;
+  max-width: 46rem;
+}
+
+/* ===== 顶部简介入场：透明度 0 → 1 + 轻微上移（页面加载后依次出现） ===== */
+#home-bento .hb-intro > * {
+  animation: hb-intro-in 0.66s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+#home-bento .hb-intro > *:nth-child(2) { animation-delay: 0.08s; }
+#home-bento .hb-intro > *:nth-child(3) { animation-delay: 0.16s; }
+
+@keyframes hb-intro-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* [motion].reduced_motion_respect = false（<html data-motion-force>）时不降级 */
+  html:not([data-motion-force]) #home-bento .hb-intro > * { animation: none; }
+}
+
+/* ===== 区块标题 ===== */
+#home-bento .hb-sec-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#home-bento .hb-sec-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+}
+
+#home-bento .hb-sec-sub {
+  margin: 2px 0 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+#home-bento .hb-sec-link {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+#home-bento .hb-sec-link:hover { color: var(--text); }
+
+#home-bento #articles { margin-top: 80px; }
+
+/* ===== 通用卡片行为（参考稿的交互动效） ===== */
+#home-bento .hb-card {
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  color: inherit;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--hb-radius);
+  box-shadow: var(--hb-shadow);
+  overflow: hidden;
+}
+
+#home-bento .hb-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--hb-shadow-hover);
+}
+
+#home-bento .hb-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#home-bento .hb-card:hover .hb-img { transform: scale(1.06); }
+
+/* 文本截断工具 */
+#home-bento .hb-clamp-1,
+#home-bento .hb-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#home-bento .hb-clamp-1 { -webkit-line-clamp: 1; }
+#home-bento .hb-clamp-2 { -webkit-line-clamp: 2; }
+
+/* 分类小药丸 */
+#home-bento .hb-pill {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--tag-bg);
+  color: var(--text-secondary);
+}
+
+/* 卡片底部「日期 · 分类 · #标签」：分类是文章 categories，标签是第一个 tags，两者不同色 */
+#home-bento .hb-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
+#home-bento .hb-meta .hb-cat,
+#home-bento .hb-a-cat {
+  color: var(--text-secondary);
+}
+
+#home-bento .hb-meta .hb-tag,
+#home-bento .hb-a-tag {
+  color: var(--global-color, var(--accent-color, #0d8368));
+}
+
+#home-bento .hb-meta .hb-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+}
+
+/* ===== 精选：Bento Grid ===== */
+#home-bento .bento-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--hb-gap);
+  grid-auto-rows: 200px;
+  margin-top: 20px;
+}
+
+@media (min-width: 640px) {
+  #home-bento .bento-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  #home-bento .bento-grid { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 210px; }
+}
+
+/* 各变体的跨格规则 */
+#home-bento .hb-hero { grid-column: span 1; grid-row: span 2; }
+#home-bento .hb-wide { grid-column: span 1; grid-row: span 1; }
+#home-bento .hb-tall { grid-column: span 1; grid-row: span 1; }
+
+@media (min-width: 640px) {
+  #home-bento .hb-hero { grid-column: span 2; }
+  #home-bento .hb-wide { grid-column: span 2; }
+}
+
+@media (min-width: 1024px) {
+  #home-bento .hb-hero { grid-column: span 2; grid-row: span 2; }
+  #home-bento .hb-tall { grid-row: span 2; }
+}
+
+/* --- 变体 A：大卡（图 + 渐变 + 文字叠加） --- */
+#home-bento .hb-hero {
+  position: relative;
+  display: block;
+  background: var(--hb-placeholder);
+}
+
+#home-bento .hb-hero .hb-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#home-bento .hb-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.25) 55%, transparent);
+}
+
+#home-bento .hb-hero .hb-hero-body {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 24px 26px;
+  color: #fff;
+}
+
+#home-bento .hb-hero .hb-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  margin-bottom: 12px;
+}
+
+#home-bento .hb-hero .hb-hero-title {
+  font-size: clamp(1.15rem, 2vw, 1.6rem);
+  font-weight: 800;
+  line-height: 1.3;
+  margin: 0 0 8px;
+}
+
+#home-bento .hb-hero .hb-hero-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 0 0 14px;
+}
+
+#home-bento .hb-hero .hb-meta { color: rgba(255, 255, 255, 0.62); }
+
+/* --- 变体 B：宽卡（左图 + 右文） --- */
+#home-bento .hb-wide {
+  display: flex;
+  flex-direction: row;
+}
+
+#home-bento .hb-wide .hb-wide-img {
+  width: 40%;
+  flex: 0 0 40%;
+  overflow: hidden;
+  background: var(--hb-placeholder);
+}
+
+#home-bento .hb-wide .hb-wide-body {
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#home-bento .hb-wide .hb-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 8px 0 6px;
+}
+
+#home-bento .hb-wide .hb-card-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+/* --- 变体 E：高卡（图 + 渐变 + 文字叠加，仅 lg 跨两行） --- */
+#home-bento .hb-tall,
+#home-bento .hb-overlay {
+  position: relative;
+  display: block;
+  background: var(--hb-placeholder);
+}
+
+#home-bento .hb-tall .hb-hero-img,
+#home-bento .hb-overlay .hb-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#home-bento .hb-tall::after,
+#home-bento .hb-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.2) 50%, transparent);
+}
+
+#home-bento .hb-tall .hb-hero-body,
+#home-bento .hb-overlay .hb-hero-body {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  color: #fff;
+}
+
+#home-bento .hb-tall .hb-hero-title,
+#home-bento .hb-overlay .hb-hero-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 8px;
+}
+
+#home-bento .hb-tall .hb-hero-desc,
+#home-bento .hb-overlay .hb-hero-desc {
+  font-size: 12px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 0 0 12px;
+}
+
+#home-bento .hb-tall .hb-meta,
+#home-bento .hb-overlay .hb-meta { color: rgba(255, 255, 255, 0.55); }
+
+/* --- 变体 C / G / I / K：无图纯文字小卡（莫兰迪暖色，明暗模式一致） --- */
+#home-bento .hb-text {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+#home-bento .hb-text .hb-card-title {
+  margin: auto 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+#home-bento .hb-text .hb-card-desc {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 6px 0 0;
+  opacity: 0.75;
+}
+
+#home-bento .hb-text .hb-text-date {
+  margin-top: 12px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+#home-bento .hb-text .hb-pill {
+  background: rgba(75, 65, 57, 0.09);
+  color: var(--hb-morandi-ink);
+  opacity: 0.85;
+}
+
+#home-bento .hb-text,
+#home-bento .hb-text .hb-card-title,
+#home-bento .hb-text .hb-card-desc,
+#home-bento .hb-text .hb-text-date {
+  color: var(--hb-morandi-ink);
+}
+
+#home-bento .hb-text { border-color: rgba(75, 65, 57, 0.08); }
+
+/* C：暖米杏 */
+#home-bento .hb-dark { background: var(--hb-morandi-1); }
+
+/* G：浅陶土 */
+#home-bento .hb-indigo { background: var(--hb-morandi-2); }
+
+/* I：暖卡其 */
+#home-bento .hb-amber { background: var(--hb-morandi-3); }
+
+/* K：暖白米 + 描边 */
+#home-bento .hb-outline { background: var(--hb-morandi-4); }
+
+/* --- 变体 D/F/H/J：白卡 + 顶图 --- */
+#home-bento .hb-top {
+  display: flex;
+  flex-direction: column;
+}
+
+#home-bento .hb-top .hb-top-img {
+  height: 45%;
+  flex: 0 0 45%;
+  overflow: hidden;
+  background: var(--hb-placeholder);
+}
+
+#home-bento .hb-top .hb-top-body {
+  flex: 1;
+  min-width: 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+#home-bento .hb-top .hb-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+#home-bento .hb-top .hb-card-desc {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+#home-bento .hb-top .hb-meta { margin-top: auto; }
+
+/* --- 变体 K：白卡 + 描边纯文字 --- */
+#home-bento .hb-outline { border-color: var(--border); }
+
+/* ===== 全部文章：等高网格 ===== */
+#home-bento .articles-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--hb-acols), 1fr);
+  gap: var(--hb-gap);
+  margin-top: 24px;
+}
+
+/* 「全部文章」区的入场动画比全局稍慢、位移稍大，节奏看得更清楚 */
+#home-bento .hb-acard[data-reveal].is-in {
+  animation-duration: 0.9s;
+}
+#home-bento .hb-acard {
+  display: flex;
+  flex-direction: column;
+  height: var(--hb-card-h);
+}
+
+#home-bento .hb-acard .hb-a-img {
+  height: var(--hb-acard-img);
+  flex: 0 0 var(--hb-acard-img);
+  overflow: hidden;
+  background: var(--hb-placeholder);
+}
+
+#home-bento .hb-acard .hb-a-body {
+  flex: 1;
+  min-width: 0;  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+#home-bento .hb-acard .hb-a-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+#home-bento .hb-acard .hb-a-desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+}
+
+#home-bento .hb-acard .hb-a-meta {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* 卡片上的浏览量（热门排序启用时显示） */
+#home-bento .hb-views { white-space: nowrap; }
+
+/* ===== 最新 / 热门 切换 ===== */
+#home-bento .hb-tabs {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  #home-bento .hb-tabs { display: flex; }
+}
+
+#home-bento .hb-tab {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+#home-bento .hb-tab:hover { background: var(--tag-bg); color: var(--text); }
+
+#home-bento .hb-tab.is-active {
+  background: var(--text);
+  color: var(--card-bg);
+}
+
+/* ===== 加载更多 ===== */
+#home-bento .hb-more-wrap {
+  margin-top: 48px;
+  display: flex;
+  justify-content: center;
+}
+
+#home-bento .hb-empty {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+#home-bento .hb-more {
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+#home-bento .hb-more:hover {
+  color: var(--text);
+  border-color: var(--text-secondary);
+  box-shadow: var(--hb-shadow);
+}
+
+/* 手机端隐藏「日期 · 标签」里的小圆点，避免换行 */
+@media (max-width: 420px) {
+  #home-bento .hb-meta .hb-dot { display: none; }
+}
+
+/* ============================================================
+   无图卡片 / 无封面图：统一用莫兰迪暖色底（不用纯白、纯黑、高饱和色）
+   ============================================================ */
+
+/* ============================================================
+   精选「自动」的内容切换：
+   服务端先渲染最新若干篇，取到浏览量/评论数后由 JS 换成最热的那几篇。
+   卡片本身从一开始就可见（入场动画也就能立刻播），换内容时走
+   「交叉淡入 + 内容从旧位置滑到新位置」的补位动画，见 home-bento.js 的 refillFeatured。
+   ============================================================ */
+
+/* ============================================================
+   移动端兜底：不让长串文本/图片撑出横向拖动条
+   ============================================================ */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+
+  #home-bento { max-width: 100%; }
+}
+
+/* ============================================================
+   hidden 属性必须真的隐藏：
+   .hb-card 自己设了 display（flex / block），会盖掉浏览器对 [hidden] 的默认
+   display:none，导致「加载更多」看起来没反应。这里显式补一条更高优先级的规则。
+   ============================================================ */
+#home-bento .hb-card[hidden],
+#home-bento .articles-grid > [hidden],
+#home-bento .bento-grid > [hidden],
+#home-bento .hb-more[hidden] {
+  display: none;
+}
+
+#home-bento img { max-width: 100%; }
+
+#home-bento .hb-hero-title,
+#home-bento .hb-hero-desc,
+#home-bento .hb-card-title,
+#home-bento .hb-card-desc,
+#home-bento .hb-a-title,
+#home-bento .hb-a-desc,
+#home-bento .hb-meta,
+#home-bento .hb-text-date {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#home-bento .bento-grid,
+#home-bento .articles-grid,
+#home-bento .hb-card,
+#home-bento .hb-wide-body,
+#home-bento .hb-top-body,
+#home-bento .hb-a-body {
+  min-width: 0;
+}
+
+/* ============================================================
+   图片加载失败时的处理：
+   失败的 <img> 隐藏，容器露出上面的莫兰迪渐变底，
+   所以封面挂了也不会变成"一块纯色"；若配置了 default_image，
+   JS 会先自动换成那张兜底图再重试。
+   ============================================================ */
+#home-bento img.hb-img-failed {
+  opacity: 0;
+}

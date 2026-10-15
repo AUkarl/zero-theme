@@ -1,0 +1,99 @@
+{{- /* ============================================================
+  head.html — <head> 部分
+  包含 meta 标签、标题、SEO、CSS 引入
+
+  性能约定（不要改成同步加载）：
+  - Google Fonts / Font Awesome / animate.css 一律用
+    media="print" + onload 的经典非阻塞写法，避免阻塞首屏渲染。
+  - 本站自己的 common.css 属于关键样式，保持同步加载。
+  ============================================================ */ -}}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{{- /* 浏览器地址栏配色与「本页接受的主题」：后台「前端管理 → SEO」优先，其次 [seo]（见主题配置文件） */ -}}
+{{- $seoHead := partial "seo-config.html" . -}}
+{{- with $seoHead.color_scheme | default "light dark" -}}
+<meta name="color-scheme" content="{{ . }}">
+{{- end -}}
+{{- with $seoHead.theme_color_light | default "#ffffff" -}}
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ . }}">
+{{- end -}}
+{{- with $seoHead.theme_color_dark -}}
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="{{ . }}">
+{{- end -}}
+{{- /* 主题标识：方便确认站点实际使用的是哪套主题 */ -}}
+<meta name="theme" content="zero">
+
+{{- /* 防闪烁：在 CSS 加载前立即应用主题 */ -}}
+<script>
+(function(){
+  var t = localStorage.getItem('theme');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+
+{{- /* 页面标题：站名走 site-config（后台「基本信息」data/site.json > 站点 params > config.toml 的 title），
+         这样后台改一次站点名，浏览器标签、RSS、落地页、404 会一起变 */ -}}
+{{- $sep := $seoHead.title_separator | default "·" -}}
+{{- $siteName := (partial "site-config.html" .).name | default "站点" -}}
+<title>
+  {{- if .IsHome -}}
+    {{ $siteName }}
+  {{- else if .Params.seoTitle -}}
+    {{ .Params.seoTitle }} {{ $sep }} {{ $siteName }}
+  {{- else -}}
+    {{ .Title }} {{ $sep }} {{ $siteName }}
+  {{- end -}}
+</title>
+
+{{- /* SEO 元数据（description / canonical / robots / OG / Twitter / JSON-LD） */ -}}
+{{- partial "seo.html" . -}}
+
+{{- /* RSS / 其它输出格式自动发现 */ -}}
+{{- range .AlternativeOutputFormats -}}
+{{ printf "<link rel=%q type=%q href=%q title=%q>" .Rel .MediaType.Type .Permalink $siteName | safeHTML }}
+{{- end -}}
+
+{{- /* Favicon：data/site.json（后台基本信息）> params.favicon > 主题自带那张 */ -}}
+{{- $favicon := (partial "site-config.html" .).favicon -}}
+{{- if $favicon -}}
+<link rel="icon" href="{{ $favicon | relURL }}">
+{{- else -}}
+<link rel="icon" href="{{ "img/logo-nav.webp" | relURL }}">
+{{- end -}}
+
+{{- /* ===== 外部资源：预连接，提前建连 ===== */ -}}
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
+{{- /* 字体：只使用系统字体栈（见 common.css 的 --font）。
+     原来这里引 Google Fonts，但它在国内基本不可达，还会多一次失败请求 + 字体晚到导致的
+     文本重排（实测文章页 CLS 0.13 就是它引起的），因此彻底去掉。 */ -}}
+
+{{- /* Font Awesome 图标库（非阻塞）。[cdn].font_awesome_css 可换成自建 / 国内镜像 */ -}}
+{{- $faURL := .Site.Params.cdn.font_awesome_css | default "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" -}}
+<link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ $faURL }}"></noscript>
+
+{{- /* 外观令牌：params 里 [design] 填了值的项在这里覆盖 CSS 的默认变量 */ -}}
+{{- partial "zero/design.html" . -}}
+
+{{- /* 时刻页横幅是 CSS 背景图，属于该页 LCP 元素但发现太晚（lcp-discovery 不通过），
+       这里提前 preload 一下 */ -}}
+{{- if and (eq .Kind "section") (eq .Section "moments") -}}
+  {{- $mc := partial "moments-config.html" . -}}
+  {{- with $mc.bannerImage }}{{ if $mc.showBackground }}<link rel="preload" as="image" href="{{ . | relURL }}" fetchpriority="high">{{ end }}{{ end -}}
+{{- end -}}
+
+{{- /* 公共样式（关键样式，保持同步加载） */ -}}
+{{- $commonCSS := resources.Get "css/common.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $commonCSS.RelPermalink }}">
+
+{{- /* 自定义 extra_css */ -}}
+{{- range .Site.Params.custom.extra_css -}}
+<link rel="stylesheet" href="{{ . | relURL }}">
+{{- end -}}
+
+{{- /* 自定义 head_html */ -}}
+{{- with .Site.Params.custom.head_html -}}
+{{ . | safeHTML }}
+{{- end -}}

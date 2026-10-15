@@ -1,0 +1,218 @@
+/* ============================================================
+   account.css — 账号页（/account/）
+   登录 / 注册两个标签页的容器、标签、表单与按钮样式；
+   「找回密码」入口链接与展开的那行文案，以及整页被站点参数关掉时的收口提示。
+   深色模式：本页组件全走 var(--*)，common.css 没有的危险色 / 待审色在本页
+   作用域内用局部变量补（见 .account-box 与文末两个主题分支）。
+   ============================================================ */
+
+/* ===== 居中容器 ===== */
+.account-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+/* ===== 本页专属配色 =====
+   common.css 里没有危险色 / 待审色的全局变量，可用的只有 --bg / --card-bg /
+   --text / --text-secondary / --border / --tag-bg / --btn-bg / --btn-color /
+   --radius / --shadow / --logo-accent-text（绿，深浅色各一套）。
+   警示色就在本页作用域里定义局部变量（不动全局 :root），深色分支见文末。 */
+.account-box {
+  --za-danger: #c0392b;
+  --za-danger-border: rgba(192, 57, 43, 0.35);
+  --za-danger-soft: rgba(192, 57, 43, 0.06);
+  --za-pending: #b8860b;
+}
+
+/* ===== 表单卡片 ===== */
+.account-box {
+  background: var(--card-bg);
+  padding: 32px 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.account-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+}
+
+/* ===== Tab 切换 ===== */
+.account-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-tabs button {
+  flex: 1;
+  padding: 8px 0;
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+}
+
+.account-tabs button.active-tab {
+  color: var(--text);
+  border-bottom-color: var(--text);
+  font-weight: 700;
+}
+
+/* --- 与两个标签同级的「找回密码」入口：小字链接，不占 flex 份额 --- */
+.account-tabs .za-forgotbtn {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 8px 0 8px 12px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: underline;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.account-tabs .za-forgotbtn:hover,
+.account-tabs .za-forgotbtn.is-open {
+  color: var(--text);
+}
+
+/* ===== 表单元素 ===== */
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.account-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-form label {
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.account-form input {
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  background: var(--tag-bg);
+  transition: border 0.2s;
+  font-family: inherit;
+  outline: none;
+  color: var(--text);
+}
+
+.account-form input:focus {
+  border-color: var(--text);
+  background: var(--card-bg);
+}
+
+/* --- 提交按钮 --- */
+.account-form .btn-account {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--btn-bg);
+  color: var(--btn-color);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: inherit;
+  margin-top: 6px;
+  letter-spacing: 1px;
+}
+
+.account-form .btn-account:hover {
+  opacity: 0.8;
+  transform: scale(1.02);
+}
+
+.account-form .btn-account:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* --- 提示信息 --- */
+.account-form .error-msg {
+  color: var(--za-danger);
+  font-size: 0.85rem;
+  display: none;
+}
+
+.account-form .success-msg {
+  color: var(--logo-accent-text);
+  font-size: 0.85rem;
+  display: none;
+}
+
+/* ===== 找回密码：展开的那行文案（点入口按钮显示，不请求接口） ===== */
+.za-forgot {
+  margin: 2px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--tag-bg);
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+/* ===== 整页关闭（params.apiBaseURL 留空 / zeroEnabled=false）的收口提示 ===== */
+.za-gate {
+  padding: 8px 2px 4px;
+}
+
+.za-gate-main {
+  margin: 0 0 12px;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* ============================================================
+   深色模式：只切本页那几个局部变量（common.css 没有危险色变量，
+   按上面的说明不动全局 :root）。手写 [data-theme="dark"] 与系统
+   auto 两个分支，与 common.css 的变量切换方式保持一致。
+   ============================================================ */
+[data-theme="dark"] .account-box {
+  --za-danger: #ff8a80;
+  --za-danger-border: rgba(255, 138, 128, 0.4);
+  --za-danger-soft: rgba(255, 138, 128, 0.12);
+  --za-pending: #ffd54f;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .account-box {
+    --za-danger: #ff8a80;
+    --za-danger-border: rgba(255, 138, 128, 0.4);
+    --za-danger-soft: rgba(255, 138, 128, 0.12);
+    --za-pending: #ffd54f;
+  }
+}

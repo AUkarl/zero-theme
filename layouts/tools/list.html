@@ -1,0 +1,80 @@
+{{- /* ============================================================
+  tools/list.html — 工具页
+  分类展示实用工具，点击子项显示模拟界面
+  数据从 data/tools.yaml 读取
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- $toolsCSS := resources.Get "css/tools.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $toolsCSS.RelPermalink }}">
+{{- end -}}
+
+{{- define "main" -}}
+{{- if (ne .Site.Params.tools.enable false) }}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title">{{ i18n "tools-title" | default "工具" }}</h1>
+    {{- if (ne .Site.Params.tools.show_desc false) }}
+    {{- $toolsDesc := .Site.Params.tools.desc | default .Site.Params.tools.desc_zh }}
+    {{- if $toolsDesc }}
+    <p class="section-desc">{{ $toolsDesc }}</p>
+    {{- else }}
+    <p class="section-desc">{{ i18n "tools-desc" | default "精选实用工具，点击子项即可使用（本站内，持续开发中）。" }}</p>
+    {{- end }}
+    {{- end }}
+    <div class="tools-container" id="toolsContainer"></div>
+    <div class="tool-display" id="toolDisplay">
+      <div class="tool-name" id="toolDisplayName"></div>
+      <div class="tool-interface" id="toolInterface"></div>
+    </div>
+
+    {{- /* ---------------------------------------------------------
+       邮箱订阅入口：/subscribe/ 那一页的站内捷径。
+       subscribeEnabled 是后台开关（GET /api/config），关掉时这一块整块不出，
+       模板先写 hidden，由 js/zero-switches.js 拿到配置后才露出（不会闪一下）。
+       没配 params.apiBaseURL 时 partial 本身不输出表单，这里只留一个页面链接。
+       --------------------------------------------------------- */ -}}
+    {{- $zeroT := partial "zero/api.html" . -}}
+    {{- if and ($zeroT.enabled) (ne .Site.Params.subscribeEnabled false) -}}
+      {{- $swT := partial "zero/switch.html" (dict "zero" $zeroT "key" "subscribeEnabled") -}}
+    <section class="tools-subscribe"{{ $swT.attrs | safeHTMLAttr }}>
+      <h2 class="tools-subscribe-title">
+        <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
+        {{ i18n "tools-subscribe-title" | default "邮箱订阅" }}
+      </h2>
+      <p class="tools-subscribe-desc">{{ i18n "tools-subscribe-desc" | default "新文章写好了直接发到邮箱，不用守着刷新。订阅、查询状态、退订都在订阅页说明。" }}</p>
+      {{- partial "zero/subscribe.html" (dict "p" . "zero" $zeroT) -}}
+      <p class="tools-subscribe-more">
+        <a href="{{ "subscribe/" | relLangURL }}">{{ i18n "tools-subscribe-link" | default "去订阅页看详细说明（怎么确认、怎么退订）" }}</a>
+      </p>
+    </section>
+    {{- else if (ne .Site.Params.subscribeEnabled false) -}}
+      {{- /* 纯静态站（没填 apiBaseURL）：表单没有后端可用，只给一个页面入口 */ -}}
+    <section class="tools-subscribe">
+      <h2 class="tools-subscribe-title">
+        <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
+        {{ i18n "tools-subscribe-title" | default "邮箱订阅" }}
+      </h2>
+      <p class="tools-subscribe-desc">{{ i18n "tools-subscribe-desc" | default "新文章写好了直接发到邮箱，不用守着刷新。" }}</p>
+      <p class="tools-subscribe-more">
+        <a href="{{ "subscribe/" | relLangURL }}">{{ i18n "tools-subscribe-link" | default "去订阅页看详细说明（怎么确认、怎么退订）" }}</a>
+      </p>
+    </section>
+    {{- end -}}
+  </section>
+</main>
+{{- else }}
+<main class="main" id="main">
+  <section class="section" style="text-align:center;padding:60px 20px;">
+    <p style="color:var(--text-secondary);">工具页已在配置里关闭（params.tools.enable = false）。</p>
+  </section>
+</main>
+{{- end }}
+{{- end -}}
+
+{{- define "scripts" -}}
+<script>
+  window.toolsData = {{ hugo.Data.tools | jsonify | safeJS }};
+</script>
+{{- $toolsJS := resources.Get "js/tools.js" | minify | fingerprint -}}
+<script src="{{ $toolsJS.RelPermalink }}"></script>
+{{- end -}}

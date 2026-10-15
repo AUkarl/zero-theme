@@ -1,0 +1,27 @@
+{{- /* ============================================================
+  zero/boot.html — zero-stack 运行时入口（每页只引一次）
+  放在 baseof.html 的公共 JS 之后、页面脚本之前，于是：
+    - window.ZeroStack 供评论接管 / 账号页 / 友链申请 / 时刻页共用
+    - 一次 /api/config 全站共享，后台改开关不需要重建站点
+  没配 params.apiBaseURL 时这里什么都不输出，主题退回纯构建期行为。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- if $zero.enabled -}}
+<script>window.__ZERO_PAGE__={{ dict "slug" .RelPermalink "title" (.Title | plainify | htmlUnescape) "lang" .Lang | jsonify | safeJS }};</script>
+  {{- $runtime := resources.Get "js/zero-runtime.js" | minify | fingerprint -}}
+<script src="{{ $runtime.RelPermalink }}"></script>
+  {{- /* 开关挂接：凡是带 data-zero-switch 的区块（导航入口 / 时刻 / 友链 / 订阅 / 点赞收藏）
+         都在这一步按 /api/config 露出或藏起，全站一次，页面脚本不用各写一套。 */ -}}
+  {{- $switches := resources.Get "js/zero-switches.js" | minify | fingerprint -}}
+<script src="{{ $switches.RelPermalink }}"></script>
+  {{- /* 组件产物也在这里一次性引：注册 <zero-comment> / <zero-like> / <zero-subscribe> /
+         <zero-moments> / <zero-login> 五个自定义元素。
+         曾在评论区、操作条、时刻页三处各引一次并靠 .Scratch 判重 —— hugo server 增量重建时
+         页面节点的 Scratch 会残留，第二次之后永远判定「已输出」，本地测试就变成
+         评论区与点赞整体消失（只有走独立脚本的收藏还在）。生产是全量构建看不出来，
+         但这种只在开发期暴露的丢脚本不能留：改成单一输出点，没有任何运行期状态。 */ -}}
+  {{- $component := partial "zero/component-url.html" -}}
+  {{- with $component }}
+<script src="{{ . }}"></script>
+  {{- end }}
+{{- end -}}

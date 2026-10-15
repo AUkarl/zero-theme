@@ -1,0 +1,39 @@
+{{- /* ============================================================
+  site-config.html — 站点基本信息的统一取法
+  ------------------------------------------------------------
+  优先级：站点 data/site.json（后台「前端管理 → 基本信息」写的）
+          > params.toml 的顶层键 > Hugo 自带的 Site.Title。
+
+  只管 params 能管的那几样：baseURL 与 Site.Title 的兜底属于 config.toml，
+  改那两份要重写带注释的配置文件，后台不碰（要改用「主题配置文件」子标签整份编辑）。
+
+  define 块之间不共享变量，所以每个用到它的块各自调一次这个 partial。
+  ============================================================ */ -}}
+{{- $d := hugo.Data.site | default dict -}}
+{{- $p := site.Params -}}
+{{- $name := $d.name | default ($p.site_name | default site.Title) -}}
+{{- $logo := $d.logo | default ($p.logo | default $p.logo_zh) -}}
+{{- $showLogo := true -}}
+{{- if isset $d "showLogo" }}{{ $showLogo = not (eq $d.showLogo false) }}{{ else if isset $p "show_logo" }}{{ $showLogo = not (eq $p.show_logo false) }}{{ end -}}
+{{- $showName := true -}}
+{{- if isset $d "showName" }}{{ $showName = not (eq $d.showName false) }}{{ else if isset $p "show_site_name" }}{{ $showName = not (eq $p.show_site_name false) }}{{ end -}}
+{{- $keywords := $p.keywords | default slice -}}
+{{- if and (isset $d "keywords") (gt (len ($d.keywords | default slice)) 0) }}{{ $keywords = $d.keywords }}{{ end -}}
+{{- /* logoHomeLink：[nav].logo_home_link 优先，兼容顶层老写法 */ -}}
+{{- /* 导航栏名称：后台留空时先用同一页刚改过的站点名（data/site.json 的 name），
+       再退到 params —— 原来直接退到 params，结果「基本信息」改了站点名、导航栏还顶着旧名字。 */ -}}
+{{- $navName := $d.navName | default (cond (gt (len ($d.name | default "")) 0) $d.name ($p.navName | default $name)) -}}
+{{- return dict
+  "name" $name
+  "navName" $navName
+  "description" ($d.description | default ($p.description | default site.Title))
+  "keywords" $keywords
+  "logo" $logo
+  "showLogo" $showLogo
+  "showName" $showName
+  "favicon" ($d.favicon | default $p.favicon)
+  "author" ($d.author | default ($p.author | default $p.author_zh))
+  "defaultAuthor" ($d.defaultAuthor | default $p.default_author)
+  "ogImage" ($d.ogImage | default ($p.seo.og_image_default | default ""))
+  "logoHomeLink" (cond (isset $p.nav "logo_home_link") (ne $p.nav.logo_home_link false) (ne $p.logo_home_link false))
+-}}

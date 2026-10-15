@@ -1,0 +1,36 @@
+{{- /* ============================================================
+  toc.html — 文章目录
+  从页面内容自动提取标题生成目录；桌面端固定在右侧，移动端由 CSS 隐藏。
+
+  [article].toc_levels     收哪几级标题（如 ["h2","h3"]）。Hugo 只按 markup 配置
+                           渲染一份 .TableOfContents（默认 h2-h6，整棵嵌套树都在页面里），
+                           所以这里按层级把超出配置深度的那一支用 CSS 折叠掉：
+                           h2 → 第 1 层 ul，h3 → 第 2 层，以此类推。
+  [article].toc_numbering  是否给条目加 1 / 1.1 / 1.1.2 这种编号（纯 CSS 计数器）
+  ============================================================ */ -}}
+{{- if .TableOfContents -}}
+  {{- $art := .Site.Params.article | default dict -}}
+  {{- $levels := $art.toc_levels | default (slice "h2" "h3") -}}
+  {{- /* 最深层级对应的嵌套层数：h2=1、h3=2 …；只取列表里最大的那一个 */ -}}
+  {{- $depth := 1 -}}
+  {{- range $levels -}}
+    {{- $n := int (replace (string .) "h" "") -}}
+    {{- if ge $n 2 -}}{{- $d := sub $n 1 -}}{{- if gt $d $depth -}}{{- $depth = $d -}}{{- end -}}{{- end -}}
+  {{- end -}}
+  <style>
+    /* 超出 toc_levels 深度的分支整支藏起来（默认 h2/h3 → 第 3 层及更深不显示） */
+    #TableOfContents {{ range seq (add $depth 1) }}ul {{ end }}{ display: none; }
+    {{- if $art.toc_numbering }}
+    /* 目录编号：每层一个计数器，层级深的自动带上父级前缀 */
+    #tocNav ol, #tocNav ul { list-style: none; counter-reset: toc; margin: 0; padding-left: 1.05em; }
+    #tocNav li { counter-increment: toc; }
+    #tocNav li::before { content: counters(toc, ".") " "; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+    {{- end }}
+  </style>
+<aside class="article-toc" id="articleToc">
+  <div class="toc-title" data-i18n="article-toc">{{ i18n "article-toc" | default "目录" }}</div>
+  <nav id="tocNav">
+    {{ .TableOfContents }}
+  </nav>
+</aside>
+{{- end -}}

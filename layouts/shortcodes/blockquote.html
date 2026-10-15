@@ -1,0 +1,21 @@
+{{- /*
+  blockquote.html — 增强引用块短代码
+  用法: {{< blockquote author="作者名" cite="https://..." >}}
+        引用内容
+        {{< /blockquote >}}
+  支持: 作者署名、来源链接、自定义样式
+  校验: cite 走 http/https 白名单，非法协议（javascript: 之类）直接不输出链接
+*/ -}}
+{{- $author := .Get "author" -}}
+{{- $cite := partial "shortcodes/safe-url.html" (.Get "cite") -}}
+<blockquote class="blockquote-enhanced">
+  <div class="blockquote-content">
+    {{ .Inner | markdownify }}
+  </div>
+  {{- if or $author $cite }}
+  <footer class="blockquote-footer">
+    {{- with $author }}<cite class="blockquote-author">{{ . }}</cite>{{ end }}
+    {{- with $cite }}<a class="blockquote-source" href="{{ . }}" target="_blank" rel="noopener">↗</a>{{ end }}
+  </footer>
+  {{- end }}
+</blockquote>

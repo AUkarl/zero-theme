@@ -1,0 +1,80 @@
+{{- /* ============================================================
+  home-bento-styles.html — 新版主页（bento）的样式引入与预连接
+  只在 [home] layout = "bento" 时被 home/list.html 的 styles 块调用（即 <head> 内）
+  ============================================================ */ -}}
+{{- $bento := .Site.Params.home.bento | default dict -}}
+{{- $home := .Site.Params.home | default dict -}}
+{{- $stats := partial "home-bento-stats-config.html" . -}}
+{{- /* 预连接统计服务：省掉一次 DNS + TLS 握手，精选/热门取数更快 */ -}}
+{{- with $stats.serverUrl }}
+<link rel="preconnect" href="{{ . }}" crossorigin>
+<link rel="dns-prefetch" href="{{ . }}">
+{{- end }}
+{{- /* 内容区宽度：width_ratio 为百分比（默认 90，沿用旧版布局同名语义；
+       没单独配置时回退到 [home] width_ratio）；
+       max_width 是可选像素上限，0/留空表示不限制（默认 0，这样 90% 在大屏也生效） */ -}}
+{{- $ratio := 90 -}}
+{{- if isset $home "width_ratio" }}{{ $ratio = $home.width_ratio }}{{ end -}}
+{{- if isset $bento "width_ratio" }}{{ $ratio = $bento.width_ratio }}{{ end -}}
+{{- $cap := 0 -}}
+{{- if isset $bento "max_width" }}{{ $cap = $bento.max_width }}{{ end -}}
+{{- /* 卡片尺寸：这几项都在 [home.bento] 里改，值直接落到 home-bento.css 的 --hb-* 变量上。
+       没写的项一行都不输出，继续吃 CSS 里的默认值（20 / 16 / 360 / 52）。 */ -}}
+{{- /* 间距与圆角写 0 是有效值（贴边 / 直角），所以用 isset 判，不能用 default（0 会被当成没填） */ -}}
+{{- $gap := 20 -}}
+{{- if isset $bento "gap" }}{{ $gap = $bento.gap }}{{ end -}}
+{{- $radius := 16 -}}
+{{- if isset $bento "radius" }}{{ $radius = $bento.radius }}{{ end -}}
+{{- $cardH := $bento.card_height | default 360 -}}
+{{- $imgPct := $bento.card_image_ratio | default 52 -}}
+{{- /* 全部文章的宽屏列数：限死 1-4，窄屏仍按断点降到 2 / 1，模板里算好两个中间值 */ -}}
+{{- $acols := $bento.articles_columns | default 3 -}}
+{{- if lt $acols 1 }}{{ $acols = 1 }}{{ end -}}
+{{- if gt $acols 4 }}{{ $acols = 4 }}{{ end -}}
+{{- $acolsSm := cond (ge $acols 2) 2 $acols -}}
+{{- $css := resources.Get "css/home-bento.css" | minify | fingerprint -}}
+<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+<style>
+  .main {
+    {{- if gt $cap 0 }}
+    max-width: min({{ $ratio }}%, {{ $cap }}px);
+    {{- else }}
+    max-width: {{ $ratio }}%;
+    {{- end }}
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #home-bento {
+    --hb-gap: {{ $gap }}px;
+    --hb-radius: {{ $radius }}px;
+    --hb-card-h: {{ $cardH }}px;
+    --hb-acard-img: {{ $imgPct }}%;
+    --hb-acols: 1;
+    {{- with $bento.palette_1 }}
+    --hb-morandi-1: {{ . }};
+    {{- end }}
+    {{- with $bento.palette_2 }}
+    --hb-morandi-2: {{ . }};
+    {{- end }}
+    {{- with $bento.palette_3 }}
+    --hb-morandi-3: {{ . }};
+    {{- end }}
+    {{- with $bento.palette_4 }}
+    --hb-morandi-4: {{ . }};
+    {{- end }}
+    {{- with $bento.palette_ink }}
+    --hb-morandi-ink: {{ . }};
+    {{- end }}
+  }
+  @media (min-width: 640px) { #home-bento { --hb-acols: {{ $acolsSm }}; } }
+  @media (min-width: 1024px) { #home-bento { --hb-acols: {{ $acols }}; } }
+</style>
+<noscript>
+  <style>
+    /* 没有 JS 时：把「加载更多」藏起来的文章全部展开，并去掉点了没反应的按钮/切换
+       （精选卡本身不再有骨架遮挡，无需额外处理） */
+    #home-bento #hbArticles .hb-acard[hidden] { display: flex; }
+    #home-bento .hb-more-wrap,
+    #home-bento .hb-tabs { display: none; }
+  </style>
+</noscript>

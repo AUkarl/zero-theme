@@ -1,0 +1,32 @@
+{{- /* ============================================================
+  robots.txt — 由 SEO 参数生成（后台「前端管理 → SEO」优先，其次 params 的 [seo]）
+  需要 config.toml 里 enableRobotsTXT = true：Hugo 只有在开了这个开关时
+  才会渲染本文件（没开就压根不产出 robots.txt，不是「用内置规则覆盖本文件」）。
+  ============================================================ */ -}}
+{{- $seo := partial "seo-config.html" . -}}
+{{- $disallow := $seo.robots_disallow | default (slice "/account/" "/admin/") -}}
+{{- $allow := $seo.robots_allow | default (slice) -}}
+{{- $clean := $seo.robots_crawl_delay | default 0 -}}
+User-agent: *
+{{- range $allow }}
+Allow: {{ . }}
+{{- end }}
+{{- range $disallow }}
+Disallow: {{ . }}
+{{- end }}
+{{- if and $clean (gt (int $clean) 0) }}
+Crawl-delay: {{ $clean }}
+{{- end }}
+{{- if (ne $seo.enable_robots_sitemap false) }}
+Sitemap: {{ "sitemap.xml" | absURL }}
+{{ if hugo.IsMultilingual }}
+{{- range .Site.Languages }}
+{{- $prefix := "" -}}
+{{- if ne $.Site.Language.Lang .Lang }}{{ $prefix = printf "/%s" .Lang }}{{ end }}
+Sitemap: {{ printf "%s/sitemap.xml" $prefix | absURL }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- with $seo.robots_host }}
+Host: {{ . }}
+{{- end }}

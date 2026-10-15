@@ -1,0 +1,13 @@
+{{- /* ============================================================
+  zero/closed.html — 功能被关闭时替换整块内容的一句话提示
+  ------------------------------------------------------------
+  用法：{{- partial "zero/closed.html" (dict "zero" $zero "key" "friendsEnabled" "text" (i18n "zero-closed-friends")) -}}
+
+  提示本身也走「默认隐藏 → 运行时露出」：开关是开的时候它不会闪一下，
+  开关是关的时候 zero-switches.js 会把上面那些区块藏起来、把这里显示出来。
+  key 留空时就是普通的一段静态提示（始终显示）。
+  ============================================================ */ -}}
+{{- $sw := partial "zero/switch.html" (dict "zero" (.zero | default dict) "key" (.key | default "") "when" "off") -}}
+<aside class="zero-closed"{{ $sw.attrs | safeHTMLAttr }}>
+  <p>{{ .text | default (i18n "zero-feature-closed" | default "该功能已关闭") }}</p>
+</aside>

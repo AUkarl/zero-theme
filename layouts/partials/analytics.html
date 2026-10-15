@@ -1,0 +1,104 @@
+{{- /* ============================================================
+  analytics.html — 访问统计
+  三套可并存：
+  1. zero-api 自建统计（默认，params.apiBaseURL 填了即启用）
+     进入页面 sendBeacon 记一次访问；停留时长在本地累加，只在切后台 / 关页面时
+     结算一次，页面一直开着才按 beat_seconds 兜底补报，省掉每分钟一次的心跳请求。
+  2. Google Analytics   —— params.analytics.enable_google
+  3. 百度统计           —— params.analytics.enable_baidu
+     总开关：[analytics].enable_zero = false 或 params.analyticsEnabled = false
+     都能关掉自建统计（前者是主题配置文件里的那一项，后者与后台「功能开关」同名）
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $an := .Site.Params.analytics | default dict -}}
+{{- $selfHosted := and $zero.enabled (ne $an.enable_zero false) -}}
+{{- if isset .Site.Params "analyticsenabled" -}}{{- $selfHosted = and $selfHosted .Site.Params.analyticsEnabled -}}{{- end -}}
+{{- /* 本地 hugo server 默认不记录，免得开发时刷出一堆脏数据；ignore_localhost = false 才记 */ -}}
+{{- $ignoreLocal := ne $an.ignore_localhost false -}}
+{{- $beat := $an.beat_seconds | default 300 -}}
+
+{{- if $selfHosted -}}
+<!-- zero-api 自建统计 -->
+<script>
+(function () {
+  if ({{ $ignoreLocal }} && /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname)) return;
+  var base = "{{ $zero.base }}";
+  function qs(o) {
+    var a = [];
+    for (var k in o) { if (o[k] !== undefined && o[k] !== null) a.push(encodeURIComponent(k) + '=' + encodeURIComponent(o[k])); }
+    return a.join('&');
+  }
+  function post(path, params) {
+    var url = base + path + '?' + qs(params);
+    if (navigator.sendBeacon) { try { return navigator.sendBeacon(url, '{}'); } catch (e) { /* 落到 fetch */ } }
+    try { fetch(url, { method: 'POST', body: '{}', keepalive: true, credentials: 'omit' }); } catch (e) {}
+  }
+
+  var sid = sessionStorage.getItem('zero_sid');
+  if (!sid) {
+    sid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    sessionStorage.setItem('zero_sid', sid);
+  }
+  var path = location.pathname + location.search;
+  post('/api/analytics/beat', { p: path, s: sid, r: document.referrer || undefined });
+
+  /* 停留时长：本地累加，切后台或关页面时一次性结算。
+     beat_seconds 现在是兜底上限 —— 页面一直开着不切走，最久这么久补报一次；
+     绝大多数访问活不到这个上限，一次访问就只有一个 beat + 一个结算请求。 */
+  var BEAT = Math.max(30, {{ $beat }}) * 1000;
+  var CHECK = 20000;
+  var pending = 0;
+  var last = Date.now();
+  function collect() {
+    var now = Date.now();
+    if (document.visibilityState === 'visible') pending += (now - last) / 1000;
+    last = now;
+  }
+  function flush() {
+    collect();
+    if (pending < 1) { pending = 0; return; }
+    post('/api/analytics/heartbeat', { s: sid, d: Math.round(pending) });
+    pending = 0;
+  }
+  setInterval(function () {
+    collect();
+    if (pending * 1000 >= BEAT) flush();
+  }, CHECK);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') flush();
+    else last = Date.now();
+  });
+  window.addEventListener('pagehide', flush);
+})();
+</script>
+{{- end -}}
+
+{{- if .Site.Params.analytics -}}
+  {{- if .Site.Params.analytics.enable_google -}}
+    {{- with .Site.Params.analytics.google_ga_id -}}
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '{{ . }}');
+  </script>
+    {{- end -}}
+  {{- end -}}
+  {{- if .Site.Params.analytics.enable_baidu -}}
+    {{- with .Site.Params.analytics.baidu_site_id -}}
+  <!-- 百度统计 -->
+  <script>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?{{ . }}";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

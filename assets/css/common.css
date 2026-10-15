@@ -1,0 +1,1118 @@
+/* ============================================================
+   common.css - 全局样式，所有页面共用
+   ============================================================ */
+
+/* ===== 全局变量 ===== */
+:root {
+  --bg: #ffffff;
+  --card-bg: #ffffff;
+  --text: #000000;
+  --text-secondary: #555555;
+  --border: #e5e5e5;
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --radius: 4px;
+  --nav-height: 64px;
+  --max-width: 1200px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --tag-bg: #f8f8f8;
+  --tag-active-bg: #e0e0e0;
+  --tag-active-color: #000000;
+  --scroll-btn-bg: rgba(255, 255, 255, 0.9);
+  --scroll-btn-color: #555555;
+  --shuo-submit-color: #ffffff;
+  /* 品牌色 #7beec7 在浅色底上只有 1.4:1，文字场景用这个加深版（白底 4.7:1） */
+  --logo-accent-text: #0d8368;
+  --shuo-name: #576b95;   /* 朋友圈式卡片的昵称色（浅色） */
+}
+
+[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --card-bg: #2a2a2a;
+  --text: #eeeeee;
+  --text-secondary: #aaaaaa;
+  --border: #444;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --tag-bg: #333;
+  --tag-active-bg: #555;
+  --tag-active-color: #ffffff;
+  --btn-bg: #ffffff;
+  --btn-color: #000000;
+  --logo-filter: invert(1);
+  --scroll-btn-bg: rgba(30, 30, 30, 0.9);
+  --scroll-btn-color: #aaaaaa;
+  --shuo-submit-color: #000000;
+  --logo-accent-text: #7beec7;
+  --shuo-name: #7f9ed0;   /* 朋友圈式卡片的昵称色（深色下用亮一点的蓝） */
+}
+
+:root {
+  --btn-bg: #000000;
+  --btn-color: #ffffff;
+  --logo-filter: none;
+}
+
+[data-theme="dark"] {
+  --btn-bg: #ffffff;
+  --btn-color: #000000;
+  --logo-filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --bg: #1e1e1e;
+    --card-bg: #2a2a2a;
+    --text: #eeeeee;
+    --text-secondary: #aaaaaa;
+    --border: #444;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --tag-bg: #333;
+    --tag-active-bg: #555;
+    --tag-active-color: #ffffff;
+    --btn-bg: #ffffff;
+    --btn-color: #000000;
+    --logo-filter: invert(1);
+    --scroll-btn-bg: rgba(30, 30, 30, 0.9);
+    --scroll-btn-color: #aaaaaa;
+    --shuo-submit-color: #000000;
+    --shuo-name: #7f9ed0;
+  }
+}
+
+/* ===== 全局重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s, color 0.3s;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ===== 无障碍：跳过链接（键盘聚焦时才出现） ===== */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: 10px 16px;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) 0;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.skip-link:focus {
+  left: 0;
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* 跳过链接的落点（<main id="main">）不需要焦点框 */
+#main:focus {
+  outline: none;
+}
+
+/* ===== 导航 ===== */
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+[data-theme="dark"] .site-nav {
+  background: rgba(30, 30, 30, 0.96);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .site-nav {
+    background: rgba(30, 30, 30, 0.96);
+  }
+}
+
+.nav-inner {
+  max-width: var(--max-width);
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-inner::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  white-space: nowrap;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.nav-logo img {
+  /* 再放大一档：48px 高；max-height 兜住，保证不超出导航栏高度与宽度 */
+  height: 48px;
+  max-height: calc(var(--nav-height) - 12px);
+  width: auto;
+  display: block;
+  filter: var(--logo-filter);
+  transition: filter 0.3s ease;
+}
+
+.nav-logo span {
+  /* 品牌色 #7beec7 在白色底上对比度只有 1.4:1（WCAG 要 4.5:1），
+     文字场景改用变量：浅色模式是加深版 #0d8368（4.7:1），深色模式仍是薄荷绿 */
+  color: var(--logo-accent-text, #0d8368);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+/* ===== Waline 配色跟随站点主题 =====
+   Waline v3 的颜色全部走它自己的 --waline-* 变量（默认只有浅色一套，没有深色模式，
+   CSS 里既没有 prefers-color-scheme 也没有 .dark）。这里把它的变量映射到站点主题变量，
+   主题变量本身会随 data-theme（light / dark）与系统深色切换，
+   所以深色、浅色、跟随系统三种情况一次搞定，不用按主题各写一遍。
+
+   选择器用 [data-waline]：那是 Waline 挂在它根节点的属性，
+   评论页（#waline）、文章页、时刻页（#comment-*）所有挂载点都能覆盖到，
+   而且它比 Waline 写在 :root 的默认值更靠近元素，优先级够。
+   注意：--waline-theme-color（主按钮绿色）与 --waline-white（按钮文字）保持原样。 */
+[data-waline] {
+  --waline-color: var(--text, #444);                        /* 正文 / 输入框 / 次级按钮文字 */
+  --waline-dark-grey: var(--text, #666);                    /* 昵称、引用文字 */
+  --waline-light-grey: var(--text-secondary, #999);         /* 页脚、RSS、评分等弱化文字 */
+  --waline-bg-color: var(--card-bg, #fff);                  /* 面板、表情/GIF 弹层 */
+  --waline-bg-color-light: var(--tag-bg, #f8f8f8);          /* 输入框聚焦、行内 code、分隔线 */
+  --waline-bg-color-hover: var(--tag-active-bg, #f0f0f0);   /* 表情按钮悬停 */
+  --waline-border-color: var(--border, #ddd);               /* 面板 / 输入框 / 按钮边框 */
+  --waline-disable-bg-color: var(--tag-bg, #f8f8f8);        /* 禁用按钮底色 */
+  --waline-disable-color: var(--text-secondary, #999);      /* 禁用按钮文字 */
+  --waline-info-bg-color: var(--tag-bg, #f8f8f8);           /* 「浏览器 / 系统」等小标签底色 */
+  --waline-info-color: var(--text-secondary, #999);         /* 小标签文字 */
+  --waline-bq-color: var(--tag-bg, #f0f0f0);                /* 引用块底色 */
+}
+
+/* ===== Waline 评论头像：一律正方形 + 圆形，防止被 flex 拉成竖椭圆 =====
+   登录后评论框左侧那个头像是 Waline 的 .wl-cards .wl-user .wl-user-avatar
+   （div 里包着 img），在窄屏下会被 flex 纵向拉伸：宽度 48px 不变、高度被撑高，
+   看起来就是"竖椭圆"。这里同时覆盖 img 与「带背景图的 div」两种形态，
+   锁死四个方向的尺寸、关掉 flex 拉伸，再统一圆形裁切。 */
+.wl-avatar,
+.wl-user .wl-avatar,
+.wl-user .wl-user-avatar,
+.wl-user-avatar,
+.wl-header-avatar,
+.wl-user img,
+.wl-avatar img,
+.wl-user .wl-avatar img,
+.wl-user .wl-user-avatar img,
+.wl-user-avatar img,
+.wl-header-avatar img,
+.wl-comment .wl-avatar,
+.wl-comment .wl-avatar img {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  box-sizing: border-box;
+}
+
+/* ===== 导航活跃下划线（桌面端：一根共用的线在各导航项之间滑动） ===== */
+.nav-underline {
+  position: absolute;
+  left: 0;
+  bottom: 1px;
+  height: 2px;
+  width: 0;
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+      rgba(123, 238, 199, 0) 0%,
+      #7beec7 22%,
+      #7beec7 78%,
+      rgba(123, 238, 199, 0) 100%);
+  transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+              width 0.32s cubic-bezier(0.22, 0.61, 0.36, 1),
+              opacity 0.2s ease;
+  will-change: transform, width;
+}
+
+.nav-link {
+  padding: 4px 12px;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  line-height: 1.4;
+  letter-spacing: 0.3px;
+  border-radius: var(--radius);
+}
+
+.nav-link:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.nav-link.active {
+  color: var(--text);
+  font-weight: 700;
+  background: transparent;
+}
+
+.nav-link.blog-link {
+  color: var(--text-secondary);
+}
+
+.nav-link.blog-link:hover {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ===== 导航子菜单（菜单项写 identifier/parent 即自动生成） =====
+   桌面端是浮层下拉（位置由 common.js 贴在父项下方）；移动端抽屉里改为内联展开。
+   桌面端用 position: fixed 而不是 absolute：导航条 .nav-inner 为了能在中等宽度横向滚动
+   设了 overflow-x: auto，按规范这会让 overflow-y 也算成 auto，绝对定位的下拉菜单会被
+   裁在导航栏高度里（表现为"菜单显示在导航栏内部"）。fixed 不受该裁剪影响。 */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-parent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.nav-caret {
+  font-size: 0.62rem;
+  opacity: 0.6;
+  transition: transform 0.22s ease;
+}
+
+.nav-item.is-open .nav-caret {
+  transform: rotate(180deg);
+}
+
+.nav-submenu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 150px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 60;
+}
+
+.nav-submenu[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   运行时开关（js/zero-switches.js + partials/zero/switch.html）
+   模板把「后台可能关掉」的区块先写成 hidden，拿到 /api/config 才露出，
+   所以关掉的功能不会闪一下。导航项 / 卡片 / 表单这些容器自带 display 规则，
+   原生 [hidden] 的 display:none 权重不够，只能在这里显式写死。
+   ------------------------------------------------------------ */
+[data-zero-switch][hidden] {
+  display: none !important;
+}
+
+/* 功能被关闭时的一句话（partials/zero/closed.html）：全站都可能用到
+   （时刻页 / 友链页 / 订阅页 / 工具页），所以基础样式放在公共样式里。 */
+.zero-closed {
+  margin: 24px 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--border, #ddd);
+  border-radius: 10px;
+  background: var(--tag-bg, #f8f8f8);
+  color: var(--text-secondary, #888);
+}
+
+.zero-closed[hidden] {
+  display: none !important;
+}
+
+.zero-closed p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.nav-submenu-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.nav-submenu-link:hover {
+  color: var(--text);
+  background: var(--tag-bg);
+}
+
+/* 纯图标导航项（params.icon_only = true）：文字只作为无障碍标签 */
+.nav-link-icon {
+  padding: 4px 8px;
+}
+
+.nav-link-icon .nav-label {
+  display: none;
+}
+
+/* 导航项里的自定义图片图标（params.image） */
+.nav-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: -0.2em;
+}
+
+/* 放进右侧图标区的菜单项：外观跟主题/语言按钮保持一致 */
+.nav-controls a.ctrl-btn {
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.nav-controls a.ctrl-btn:hover {
+  color: var(--text);
+}
+
+/* 账号入口：登录后图标换成主题色，登录态一眼能看出来 */
+.nav-controls a.nav-account.is-signed {
+  color: var(--logo-accent-text, #0d8368);
+}
+
+/* 登录后由 common.js 换上的圆形头像 */
+.nav-controls .nav-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 桌面端下拉菜单：fixed 定位由 JS 贴到父项正下方，宽度不足时会自动回避右边界 */
+@media (min-width: 769px) {
+  .nav-submenu {
+    z-index: 1200;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+  }
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.nav-controls .ctrl-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.nav-controls .ctrl-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  flex-shrink: 0;
+  z-index: 101;
+}
+
+.nav-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+}
+
+.nav-close {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: block;
+  }
+
+  .nav-close {
+    display: block;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    line-height: 1;
+    z-index: 10;
+  }
+
+  .nav-close:hover {
+    color: var(--text);
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100vh;
+    background: var(--card-bg);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 70px 20px 40px;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    z-index: 1000;
+    border-left: 1px solid var(--border);
+    flex: none;
+    justify-content: flex-start;
+    gap: 0;
+    display: flex;
+  }
+
+  .nav-links.open {
+    right: 0;
+  }
+
+  .nav-overlay.show {
+    display: block;
+  }
+
+  .nav-links .nav-link,
+  .nav-links .blog-link {
+    padding: 14px 16px;
+    font-size: 1rem;
+    width: 100%;
+    text-align: left;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+    white-space: normal;
+    display: block;
+  }
+
+  /* 移动端抽屉里不用滑动下划线 */
+  .nav-underline {
+    display: none;
+  }
+
+  .nav-links .nav-controls {
+    margin-left: 0;
+    margin-top: 16px;
+    justify-content: flex-start;
+    gap: 20px;
+    padding: 16px 16px 0;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .nav-links .blog-link {
+    display: block;
+  }
+
+  /* 抽屉里的子菜单：改成内联展开，跟着父项往下排 */
+  .nav-item {
+    display: block;
+    width: 100%;
+  }
+
+  .nav-links .nav-parent {
+    width: 100%;
+    justify-content: space-between;
+    padding: 14px 16px;
+    font-size: 1rem;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-submenu {
+    position: static;
+    min-width: 0;
+    padding: 0 0 0 14px;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .nav-submenu-link {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    white-space: normal;
+  }
+
+  /* 抽屉里图标项也把文字显示出来，方便点选 */
+  .nav-link-icon {
+    padding: 14px 16px;
+  }
+
+  .nav-link-icon .nav-label {
+    display: inline;
+  }
+
+  .nav-inner {
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .nav-logo {
+    margin-right: auto;
+  }
+}
+
+/* ===== 主容器 ===== */
+.main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: calc(var(--nav-height) + 35px) 20px 20px;
+  width: 100%;
+  flex: 1 0 auto;
+  background: var(--bg);
+  transition: background 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+
+.section {
+  animation: fadeUp 0.4s ease;
+  flex: 1;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-title {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+
+.section-desc {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+  border-left: 3px solid var(--text);
+  padding-left: 20px;
+  font-weight: 300;
+}
+
+/* ===== 底部 ===== */
+.footer {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  transition: border-color 0.3s;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  width: 100%;
+  flex-shrink: 0;
+  background: var(--bg);
+  min-height: 64px;
+}
+
+.footer .footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: 0.82rem;
+  align-items: flex-start;
+  line-height: 1.3;
+  flex: 0 0 auto;
+}
+
+.footer .footer-left .designer {
+  font-size: 0.75rem;
+  /* 原来这里叠了 opacity: 0.7，实测 #888/白 = 3.54:1 不达标；去掉就是 --text-secondary（7:1） */
+}
+
+.footer .footer-left .powered-by {
+  font-size: 0.75rem;
+}
+
+.footer .footer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.footer .footer-center .footer-services {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.footer .footer-center .footer-services a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 14px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.footer .footer-center .footer-services a:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+.footer .footer-center .footer-services a:hover {
+  color: var(--text);
+}
+
+.footer .footer-center .footer-services a i {
+  font-size: 0.9rem;
+}
+
+/* 服务项支持自定义图片（params: [[footer.services]] 里写 img = "…"） */
+.footer .footer-center .footer-services a img.footer-service-img {
+  width: auto;
+  height: 1.05em;
+  max-height: 18px;
+  display: inline-block;
+  vertical-align: -0.15em;
+  object-fit: contain;
+  /* 默认跟随站点 logo 的处理方式：浅色模式原样、深色模式自动反色
+     （深色 logo 在白底上看得见、在黑底上也不会糊成一片） */
+  filter: var(--logo-filter, none);
+}
+
+/* invert = true → 始终反色；no_invert = true → 从不反色 */
+.footer .footer-center .footer-services a img.footer-service-img-invert {
+  filter: invert(1);
+}
+
+.footer .footer-center .footer-services a img.footer-service-img-noinvert {
+  filter: none;
+}
+
+.footer .footer-center .footer-icp {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0 8px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* 多条备案号之间的竖线分隔（CSS 生成，读屏软件不会念出来） */
+.footer .footer-center .footer-icp > *:not(:last-child)::after {
+  content: '|';
+  margin-left: 8px;
+  opacity: 0.5;
+}
+
+.footer .footer-center .footer-icp span {
+  color: var(--text-secondary);
+}
+
+.footer .footer-center .footer-icp a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  /* 触控目标要 ≥24×24（Lighthouse target-size）：备案号字号小，不加内边距不好点 */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 1px;
+}
+
+.footer .footer-center .footer-icp a:hover {
+  color: var(--text);
+}
+
+.footer .footer-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+  flex: 0 0 auto;
+}
+
+.footer .footer-right .social-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  justify-items: center;
+  width: 100%;
+}
+
+.footer .footer-right .social-row a {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.footer .footer-right .social-row a:hover {
+  color: var(--text);
+  transform: translateY(-2px);
+}
+
+/* ===== 滚动按钮 ===== */
+.scroll-buttons {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 999;
+}
+
+.scroll-buttons .scroll-btn {
+  background: var(--scroll-btn-bg);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--scroll-btn-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 手机上点完不要留下"按下/聚焦"的高亮底色 */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 悬停效果只在真正支持悬停的设备上生效：
+   触屏点一下会残留 :hover，导致按钮一直保持深色 */
+@media (hover: hover) and (pointer: fine) {
+  .scroll-buttons .scroll-btn:hover {
+    background: var(--tag-active-bg);
+    color: var(--text);
+  }
+}
+
+/* 用键盘操作时给出焦点提示，鼠标/触摸点击后不残留焦点样式 */
+.scroll-buttons .scroll-btn:focus {
+  outline: none;
+}
+
+.scroll-buttons .scroll-btn:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.scroll-buttons .scroll-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 820px) {
+  .scroll-buttons {
+    bottom: 80px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 500px) {
+  .site-nav {
+    height: 56px;
+    padding: 0 12px;
+  }
+
+  .nav-logo {
+    font-size: 0.95rem;
+  }
+
+  .nav-logo img {
+    /* 手机上导航更矮（56px），同步放大但不超出导航栏 */
+    height: 38px;
+    max-height: calc(56px - 12px);
+  }
+
+  .main {
+    padding: calc(var(--nav-height) + 20px) 16px 20px;
+  }
+
+  .section-title {
+    font-size: 1.7rem;
+  }
+
+  .section-desc {
+    font-size: 0.95rem;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer .footer-left {
+    align-items: center;
+  }
+
+  .footer .footer-right {
+    align-items: center;
+  }
+
+  .scroll-buttons {
+    bottom: 70px;
+    right: 16px;
+  }
+
+  .scroll-buttons .scroll-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .footer .footer-right .social-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ============================================================
+   图片放大查看（lightbox）
+   文章正文与时刻卡片的图片点击后用；样式跟着主题走
+   ============================================================ */
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  animation: lightboxIn 0.18s ease;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+@keyframes lightboxIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-img {
+  max-width: 92vw;
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: 4px;
+  background: #111;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-btn {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.lightbox-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.lightbox-btn[hidden] {
+  display: none;
+}
+
+.lightbox-close {
+  top: 16px;
+  right: 16px;
+  font-size: 1.6rem;
+}
+
+.lightbox-prev,
+.lightbox-next {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.lightbox-prev { left: 12px; }
+.lightbox-next { right: 12px; }
+
+.lightbox-count {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+/* 可点击放大的图片：给个放大镜光标 */
+.article-body img,
+.shuo-images img,
+.shuo-media img {
+  cursor: zoom-in;
+}
+
+/* 时刻卡片里的配图外层：用按钮代替链接，点了只放大、不跳转 */
+.shuo-img-link {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+}
+
+@media (max-width: 600px) {
+  .lightbox-prev, .lightbox-next { width: 38px; height: 38px; font-size: 1.3rem; }
+  .lightbox-img { max-width: 96vw; max-height: 80vh; }
+}
