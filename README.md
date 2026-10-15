@@ -92,7 +92,10 @@ hugo mod init 你的模块名          # 例如 github.com/you/zero-site
 
 这条路有两个前置条件，缺一个就报 `module does not exist` 或 `binary with name "go" not found in PATH`：
 
-1. 本机 `PATH` 里要能找到 `go`（Hugo 不读 `GOROOT`，也不看注册表 —— Go 装了但不在 PATH 一样失败）；
+1. 本机 `PATH` 里要能找到 `go`（Hugo 不读 `GOROOT`，也不看注册表 —— Go 装了但不在 PATH 一样失败）。
+   **Go 装在哪个盘都无所谓**，把实际安装目录下的 `bin` 加进 PATH 即可：
+   PowerShell 临时试 `$env:PATH += ";E:\Program Files\Go\bin"`，验证 `go version` 有输出后
+   `setx PATH "$env:PATH"` 持久化（重开终端生效）；macOS/Linux 通常是 `/usr/local/go/bin` 或 brew 目录，已在 PATH 内。
 2. 站点自己也得是模块，先 `hugo mod init github.com/你/你的站点仓库`，再 `hugo mod get -u github.com/AUkarl/zero-theme`。
 
 网络到不了 `proxy.golang.org` 时，让 Go 直接走 git：`setx GOPRIVATE "github.com/AUkarl/*"`（或临时 `$env:GOPRIVATE='github.com/AUkarl/*'`）。
