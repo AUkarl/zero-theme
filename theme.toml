@@ -8,7 +8,7 @@
 # （或在 Cloudflare Pages 直接连本仓库）发布后才可访问。
 
 name = "zero"
-license = "MIT"
+license = "Apache-2.0"
 licenselink = "https://github.com/AUkarl/zero-theme/blob/main/LICENSE"
 description = "极简风格的中文 Hugo 个人站点主题：暗色模式、Bento 落地页与首页、时刻页卡片时间线、弹幕标签云归档、友链与在线申请、邮箱订阅、自建访问统计、多作者与用户中心；内置自建评论系统 zero-comment，并可切换 Waline / Giscus / Twikoo / Artalk。"
 homepage = "https://github.com/AUkarl/zero-theme"

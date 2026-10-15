@@ -337,4 +337,5 @@ node scripts/sync-comment.mjs      # 接收 ../zero-stack 产出的评论组件
 
 ## 许可证
 
-MIT。页脚的主题作者署名不属于「可自定义内容」，请保留。
+Apache-2.0，全文见仓库根目录的 `LICENSE`（与 `zero-stack` 保持一致，专利授权条款比 MIT 更明确）。
+页脚的主题作者署名不属于「可自定义内容」，请保留。
