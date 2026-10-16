@@ -1,0 +1,23 @@
+{
+  "desc": "做过的一些小东西：能点开的放链接，点不开的写个状态。",
+  "items": [
+    {
+      "title": "zero-theme",
+      "desc": "这个站点用的 Hugo 主题：导航、首页 Bento、文章排版、评论接管、多作者署名都在里面。",
+      "status": "维护中",
+      "url": "https://github.com/AUkarl/zero-theme"
+    },
+    {
+      "title": "zero-cms",
+      "desc": "与主题配套的后台：文章/时刻写作、前端管理、评论与友链、统计、订阅群发、全站备份。",
+      "status": "维护中",
+      "url": "https://github.com/AUkarl/zero-stack"
+    },
+    {
+      "title": "示例项目",
+      "desc": "这一格是占位：在后台「前端管理 → 工坊」里改标题、说明与状态即可。",
+      "status": "计划中",
+      "url": ""
+    }
+  ]
+}

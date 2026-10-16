@@ -1,0 +1,31 @@
+{
+  "desc": "关于这个演示站与它背后的主题。",
+  "tagline": "一个把主题和后台都跑起来的样本站",
+  "bio": [
+    "这个站点只用来演示：主题 zero-theme 负责渲染，后台 zero-cms 负责写内容。",
+    "导航栏、首页、页脚、关于、工坊、时刻、SEO、友链这八段配置，全部可以在后台「前端管理」里改，不需要动代码。",
+    "把 data/ 与 content/ 换成你自己的，就是你自己的站。"
+  ],
+  "declaration": [
+    "正文原创，代码与图片可自由复用；转载请注明出处。",
+    "示例站不收集任何个人数据，评论区与统计都只是演示用。"
+  ],
+  "site": [
+    "构建：Hugo 0.165 extended + zero-theme。",
+    "后端：Cloudflare Workers + D1 + R2 + Pages（zero-api / zero-cms）。"
+  ],
+  "contacts": [
+    {
+      "label": "邮箱",
+      "text": "hi@example.com",
+      "url": "mailto:hi@example.com",
+      "external": true
+    },
+    {
+      "label": "RSS",
+      "text": "订阅更新",
+      "url": "/index.xml",
+      "external": false
+    }
+  ]
+}

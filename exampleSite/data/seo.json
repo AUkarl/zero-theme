@@ -1,0 +1,37 @@
+{
+  "default_description": "Zero Demo —— zero-theme 与 zero-cms 的演示站点。",
+  "default_keywords": [
+    "Hugo",
+    "主题演示",
+    "zero-theme",
+    "zero-cms"
+  ],
+  "description_length": 160,
+  "title_separator": "·",
+  "site_author": "Zero Author",
+  "og_image_default": "/img/author.svg",
+  "publisher_logo": "/img/logo.svg",
+  "enable_canonical": true,
+  "enable_robots": true,
+  "robots_default": "index, follow",
+  "robots_disallow": [
+    "/account/",
+    "/admin/",
+    "/api/"
+  ],
+  "robots_allow": [],
+  "enable_robots_sitemap": true,
+  "robots_crawl_delay": 0,
+  "robots_host": "",
+  "enable_keywords": true,
+  "enable_og": true,
+  "enable_twitter": true,
+  "twitter_site": "",
+  "twitter_creator": "",
+  "enable_jsonld": true,
+  "enable_breadcrumb": true,
+  "enable_search_action": false,
+  "theme_color_light": "#ffffff",
+  "theme_color_dark": "#1e1e1e",
+  "color_scheme": "light dark"
+}

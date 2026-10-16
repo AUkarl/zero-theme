@@ -1,0 +1,121 @@
+{
+  "items": [
+    {
+      "name": "主页",
+      "url": "/home/",
+      "weight": 1,
+      "icon": "fas fa-house",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "文章",
+      "url": "/posts/",
+      "weight": 2,
+      "icon": "fas fa-feather-pointed",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "时刻",
+      "url": "/moments/",
+      "weight": 3,
+      "icon": "fas fa-camera",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "分类",
+      "url": "/categories/",
+      "weight": 4,
+      "icon": "fas fa-folder-tree",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "标签",
+      "url": "/tags/",
+      "weight": 5,
+      "icon": "fas fa-tags",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "友链",
+      "url": "/links/",
+      "weight": 6,
+      "icon": "fas fa-link",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "工坊",
+      "url": "/work/",
+      "weight": 7,
+      "icon": "fas fa-hammer",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "关于",
+      "url": "/about/",
+      "weight": 8,
+      "icon": "fas fa-circle-info",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": false
+    },
+    {
+      "name": "登录",
+      "url": "/account/",
+      "weight": 9,
+      "icon": "fas fa-right-to-bracket",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "controls",
+      "identifier": "",
+      "parent": "",
+      "zeroAccount": true
+    }
+  ]
+}
