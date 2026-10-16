@@ -56,6 +56,8 @@
 
     var T = readI18n();
     var ov = null;
+    /** /api/config 的内容：params 没填 cmsBaseURL 时，后台地址只能从这里拿 */
+    var runtimeCfg = {};
     var tab = readTab();
     var kind = 'star';
     var status = 'all';
@@ -66,9 +68,11 @@
     /* ---------------- 启动 ---------------- */
 
     function boot() {
-      api('/api/account/overview')
-        .then(function (d) {
-          ov = d || {};
+      var cfgPromise = window.ZeroStack && window.ZeroStack.config ? window.ZeroStack.config() : Promise.resolve({});
+      Promise.all([cfgPromise, api('/api/account/overview')])
+        .then(function (res) {
+          runtimeCfg = res[0] || {};
+          ov = res[1] || {};
           if (!ov.account || !ov.account.id) throw new Error(T.needLogin || '请先登录');
           if (isAdmin(ov.account)) return paintAdmin();
           paintShell();
@@ -102,10 +106,12 @@
       return Boolean(a) && (a.isAdmin === true || a.role === 'admin');
     }
 
-    /** 站点后台入口：params.cmsBaseURL → 模板按环境算好的地址 → 线上常量 */
+    /** 站点后台入口：params.cmsBaseURL → 运行期后台自己记下的地址 → 模板按环境算好的地址 → 线上常量 */
     function cmsHref() {
       var fromParams = String(T.cmsBaseURL || '').trim();
       if (fromParams) return fromParams;
+      var fromRuntime = String(runtimeCfg.cmsAdminUrl || '').trim();
+      if (fromRuntime) return fromRuntime;
       var fromBuild = String(T.cmsURL || '').trim();
       return fromBuild || CMS_ONLINE;
     }

@@ -14,9 +14,10 @@
 //
 // 站点后台地址来源，优先级从高到低：
 //   1) account/list.html 注入的 cmsBaseURL —— 站点 config 的 params.cmsBaseURL；
-//   2) 模板按构建环境给出的 cmsURL —— hugo server 时是 zero-cms 的本地
+//   2) /api/config 的 cmsAdminUrl —— 管理员第一次从后台登录时后端记下的来源地址；
+//   3) 模板按构建环境给出的 cmsURL —— hugo server 时是 zero-cms 的本地
 //      vite 端口，正式构建是同域 /admin/；
-//   3) 常量 CMS_ONLINE：前两者都空时的兜底（与 account/list.html 里的
+//   4) 常量 CMS_ONLINE：以上都空时的兜底（与 account/list.html 里的
 //      $cmsFallback 成对，改一处要改两处）。
 // ============================================================
 (function () {
@@ -68,10 +69,12 @@
 
     /* ---------------- 后台地址与登录分流 ---------------- */
 
-    /** 站点后台入口：params.cmsBaseURL → 模板按环境算好的地址 → 线上常量 */
+    /** 站点后台入口：params.cmsBaseURL → 运行期后台自己记下的地址 → 模板按环境算好的地址 → 线上常量 */
     function cmsHref() {
       var fromParams = String(T.cmsBaseURL || '').trim();
       if (fromParams) return fromParams;
+      var fromRuntime = String(cfg.cmsAdminUrl || '').trim();
+      if (fromRuntime) return fromRuntime;
       var fromBuild = String(T.cmsURL || '').trim();
       return fromBuild || CMS_ONLINE;
     }
