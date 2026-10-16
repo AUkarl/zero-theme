@@ -346,8 +346,8 @@
     /* ===== 主视觉区域 ===== */
     .box-intro {
       {{- $landing := .Site.Params.landing -}}
-      {{- if and (ne $landing.show_background false) ($landing.background_image | default "img/bj.webp") -}}
-      background: url('{{ $landing.background_image | default "img/bj.webp" | relURL }}') center/cover no-repeat, linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      {{- if and (ne $landing.show_background false) ($landing.background_image | default "img/bj.png") -}}
+      background: url('{{ $landing.background_image | default "img/bj.png" | relURL }}') center/cover no-repeat, linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       {{- else }}
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       {{- end }}
@@ -506,7 +506,7 @@
         {{- if $site.showLogo }}
         <div class="box-logo">
           <a href="{{ "/" | relURL }}">
-            {{- $logoPath := $site.logo | default "/img/logo-nav.webp" -}}
+            {{- $logoPath := $site.logo | default "/img/logo-nav.png" -}}
             <img src="{{ $logoPath | relURL }}" alt="Logo">
           </a>
         </div>

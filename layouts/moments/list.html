@@ -45,7 +45,7 @@
     <div class="moments-header-content">
       {{- if $mc.showAvatar }}
       <div class="moments-header-avatar">
-        <img src="{{ ($mc.avatar | default "img/avatar.webp") | relURL }}" alt="avatar">
+        <img src="{{ ($mc.avatar | default "img/avatar.png") | relURL }}" alt="avatar">
       </div>
       {{- end }}
       <div class="moments-header-info">
@@ -119,7 +119,7 @@
     "iso" ($p.Date.Format "2006-01-02T15:04:05Z07:00")
     "location" (cond $mc.showLocation ((string ($p.Params.location | default "")) | default $mc.defaultLocation) "")
     "nickname" (cond (ne $mc.nickname "") $mc.nickname ($p.Site.Params.aboutName | default (partial "site-config.html" $p).name))
-    "avatarUrl" (($mc.avatar | default ($p.Site.Params.aboutAvatar | default "img/avatar.webp")) | relURL)
+    "avatarUrl" (($mc.avatar | default ($p.Site.Params.aboutAvatar | default "img/avatar.png")) | relURL)
   ) -}}
 {{- end -}}
 <script type="application/json" id="shuoData">
@@ -154,7 +154,7 @@
     componentSrc: "{{ partial "zero/component-url.html" }}",
     shortBase: "{{ partial "zero/short-base.html" }}",
     authorName: "{{ $mc.nickname | default (.Site.Params.aboutName | default (partial "site-config.html" .).name) }}",
-    authorAvatar: "{{ ($mc.avatar | default (.Site.Params.aboutAvatar | default "img/avatar.webp")) | relURL }}",
+    authorAvatar: "{{ ($mc.avatar | default (.Site.Params.aboutAvatar | default "img/avatar.png")) | relURL }}",
     /* 点赞：waline 那套用它的计数器（reaction0），zero 那套用 /api/reactions */
     likeEnabled: {{ if and $mc.showLike .Site.Params.comment.enable (or (eq $effective "zero") (and (eq $effective "waline") (ne $walURL ""))) }}true{{ else }}false{{ end }},
     likeType: "{{ $mWal.reaction_type | default ($mCfg.waline_reaction_type | default "reaction0") }}",

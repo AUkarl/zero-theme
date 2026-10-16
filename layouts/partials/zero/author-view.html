@@ -34,7 +34,7 @@
 {{- if and (not $avatar) $isOwner $profile -}}
   {{- with $profile.avatar -}}{{- $avatar = string . -}}{{- end -}}
 {{- end -}}
-{{- if not $avatar -}}{{- $avatar = string (.Site.Params.authorAvatar | default "img/avatar.webp") -}}{{- end -}}
+{{- if not $avatar -}}{{- $avatar = string (.Site.Params.authorAvatar | default "img/avatar.png") -}}{{- end -}}
 
 {{- /* 简介：bio 是主题配置文件里的键名，bio_zh 是旧站点与 data/authors.yaml 里常见的写法，两边都认 */ -}}
 {{- $bio := "" -}}

@@ -30,7 +30,7 @@
 {{- end -}}
 {{- $known := ne $name "" -}}
 {{- if not $name -}}{{- $name = $id -}}{{- end -}}
-{{- $avatar := (.Site.Params.authorAvatar | default "img/avatar.webp") | relURL -}}
+{{- $avatar := (.Site.Params.authorAvatar | default "img/avatar.png") | relURL -}}
 {{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
 {{- $bio := "" -}}
 {{- with (or $p.bio $p.bio_zh) -}}{{- $bio = string . -}}{{- end -}}

@@ -67,7 +67,7 @@ theme.toml  LICENSE
 ```
 
 主题仓库**不含站点图片**：`static/` 是空的，示例图在 `exampleSite/static/img/`，
-你自己的站点把图片放在自己的 `static/img/` 里（模板按 `img/logo-nav.webp` 这类相对地址引用）。
+你自己的站点把图片放在自己的 `static/img/` 里（模板按 `img/logo-nav.png` 这类相对地址引用）。
 
 ---
 

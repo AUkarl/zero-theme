@@ -52,7 +52,7 @@ analyticsEnabled = true           # 自建访问统计（进入记一次 + 心�
 # 这里只作为没写 data 文件时的默认值。
 
 show_logo = true                  # 导航栏是否显示 Logo
-logo = "/img/logo-nav.webp"       # Logo 路径（相对 static 目录），也可填完整 https 地址
+logo = "/img/logo-nav.png"       # Logo 路径（相对 static 目录），也可填完整 https 地址
 show_site_name = true             # 导航栏是否显示站点名
 site_name = "零度站点"             # 站点名（导航栏、标题兜底）
 navName = "零度站点"               # 导航栏与 SEO 里用的站点名，留空退回 site_name
@@ -61,9 +61,9 @@ author = "站长"                    # 默认署名（SEO、文章作者框兜�
 default_author = "default"        # 默认作者标识，对应 data/authors.yaml 里的 key
 description = "一个极简个人站点"    # 站点描述，用于 SEO 与分享卡片
 keywords = ["blog", "tech", "design"]   # 站点关键词
-favicon = "/img/logo-favicon.png"  # 浏览器图标；留空回落到主题自带的 img/logo-nav.webp
+favicon = "/img/logo-favicon.png"  # 浏览器图标；留空回落到主题自带的 img/logo-nav.png
 ogImage = ""                        # 分享图兜底（文章没封面时用），留空回落到 Logo
-aboutAvatar = "img/avatar.webp"   # 关于页 / 时刻页的头像
+aboutAvatar = "img/avatar.png"   # 关于页 / 时刻页的头像
 aboutName = "站长"                 # 关于页 / 时刻页显示的昵称
 authorAvatar = ""                  # 文章署名行的头像兜底，留空用 aboutAvatar
 
@@ -203,7 +203,7 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   show_welcome = true             # 是否显示问候行
   welcome = "Hey，好久不见"        # 问候语
   show_background = true           # 是否使用背景图
-  background_image = "img/bj.webp" # 背景图（相对 static）
+  background_image = "img/bj.png" # 背景图（相对 static）
   background_fade = true           # 背景渐入动画
   enter_text = "进入"              # 进入按钮文字
   show_copyright = true           # 底部是否显示版权行（内容取 footer.copyright_text）
@@ -347,13 +347,13 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 
   [moment.banner]
     show_background = true        # 顶部横幅背景图
-    background_image = "img/bj.webp"
+    background_image = "img/bj.png"
 
   [moment.profile]
     show_avatar = true            # 横幅里的头像
     show_nickname = true          # 横幅里的昵称
     default_nickname = "站长"
-    default_avatar = "img/avatar.webp"
+    default_avatar = "img/avatar.png"
 
   # 非 zero 评论系统的连接参数（用哪个由上面的 comment_provider 决定）
   [moment.waline]
@@ -597,7 +597,7 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 # 后台「前端管理 → 基本信息」和「作者认证」可以覆盖显示名与头像。
 
 [author_profile]
-  avatar = "img/avatar.webp"      # 头像
+  avatar = "img/avatar.png"      # 头像
   nickname = "站长"                # 显示名
   bio = "独立创作者 · 极简主义践行者"   # 简介
   show_cc_license = true          # 作者框里显示协议（false 时改在页脚显示）

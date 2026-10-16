@@ -20,7 +20,7 @@
       {{- /* 给 logo 写上宽高：否则图片加载完会撑动导航、把整页内容顶一下（CLS）。
              取不到尺寸（SVG / 外链）时就不写，靠 CSS 的 height 兜底。 */ -}}
       {{- $site := partial "site-config.html" . -}}
-      {{- $logoPath := $site.logo | default "img/logo-nav.webp" -}}
+      {{- $logoPath := $site.logo | default "img/logo-nav.png" -}}
       {{- $logoDim := try (imageConfig (printf "static%s" ($logoPath | relURL))) -}}
       {{- /* logo_home_link=false 时两处都退化成纯图片 / 纯文字，点了不跳转 */ -}}
       {{- $homeHref := cond $site.logoHomeLink ("home/" | relLangURL) "" -}}
@@ -28,7 +28,7 @@
         {{- with $site.logo -}}
       <a{{ with $homeHref }} href="{{ . }}"{{ end }}><img src="{{ . | relURL }}" alt="{{ $site.navName }}"{{ with $logoDim.Value }} width="{{ $logoDim.Value.Width }}" height="{{ $logoDim.Value.Height }}"{{ end }}></a>
         {{- else -}}
-      <a{{ with $homeHref }} href="{{ . }}"{{ end }}><img src="{{ "img/logo-nav.webp" | relURL }}" alt="{{ $site.navName }}"{{ with $logoDim.Value }} width="{{ $logoDim.Value.Width }}" height="{{ $logoDim.Value.Height }}"{{ end }}></a>
+      <a{{ with $homeHref }} href="{{ . }}"{{ end }}><img src="{{ "img/logo-nav.png" | relURL }}" alt="{{ $site.navName }}"{{ with $logoDim.Value }} width="{{ $logoDim.Value.Width }}" height="{{ $logoDim.Value.Height }}"{{ end }}></a>
         {{- end -}}
       {{- end -}}
       {{- if $site.showName -}}

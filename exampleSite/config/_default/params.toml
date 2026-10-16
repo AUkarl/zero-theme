@@ -47,8 +47,8 @@ analyticsEnabled = true             # 自建访问统计（进入页面记一次
 
 # --- Logo ---
 show_logo = true                    # 是否显示 Logo（true=显示 / false=隐藏）
-logo = "/img/logo.svg"              # Logo 图片路径（相对于 static 目录）
-logo_zh = "/img/logo.svg"           # 中文 Logo（留空则使用 logo）
+logo = "/img/logo-nav.png"          # Logo 图片路径（相对于 static 目录）
+logo_zh = ""                        # 中文 Logo（留空则使用 logo）
 
 # --- 网站名称 ---
 show_site_name = true               # 是否在导航栏显示网站名称
@@ -64,12 +64,12 @@ default_author = "default"           # 文章默认作者 ID（对应 data/autho
 # --- 其他 ---
 description = "一个使用 zero 主题搭建的示例站点。"     # 站点描述（用于 SEO）
 keywords = ["blog", "hugo", "theme", "示例站点", "个人博客"]  # 站点关键词（数组）
-favicon = "/img/logo.svg"         # 网站图标路径（相对于 static 目录，留空使用默认）
+favicon = "/img/logo-favicon.png"   # 网站图标路径（相对于 static 目录，留空使用默认）
 
 # --- 关于页 / 时刻页 / 作者栏共用的头像与昵称 ---
 # 注意：这两个键必须写在所有 [表] 之前（TOML 规则：出现表头后，裸键都会归到那张表里），
 # 否则会被并进 [[about.declaration]] 变成无效配置，主题就退回它自带的默认值。
-aboutAvatar = "img/avatar.svg"   # 头像路径（相对于 static 目录）
+aboutAvatar = "img/avatar.png"   # 头像路径（相对于 static 目录）
 aboutName = "示例作者"            # 显示名称
 
 
@@ -114,7 +114,7 @@ navName_zh = "示例站点"
 
   # --- 背景图片 ---
   show_background = true            # 是否显示背景图片
-  background_image = "img/bj.jpg"  # 背景图片路径（相对于 static 目录）
+  background_image = "img/bj.png"  # 背景图片路径（相对于 static 目录）
 
 
 # --------------------------------------------
@@ -210,12 +210,12 @@ math = true                         # 是否全局启用数学公式（KaTeX）
   # 顶部横幅
   [moment.banner]
     show_background = true          # 是否显示背景图
-    background_image = "img/bj2.jpg" # 背景图路径（相对于 static 目录）
+    background_image = "img/bj2.png" # 背景图路径（相对于 static 目录）
 
   # 横幅里的资料（也是后台时刻卡片的署名）
   [moment.profile]
     default_nickname = "示例昵称"    # 昵称
-    default_avatar = "img/avatar.svg" # 头像路径
+    default_avatar = "img/avatar.png" # 头像路径
     show_avatar = true              # 是否显示头像
     show_nickname = true            # 是否显示昵称
     show_signature = true           # 是否显示签名
@@ -596,7 +596,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
 # 多作者信息请在 data/authors.yaml 中配置（本处为默认/备用值）。
 
 [author_profile]
-  avatar = "img/avatar.svg"         # 默认作者头像路径
+  avatar = "img/avatar.png"         # 默认作者头像路径
   nickname = "示例作者"             # 作者昵称
   bio_zh = "这里是示例作者简介。"  # 中文简介
   show_cc_license = true           # 是否显示 CC 开源协议

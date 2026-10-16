@@ -3,7 +3,7 @@
 # 站长的这一条由后台「我的信息 → 站长作者资料」维护。
 zero-author:
   name: "Zero Author"
-  avatar: "/img/avatar.svg"
+  avatar: "/img/avatar.png"
   bio_zh: "占位作者：换成你自己的名字与简介"
   website: ""
   verified: true

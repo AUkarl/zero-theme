@@ -34,7 +34,7 @@
   {{- end -}}
   {{- $known := ne $name "" -}}
   {{- if not $known -}}{{- $name = $id -}}{{- end -}}
-  {{- $avatar := ($.Site.Params.authorAvatar | default "img/avatar.webp") | relURL -}}
+  {{- $avatar := ($.Site.Params.authorAvatar | default "img/avatar.png") | relURL -}}
   {{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
   {{- $term := "" -}}
   {{- if isset $.Site.Taxonomies "author" -}}{{- $term = index $.Site.Taxonomies.author ($id | urlize) -}}{{- end -}}
