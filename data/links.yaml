@@ -1,0 +1,21 @@
+# 友链页的数据文件（hugo.Data.links）：friends = 左邻右舍，alliance = 站点联盟。
+# 下面三条是占位示例，用来让新装的主题不是一张空页；换成自己的条目即可，
+# 后台「友链」的每次增删改都会自动同步这份文件。
+friends:
+  - name: "示例左邻"
+    url: "https://example.com/one"
+    desc: "一条占位：换成朋友站点的名字与地址"
+    icon: ""
+    email: ""
+    rss: ""
+  - name: "示例右舍"
+    url: "https://example.com/two"
+    desc: "另一条占位"
+    icon: ""
+    email: ""
+    rss: ""
+alliance:
+  - name: "示例联盟"
+    url: "https://example.com/three"
+    desc: "站点联盟不参与在线检测，只显示名单"
+    icon: ""

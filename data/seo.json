@@ -1,16 +1,11 @@
 {
-  "default_description": "Zero Demo —— zero-theme 与 zero-cms 的演示站点。",
-  "default_keywords": [
-    "Hugo",
-    "主题演示",
-    "zero-theme",
-    "zero-cms"
-  ],
+  "default_description": "",
+  "default_keywords": [],
   "description_length": 160,
   "title_separator": "·",
-  "site_author": "Zero Author",
-  "og_image_default": "/img/author.svg",
-  "publisher_logo": "/img/logo.svg",
+  "site_author": "",
+  "og_image_default": "",
+  "publisher_logo": "",
   "enable_canonical": true,
   "enable_robots": true,
   "robots_default": "index, follow",

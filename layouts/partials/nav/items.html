@@ -26,7 +26,14 @@
   顺序：菜单侧沿用 Hugo 已排好的顺序，不再重排，保证没写 nav.json 时页面
   和改造前一模一样；data 侧按 weight 排序（JSON 数组本身不保证顺序）。
   ============================================================ */ -}}
+{{- /* 主题自带 data/nav.json 作为默认导航，但它只在该站点「自己没有 nav.json 且没有 menus」时接管。
+       站点用 menus.*.toml 配导航的一直存在，让主题默认数据把它整段盖掉就是无故破坏别人的站；
+       hugo.Data 是主题与站点合并后的结果，看不出来源，所以直接问站点目录下有没有这份文件。
+       站点自己的 data/nav.json 存在时优先（后台「前端管理 → 导航栏」写的就是它）。 */ -}}
 {{- $d := hugo.Data.nav -}}
+{{- if and (not (os.FileExists "data/nav.json")) .Site.Menus.main -}}
+  {{- $d = nil -}}
+{{- end -}}
 {{- $raw := slice -}}
 {{- if reflect.IsSlice $d -}}
   {{- $raw = $d -}}
@@ -85,4 +92,19 @@
     {{- end -}}
   {{- end -}}
 {{- end -}}
+{{- /* 账号入口（登录 / 登录后换头像）不在「前端管理 → 导航栏」的可配范围内：
+       它只跟着「设置 → 站点设置 → 前台账号系统」这个总闸走。这里固定补一项，
+       挂 data-zero-switch="accountSystemEnabled"，由 zero-switches.js 在拿到
+       /api/config 后决定露不露 —— 关掉时构建期就带 hidden，不会闪一下；
+       开启时用户不用去导航配置里手工加。用户已经在 nav 里自己配过账号入口时，
+       header.html 的 $acctSeen 会把它排在前面，这一条自动被忽略。 */ -}}
+{{- $acct := partial "nav/entry-data.html" (dict "item" (dict
+  "name" "登录"
+  "url" "/account/"
+  "weight" 9999
+  "icon" "fas fa-right-to-bracket"
+  "position" "controls"
+  "iconOnly" true
+  "zeroAccount" true)) -}}
+{{- $items = $items | append (merge $acct (dict "switchKey" "accountSystemEnabled" "children" slice "isParent" false)) -}}
 {{- return $items -}}

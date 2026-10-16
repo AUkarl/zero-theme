@@ -1,0 +1,16 @@
+{
+  "copyrightText": "© {year} 我的站点",
+  "showPoweredBy": true,
+  "poweredByText": "powered by zero-theme",
+  "poweredByLink": "",
+  "icpItems": [
+    {
+      "text": "ICP备 00000000号-1",
+      "link": "https://beian.miit.gov.cn/"
+    },
+    {
+      "text": "公网安备 00000000000000号",
+      "link": "https://beian.mps.gov.cn/"
+    }
+  ]
+}
