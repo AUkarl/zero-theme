@@ -9,13 +9,18 @@
     · 其它协议（javascript: / data: / vbscript: / file: / …）→ 返回 ""
   为什么要这一层：短代码是给后台编辑器插进正文用的，地址来自可编辑的字段；
   `<img src>`、`<source src>`、`<a href>` 直接吃 javascript: 就是自伤型 XSS。
+  ------------------------------------------------------------
+  `return` 只认模板体顶层：写进 if/range 分支里，Hugo 会把它当成一个叫 return
+  的函数去数参数（0.165 报 "wrong number of args for return: want 0 got 1"），
+  一个短代码就能把整站构建打死。所以这里把结果一路算进 $safe，最后只在顶层 return。
   ============================================================ */ -}}
 {{- $u := trim (string (. | default "")) " " -}}
-{{- if eq $u "" -}}{{- return "" -}}{{- end -}}
 {{- $lower := lower $u -}}
-{{- if or (hasPrefix $lower "http://") (hasPrefix $lower "https://") (hasPrefix $u "//") -}}
-  {{- return $u -}}
+{{- $safe := $u -}}
+{{- if not (or (hasPrefix $lower "http://") (hasPrefix $lower "https://") (hasPrefix $u "//")) -}}
+  {{- /* 出现「<字母…>:」这种协议头就不是站内路径，也不在上面放行的协议里，一律拒绝 */ -}}
+  {{- if findRE `^[a-zA-Z][a-zA-Z0-9+.-]*:` $u -}}
+    {{- $safe = "" -}}
+  {{- end -}}
 {{- end -}}
-{{- /* 出现「<字母…>:」这种协议头就说明不是站内路径，一律拒绝 */ -}}
-{{- if findRE `^[a-zA-Z][a-zA-Z0-9+.-]*:` $u -}}{{- return "" -}}{{- end -}}
-{{- return $u -}}
+{{- return $safe -}}
