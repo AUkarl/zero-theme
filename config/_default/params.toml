@@ -433,13 +433,13 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   [[footer.icp_items]]
     text = ""
     link = ""
-  # 中部图标行：站点联盟 / 出行等，img 与 icon 二选一，invert=true 深色下反色
-  [[footer.services]]
-    name = ""
-    img = ""
-    link = ""
-    icon = ""
-    invert = false
+  # 中部图标行：站点联盟 / 出行等，img 与 icon 二选一，invert=true 深色下反色。
+  # 默认一条都不给：link 留空的条目模板会直接跳过，写一条全空的只会让人以为是配置坏了。
+  # [[footer.services]]
+  #   name = "站点联盟"
+  #   img = "/img/alliance.png"
+  #   link = "https://example.com/"
+  #   invert = false
   # 右侧社交图标（两行）
   [[footer.social_row1]]
     name = "GitHub"

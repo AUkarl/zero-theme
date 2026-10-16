@@ -90,6 +90,8 @@
       {{- $imgCls := "footer-service-img" -}}
       {{- if $svc.invert }}{{ $imgCls = printf "%s footer-service-img-invert" $imgCls }}{{ end -}}
       {{- if $svc.no_invert }}{{ $imgCls = printf "%s footer-service-img-noinvert" $imgCls }}{{ end -}}
+      {{- /* link 没填就整条不渲染：空 href 的 <a> 会指向当前页，看着是图标、点了没反应 */ -}}
+      {{- if not $svc.link }}{{ continue }}{{ end -}}
       <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}">{{ with $svc.img }}<img class="{{ $imgCls }}" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ else }}<i class="{{ $svc.icon }}" aria-hidden="true"></i>{{ end }} {{ $svc.name }}</a>
       {{- end }}
     </nav>
@@ -113,6 +115,7 @@
     {{- with $footer.social_row1 }}
     <div class="social-row">
       {{- range . }}
+      {{- if not .link }}{{ continue }}{{ end -}}
       <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
       {{- end }}
     </div>
@@ -120,6 +123,7 @@
     {{- with $footer.social_row2 }}
     <div class="social-row">
       {{- range . }}
+      {{- if not .link }}{{ continue }}{{ end -}}
       <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
       {{- end }}
     </div>
