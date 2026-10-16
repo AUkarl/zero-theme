@@ -36,9 +36,13 @@ enableFuture = true
 # ===== 内容分类 =====
 # 定义文章的分类维度（对应 front matter 中的 categories 和 tags 字段）
 [taxonomies]
-  category = "categories"             # 分类（复数形式作为 URL 路径）
-  tag = "tags"                        # 标签
+  # 只声明 author：文章页顶部的署名要点进 /author/<标识>/，这一条必须有。
+  # 不再声明 category / tag —— Hugo 只为声明过的分类法生成聚合页，
+  # 所以这座站不会长出 /categories/ 与 /tags/；文章里的分类、标签仍照常显示为文字。
+  # 想要那两个页面时，把下面两行的注释去掉即可（主题 layouts/taxonomy/ 里有现成模板）。
   author = "author"                   # 作者标识原样作为 URL 片段，生成 /author/<作者标识>/ 资料页
+  # category = "categories"
+  # tag = "tags"
 
 # ===== Markdown 渲染 =====
 # 控制 Markdown 解析和代码高亮的行为

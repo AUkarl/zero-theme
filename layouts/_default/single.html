@@ -65,9 +65,16 @@
         </div>
         {{- if $showAuthor }}{{- partial "author-byline.html" . -}}{{- end -}}
         {{- if and .Params.tags (ne $art.show_tags false) }}
+        {{- /* 站点没在 [taxonomies] 里声明 tag 时，Hugo 不会生成 /tags/<x>/ ——
+               这时标签只当文字显示，不能继续挂 <a>，否则文章页一排死链。 */ -}}
+        {{- $tagPages := isset .Site.Taxonomies "tags" }}
         <div class="article-tags">
           {{- range .Params.tags }}
+            {{- if $tagPages }}
           <a href="{{ "tags/" | relLangURL }}{{ . | urlize }}/" class="article-tag">#{{ . }}</a>
+            {{- else }}
+          <span class="article-tag">#{{ . }}</span>
+            {{- end }}
           {{- end }}
         </div>
         {{- end }}
