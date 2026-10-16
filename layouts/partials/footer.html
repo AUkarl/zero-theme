@@ -77,9 +77,13 @@
     {{- end }}
   </div>
 
-  {{- /* 中栏：支持服务 + ICP 备案 */ -}}
+  {{- /* 中栏：支持服务 + ICP 备案。三组列表都按「后台 data/footer.json 优先、
+         params.toml 兜底」取，跟 ICP 同一套规则 —— 否则后台页脚面板管不到它们。 */ -}}
+  {{- $svcItems := partial "cms/list.html" (dict "data" $d "keys" (slice "services") "fallback" $footer.services) -}}
+  {{- $row1Items := partial "cms/list.html" (dict "data" $d "keys" (slice "socialRow1" "social_row1") "fallback" $footer.social_row1) -}}
+  {{- $row2Items := partial "cms/list.html" (dict "data" $d "keys" (slice "socialRow2" "social_row2") "fallback" $footer.social_row2) -}}
   <div class="footer-center">
-    {{- with $footer.services }}
+    {{- with $svcItems }}
     <nav class="footer-services" aria-label="{{ i18n "footer-services-label" | default "支持服务" }}">
       {{- range . }}
       {{- $svc := . }}
@@ -112,18 +116,18 @@
 
   {{- /* 右栏：两排社交图标 */ -}}
   <div class="footer-right">
-    {{- with $footer.social_row1 }}
+    {{- with $row1Items }}
     <div class="social-row">
       {{- range . }}
-      {{- if not .link }}{{ continue }}{{ end -}}
+      {{- if not (.link) }}{{ continue }}{{ end -}}
       <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
       {{- end }}
     </div>
     {{- end }}
-    {{- with $footer.social_row2 }}
+    {{- with $row2Items }}
     <div class="social-row">
       {{- range . }}
-      {{- if not .link }}{{ continue }}{{ end -}}
+      {{- if not (.link) }}{{ continue }}{{ end -}}
       <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"><i class="{{ .icon }}" aria-hidden="true"></i></a>
       {{- end }}
     </div>

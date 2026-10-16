@@ -12,5 +12,45 @@
       "text": "公网安备 00000000000000号",
       "link": "https://beian.mps.gov.cn/"
     }
+  ],
+  "services": [
+    {
+      "name": "站点联盟",
+      "icon": "fas fa-train-subway",
+      "img": "",
+      "link": "https://example.com/alliance",
+      "invert": false
+    },
+    {
+      "name": "打赏作者",
+      "icon": "fas fa-mug-hot",
+      "img": "",
+      "link": "https://example.com/donate",
+      "invert": false
+    }
+  ],
+  "socialRow1": [
+    {
+      "name": "GitHub",
+      "icon": "fa-brands fa-github",
+      "link": "https://example.com/github"
+    },
+    {
+      "name": "X",
+      "icon": "fa-brands fa-x-twitter",
+      "link": "https://example.com/x"
+    }
+  ],
+  "socialRow2": [
+    {
+      "name": "RSS",
+      "icon": "fa-solid fa-rss",
+      "link": "/index.xml"
+    },
+    {
+      "name": "邮箱订阅",
+      "icon": "fa-solid fa-envelope-open-text",
+      "link": "/subscribe/"
+    }
   ]
 }
