@@ -13,21 +13,9 @@
       "parent": ""
     },
     {
-      "name": "文章",
-      "url": "/posts/",
-      "weight": 2,
-      "icon": "fas fa-feather-pointed",
-      "image": "",
-      "iconOnly": false,
-      "external": false,
-      "position": "",
-      "identifier": "",
-      "parent": ""
-    },
-    {
       "name": "时刻",
       "url": "/moments/",
-      "weight": 3,
+      "weight": 2,
       "icon": "fas fa-camera",
       "image": "",
       "iconOnly": false,
@@ -37,10 +25,10 @@
       "parent": ""
     },
     {
-      "name": "分类",
-      "url": "/categories/",
-      "weight": 4,
-      "icon": "fas fa-folder-tree",
+      "name": "工具",
+      "url": "/tools/",
+      "weight": 3,
+      "icon": "fas fa-screwdriver-wrench",
       "image": "",
       "iconOnly": false,
       "external": false,
@@ -49,10 +37,22 @@
       "parent": ""
     },
     {
-      "name": "标签",
-      "url": "/tags/",
+      "name": "工坊",
+      "url": "/work/",
+      "weight": 4,
+      "icon": "fas fa-hammer",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "归档",
+      "url": "/archive/",
       "weight": 5,
-      "icon": "fas fa-tags",
+      "icon": "fas fa-box-archive",
       "image": "",
       "iconOnly": false,
       "external": false,
@@ -73,21 +73,9 @@
       "parent": ""
     },
     {
-      "name": "工坊",
-      "url": "/work/",
-      "weight": 7,
-      "icon": "fas fa-hammer",
-      "image": "",
-      "iconOnly": false,
-      "external": false,
-      "position": "",
-      "identifier": "",
-      "parent": ""
-    },
-    {
       "name": "关于",
       "url": "/about/",
-      "weight": 8,
+      "weight": 7,
       "icon": "fas fa-circle-info",
       "image": "",
       "iconOnly": false,
