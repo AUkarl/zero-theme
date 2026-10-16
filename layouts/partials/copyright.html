@@ -14,4 +14,7 @@
 {{- else -}}
   {{- $copyright = $footer.copyright_text | default "2023-{year} Example" -}}
 {{- end -}}
+{{- /* 模板自己会补一个 &copy;，所以文字里再写 © 就会显示成「©©」。
+       这里把开头多余的版权符号与空白削掉，让写配置的人怎么都不会写错。 */ -}}
+{{- $copyright = strings.TrimLeft "©  " $copyright -}}
 {{- return replace $copyright "{year}" (string now.Year) -}}
