@@ -491,7 +491,8 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   alliance = true                 # 「站点联盟」选项卡
   apply = true                    # 「申请友链」表单
   per_page = 10                   # 朋友动态每页条数（两列布局 = 五行）
-  avatar_service = "cravatar"     # 没有图标时的头像服务：cravatar / gravatar / none
+  # 图标取哪一张没有开关：固定按「手填头像 → 定时任务抓的 favicon → Gravatar → Cravatar → QQ」退，
+  # 全取不到就留空框（实现见 partials/links-icon.html 与 partials/links-email-icons.html）
   lost_offline_days = 30          # 失联 N 天 → 归入「迷失的小船」（与 .github/workflows/check-links.yml 一致）
   lost_stale_days = 90            # 断更 N 天 → 归入「迷失的小船」
   drop_offline_days = 90          # 失联 N 天 → 工作流自动删除友链

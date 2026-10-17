@@ -34,10 +34,40 @@
   {{- end -}}
   {{- $known := ne $name "" -}}
   {{- if not $known -}}{{- $name = $id -}}{{- end -}}
-  {{- $avatar := ($.Site.Params.authorAvatar | default "img/avatar.png") | relURL -}}
-  {{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
+  {{- /* 头像链：作者表里填的 → 作者邮箱的 Gravatar/Cravatar/QQ → 站点默认图。
+         与底部作者框（partials/zero/author-view.html）同一条口径，两处不会一个有图一个没图。 */ -}}
+  {{- $filled := "" -}}
+  {{- with $p.avatar -}}{{- $filled = string . -}}{{- end -}}
+  {{- $mail := "" -}}
+  {{- with $p.email -}}{{- $mail = string . -}}{{- end -}}
+  {{- $chain := slice -}}
+  {{- if $filled -}}
+    {{- $chain = slice $filled -}}
+  {{- else -}}
+    {{- range (partial "avatar-chain.html" (dict "email" $mail "size" 128)) -}}
+      {{- $chain = $chain | append (string .) -}}
+    {{- end -}}
+    {{- if not $chain -}}{{- $chain = slice ($.Site.Params.authorAvatar | default "img/avatar.png") -}}{{- end -}}
+  {{- end -}}
+  {{- $urls := slice -}}
+  {{- range $u := $chain -}}
+    {{- $s := string $u | relURL -}}
+    {{- if and $s (not (in $urls $s)) -}}{{- $urls = $urls | append $s -}}{{- end -}}
+  {{- end -}}
+  {{- $rest := slice -}}
+  {{- range $i, $s := $urls -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $s -}}{{- end -}}{{- end -}}
+  {{- $avatar := index $urls 0 -}}
+  {{- /* 作者页链接：Site.Taxonomies 的键是 front matter 里那个值**小写化**之后的样子
+         （"Big Name" 存在 "big name" 底下），空格与大小写都不动，只有生成的目录名才 urlize。
+         以前只查 urlize 之后那个键，于是标识里一旦有大写 / 空格 / 中文，署名就成点不动的死字。
+         三档依次查：原值 → 小写 → urlize，命中哪个都用它。 */ -}}
   {{- $term := "" -}}
-  {{- if isset $.Site.Taxonomies "author" -}}{{- $term = index $.Site.Taxonomies.author ($id | urlize) -}}{{- end -}}
+  {{- if isset $.Site.Taxonomies "author" -}}
+    {{- $tax := $.Site.Taxonomies.author -}}
+    {{- $term = index $tax $id -}}
+    {{- if not $term -}}{{- $term = index $tax (lower $id) -}}{{- end -}}
+    {{- if not $term -}}{{- $term = index $tax ($id | urlize) -}}{{- end -}}
+  {{- end -}}
   {{- $open := "<span class=\"byline-link\">" -}}
   {{- $close := "</span>" -}}
   {{- if $term -}}
@@ -47,7 +77,8 @@
   <span class="byline-item" data-author="{{ $id }}" data-initial="{{ substr $name 0 1 }}" data-raw="{{ if $known }}0{{ else }}1{{ end }}">
     {{- $open | safeHTML -}}
     <img class="byline-avatar" src="{{ $avatar }}" alt="{{ $name }}" loading="lazy"
-         onerror="var h=this.closest('.byline-item');if(h)h.classList.add('is-fallback')">
+         data-chain="{{ delimit $rest " " }}"
+         onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.byline-item');if(h)h.classList.add('is-fallback')}">
     <span class="byline-name">{{ $name }}</span>
     {{- $close | safeHTML -}}
   </span>

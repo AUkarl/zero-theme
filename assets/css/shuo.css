@@ -13,8 +13,10 @@
   overflow: hidden;
 }
 
+/* 后台关掉横幅背景时不再占 280px：压成一条紧凑的浅色身份栏 */
 .moments-header-banner.moments-header-no-bg {
   background: var(--card-bg, #fff);
+  height: auto;
 }
 
 .moments-header-overlay {
@@ -26,6 +28,16 @@
 
 .moments-header-no-bg .moments-header-overlay {
   display: none;
+}
+
+/* 纯色变体：内容不再撑满 280px，上下留白收到 16px；白色描边在白底上改浅灰 */
+.moments-header-no-bg .moments-header-content {
+  height: auto;
+  padding: 16px 20px;
+}
+
+.moments-header-no-bg .moments-header-avatar {
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .moments-header-content {

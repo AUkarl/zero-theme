@@ -1,0 +1,40 @@
+{{- /* ============================================================
+  links-icon.html — 友链三处（朋友动态 / 左邻右舍 / 站点联盟）共用的图标位
+  ------------------------------------------------------------
+  用法：
+    {{- partial "links-icon.html" (dict "chain" $chain "box" "neighbor-icon" "size" "md") -}}
+    chain  按优先级排好的候选地址切片（各家自己拼，见下面的顺序说明）
+    box    外层 <span> 的 class（决定尺寸与圆角，CSS 已有）
+
+  行为：第一张直接输出成 <img src>，剩下的挂在 data-chain 上（空格分隔 —— 链上都是
+  图床与站点拼出来的规整地址，不会带空格）；某张加载失败就换下一张，全失败就把这张图
+  删掉，只留外层那个空的圆角底框。
+
+  为什么不显示首字母：这是按需求定的 —— 「都没有则留空」。以前每个取不到图的格子都顶一个
+  站名首字母，一排朋友里总有几个和图标无关的字母，看着像图坏了。
+
+  onerror 写成内联的：这三处本来就不依赖任何 JS 文件，脚本没加载也要能退图。
+
+  调用方的顺序（都在这个文件外面决定，改优先级不用动这里）：
+    朋友动态   文章自己的封面 → 提交友链时填的头像 → 邮箱那几家 → 留白
+    左邻右舍   提交友链时填的头像 → 定时任务抓的 favicon（data/linksicons.json）→ 邮箱那几家 → 留白
+    站点联盟   同上
+  ============================================================ */ -}}
+{{- $box := .box | default "links-icon" -}}
+{{- $valid := slice -}}
+{{- range .chain -}}
+  {{- $u := trim (string .) " " -}}
+  {{- if and $u (not (in $valid $u)) -}}{{- $valid = $valid | append $u -}}{{- end -}}
+{{- end -}}
+{{- if not $valid -}}
+<span class="{{ $box }}"></span>
+{{- else -}}
+{{- $first := index $valid 0 -}}
+{{- $rest := slice -}}
+{{- range $i, $u := $valid -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $u -}}{{- end -}}{{- end -}}
+<span class="{{ $box }}">
+  <img src="{{ $first }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+       data-chain="{{ delimit $rest " " }}"
+       onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{this.remove()}">
+</span>
+{{- end -}}

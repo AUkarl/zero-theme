@@ -2,8 +2,10 @@
   zero/author-view.html — 解析「这篇文章的作者」
   ------------------------------------------------------------
   用法：{{- $v := partial "zero/author-view.html" . -}}
-  返回 dict：id / name / avatar / bio / donate / contacts / isOwner
-  顶部署名、底部作者框、赞赏弹窗都读这一份，保证三处说的是同一个人。
+  返回 dict：id / name / avatar / avatarChain / email / bio / donate / contacts / isOwner
+  顶部署名、底部作者框、赞赏弹窗、作者资料页都读这一份，保证几处说的是同一个人。
+  avatarChain 是头像的依次候选（本人填的 → 邮箱的 Gravatar/Cravatar/QQ → 站点默认图），
+  渲染处把它放进 data-chain，图片 404 就一张一张往下试。
 
   取值顺序：data/authors.yaml[author] > author_profile（仅默认作者）> 站点参数。
   投稿作者没登记的字段一律留空，不借用站长的简介、联系方式与赞赏码。
@@ -34,7 +36,27 @@
 {{- if and (not $avatar) $isOwner $profile -}}
   {{- with $profile.avatar -}}{{- $avatar = string . -}}{{- end -}}
 {{- end -}}
-{{- if not $avatar -}}{{- $avatar = string (.Site.Params.authorAvatar | default "img/avatar.png") -}}{{- end -}}
+{{- /* 头像退化链：本人填的 → 按邮箱的 Gravatar→Cravatar→QQ → 站点默认图。
+       投稿作者没填头像时以前直接顶站长那张（params.authorAvatar），看着就像「头像配错了人」；
+       现在先按作者自己的邮箱取，最后才用默认图兜底。 */ -}}
+{{- $email := "" -}}
+{{- with $entry.email -}}{{- $email = string . -}}{{- end -}}
+{{- $mailChain := slice -}}
+{{- if and (not $avatar) $email -}}
+  {{- range (partial "avatar-chain.html" (dict "email" $email "size" 128)) -}}
+    {{- $mailChain = $mailChain | append (string .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $fallback := string (.Site.Params.authorAvatar | default "img/avatar.png") -}}
+{{- $avatarChain := slice -}}
+{{- if $avatar -}}
+  {{- $avatarChain = slice $avatar -}}
+{{- else if $mailChain -}}
+  {{- $avatarChain = $mailChain -}}
+{{- else -}}
+  {{- $avatarChain = slice $fallback -}}
+{{- end -}}
+{{- if not $avatar -}}{{- $avatar = index $avatarChain 0 -}}{{- end -}}
 
 {{- /* 简介：bio 是主题配置文件里的键名，bio_zh 是旧站点与 data/authors.yaml 里常见的写法，两边都认 */ -}}
 {{- $bio := "" -}}
@@ -50,7 +72,9 @@
 {{- if and (not $list) $isOwner $profile $profile.donate -}}
   {{- if reflect.IsSlice $profile.donate -}}{{- $list = $profile.donate -}}{{- else -}}{{- $list = slice $profile.donate -}}{{- end -}}
 {{- end -}}
-{{- if not $list -}}
+{{- /* 赞赏码只属于站长：params.donate 与 author_profile.donate 是站主自己配的，
+       投稿作者的框里挂上站长的收款码是错的。作者表里那条填了 donate 才显示按钮。 */ -}}
+{{- if and (not $list) $isOwner -}}
   {{- with .Site.Params.donate -}}
     {{- if reflect.IsSlice . -}}{{- $list = . -}}{{- else -}}{{- $list = slice . -}}{{- end -}}
   {{- end -}}
@@ -65,4 +89,4 @@
   {{- $contacts = dict "social" .Site.Params.social -}}
 {{- end -}}
 
-{{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}
+{{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "avatarChain" $avatarChain "email" $email "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}

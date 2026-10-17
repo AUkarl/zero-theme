@@ -35,7 +35,11 @@
 {{- $swM := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled") -}}
 
 <main class="main" id="main">
-  {{- /* ====== 顶部横幅 ====== */ -}}
+  {{- /* ====== 顶部横幅 ======
+        后台「前端管理 → 时刻页」关掉横幅背景时：
+          · 头像/昵称还开着 → 只留一条紧凑的浅色身份栏（shuo.css 的 no-bg 变体，不再占 280px）
+          · 头像/昵称也全关 → 整块不输出，页面直接从卡片开始（以前这里是一片空白） */ -}}
+  {{- if or $mc.showBackground (or $mc.showAvatar $mc.showNickname) -}}
   {{- if $mc.showBackground -}}
   <div class="moments-header-banner" style="background-image: url('{{ $mc.bannerImage | relURL }}');">
   {{- else -}}
@@ -48,13 +52,14 @@
         <img src="{{ ($mc.avatar | default "img/avatar.png") | relURL }}" alt="avatar">
       </div>
       {{- end }}
+      {{- if $mc.showNickname }}
       <div class="moments-header-info">
-        {{- if $mc.showNickname }}
         <div class="moments-header-nickname">{{ $mc.nickname | default (partial "site-config.html" .).name }}</div>
-        {{- end }}
       </div>
+      {{- end }}
     </div>
   </div>
+  {{- end -}}
 
   {{- /* ====== 卡片时间线 ====== */ -}}
   <section class="section"{{ $swM.attrs | safeHTMLAttr }}>

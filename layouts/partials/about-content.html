@@ -2,8 +2,9 @@
   about-content.html — 关于页内容归一化：data 目录的 about.json 优先，回落 [about] params
   ------------------------------------------------------------
   用法：{{- $a := partial "about-content.html" . -}}
-  返回 (dict "desc" "tagline" "bio" "site" "declaration" "contacts"
+  返回 (dict "desc" "tagline" "name" "avatar" "bio" "site" "declaration" "contacts"
               "show_desc" "show_bio" "show_site" "show_declaration" "show_social")
+    name / avatar 例外：取 data/owner.json（后台账号资料自动写入）> params.aboutName / aboutAvatar。
     bio / site / declaration 一律是字符串切片：params 侧的 [[about.bio]] 是表格数组
     （每项一个 text_zh），后台写的是字符串数组，收成一种形状后渲染处不必分支。
     contacts 每项：label / text / url / external。
@@ -18,6 +19,15 @@
 {{- $d := hugo.Data.about -}}
 {{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "descZh") "fallback" ($cfg.desc | default $cfg.desc_zh)) -}}
 {{- $tagline := partial "cms/text.html" (dict "data" $d "keys" (slice "tagline" "taglineZh") "fallback" ($cfg.tagline | default $cfg.tagline_zh)) -}}
+{{- /* 头像与昵称：读 data/owner.json —— 后台「我的信息 → 账号资料」一保存，
+       zero-api 就把站长的昵称与头像落到这个文件（见 setOwnerProfile），所以这里不用手改
+       params.aboutName / aboutAvatar 也能跟着账号走。单独一个文件而不是写进 about.json：
+       about.json 整份由「前端管理 → 关于页」的表单覆盖，两个写入方挤在一个文件里，
+       保存一次关于页就会把同步过来的头像抹掉。owner.json 只有这一个写入方，
+       没这个文件时（老站点、没配内容仓库）照旧回落 params。 */ -}}
+{{- $o := hugo.Data.owner -}}
+{{- $name := partial "cms/text.html" (dict "data" $o "keys" (slice "name" "nickname") "fallback" .Site.Params.aboutName) -}}
+{{- $avatar := partial "cms/text.html" (dict "data" $o "keys" (slice "avatar" "image") "fallback" .Site.Params.aboutAvatar) -}}
 {{- $bio := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "bio") "fallback" $cfg.bio))) -}}
 {{- $site := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "site") "fallback" $cfg.site))) -}}
 {{- $decl := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "declaration" "declarations") "fallback" $cfg.declaration))) -}}
@@ -55,6 +65,8 @@
 {{- return (dict
   "desc" $desc
   "tagline" $tagline
+  "name" $name
+  "avatar" $avatar
   "bio" $bio
   "site" $site
   "declaration" $decl

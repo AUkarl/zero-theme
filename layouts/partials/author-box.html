@@ -11,8 +11,12 @@
 {{- end }}
 <div class="article-author" data-author="{{ $v.id }}" data-raw="{{ if $v.known }}0{{ else }}1{{ end }}">
   <div class="author-avatar" data-initial="{{ substr $v.name 0 1 }}">
-    <img src="{{ $v.avatar | relURL }}" alt="{{ $v.name | default "作者" }}" width="64" height="64" loading="lazy" decoding="async"
-         onerror="var h=this.closest('.author-avatar');if(h)h.classList.add('is-fallback')">
+    {{- $ac := slice -}}
+    {{- range $u := $v.avatarChain -}}{{- $s := string $u | relURL -}}{{- if and $s (not (in $ac $s)) -}}{{- $ac = $ac | append $s -}}{{- end -}}{{- end -}}
+    {{- $rest := slice -}}{{- range $i, $u := $ac -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $u -}}{{- end -}}{{- end -}}
+    <img src="{{ index $ac 0 }}" alt="{{ $v.name | default "作者" }}" width="64" height="64" loading="lazy" decoding="async"
+         data-chain="{{ delimit $rest " " }}"
+         onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.author-avatar');if(h)h.classList.add('is-fallback')}">
     {{- if $v.donate }}
     <button class="author-donate-btn" id="donateBtn"><i class="fas fa-coffee"></i> <span>{{ i18n "article-donate" | default "赞赏" }}</span></button>
     {{- end }}

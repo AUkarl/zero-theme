@@ -42,7 +42,7 @@
         var name = item.querySelector('.byline-name');
         if (name && a.name) { name.textContent = a.name; item.dataset.initial = String(a.name).slice(0, 1); }
         var img = item.querySelector('.byline-avatar');
-        if (img && a.image) { img.src = a.image; item.classList.remove('is-fallback'); }
+        if (img && a.image) { img.removeAttribute('data-chain'); img.src = a.image; item.classList.remove('is-fallback'); }
         item.dataset.raw = '0';
       });
 
@@ -60,7 +60,7 @@
           if (holder) holder.dataset.initial = String(a.name).slice(0, 1);
         }
         var img = box.querySelector('.author-avatar img');
-        if (img && a.image) { img.src = a.image; if (holder) holder.classList.remove('is-fallback'); }
+        if (img && a.image) { img.removeAttribute('data-chain'); img.src = a.image; if (holder) holder.classList.remove('is-fallback'); }
         var bio = box.querySelector('.author-bio');
         if (bio && a.bio) bio.textContent = a.bio;
         box.dataset.raw = '0';
@@ -78,7 +78,7 @@
       if (head) head.dataset.initial = String(a.name).slice(0, 1);
     }
     var img = el.querySelector('.ap-avatar');
-    if (img && a.image) { img.src = a.image; if (head) head.classList.remove('is-fallback'); }
+    if (img && a.image) { img.removeAttribute('data-chain'); img.src = a.image; if (head) head.classList.remove('is-fallback'); }
     var bio = el.querySelector('.ap-bio:not(.ap-rich)');
     if (bio && a.bio) bio.textContent = a.bio;
     var site = el.querySelector('.ap-site');

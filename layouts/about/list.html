@@ -28,11 +28,11 @@
       <div class="about-section">
         <div class="about-me-header">
           {{- if (ne .Site.Params.about.show_avatar false) }}
-          <img class="about-avatar" src="{{ .Site.Params.aboutAvatar | default "img/avatar.png" | relURL }}" alt="Avatar">
+          <img class="about-avatar" src="{{ $a.avatar | default "img/avatar.png" | relURL }}" alt="Avatar">
           {{- end }}
           <div class="about-me-info">
             {{- if (ne .Site.Params.about.show_name false) }}
-            <div class="about-name">{{ .Site.Params.aboutName | default (partial "site-config.html" .).name }}</div>
+            <div class="about-name">{{ $a.name | default (partial "site-config.html" .).name }}</div>
             {{- end }}
             {{- if $a.show_bio }}
             {{- if $a.tagline }}

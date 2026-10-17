@@ -479,9 +479,18 @@
           '<p class="zsme-count">共 ' + items.length + ' 条</p><ul class="zsme-list">' +
           items
             .map(function (r) {
+              /* 后端标的 target：post = 站内文章（标题去内容仓库查，查不到才是真出问题），
+                 moment = 时刻卡片（按设计没有标题，不该顶一块「未同步」的牌子） */
+              var isMoment = r.target === 'moment';
+              var label = r.title || (isMoment ? T.kindMoment || '时刻' : r.slug);
+              var chip = isMoment
+                ? '<span class="zsme-chip">' + esc(T.kindMoment || '时刻') + '</span>'
+                : r.title
+                  ? ''
+                  : '<span class="zsme-chip is-warn">' + esc(T.notArchived || '这篇文章没在仓库里（可能已删除）') + '</span>';
               return (
-                '<li><div class="zsme-line"><a href="' + esc(r.slug) + '">' + esc(r.title || r.slug) + '</a>' +
-                (r.title ? '' : '<span class="zsme-chip is-warn">' + esc(T.notArchived || '未同步标题') + '</span>') +
+                '<li><div class="zsme-line"><a href="' + esc(r.slug) + '">' + esc(label) + '</a>' +
+                chip +
                 '<span class="zsme-chip">' + esc(r.kind === 'star' ? T.kindStar : T.kindLike) + '</span>' +
                 '<span class="zsme-time">' + esc(fmt(r.createdAt)) + '</span>' +
                 '<button type="button" class="zsme-btn sm" data-id="' + esc(r.id) + '">' + esc(T.btnWithdraw || '撤回') + '</button></div></li>'
@@ -1072,12 +1081,10 @@
         var offBtn = els.pane.querySelector('#zsMeTotpOff');
         if (!offBtn) return;
         offBtn.onclick = function () {
+          /* 关闭只认当前动态码一项（原来还多一个「或当前密码」，看着像要两样都填） */
           var code = val(els.pane, 'totpOffCode');
-          var pw = val(els.pane, 'totpOffPw');
-          if (!code && !pw) return msg(T.fill, true);
-          var body = {};
-          if (code) body.code = code;
-          if (pw) body.password = pw;
+          if (!/^\d{6}$/.test(code.replace(/\s/g, ''))) return msg(T.fill, true);
+          var body = { code: code.replace(/\s/g, '') };
           offBtn.disabled = true;
           api('/api/security/totp/disable', { method: 'POST', body: body }).then(
             function (res) {
@@ -1210,7 +1217,6 @@
         '</span></p>' +
         '<div class="zsme-fields">' +
         field('totpOffCode', T.secTotpOffCode || '当前动态码', 'text', 'inputmode="numeric" maxlength="6" autocomplete="one-time-code"', '') +
-        field('totpOffPw', T.secTotpOffPw || '或当前密码', 'password', 'maxlength="200" autocomplete="current-password"', '') +
         '</div><p class="zsme-acts"><button type="button" class="zsme-btn is-danger" id="zsMeTotpOff">' +
         esc(T.secDisable || '关闭验证器') + '</button></p>';
     }

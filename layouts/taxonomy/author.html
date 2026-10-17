@@ -4,6 +4,9 @@
   /author/<作者标识>/ 是资料页：名字、头像、简介先由 data/authors.yaml 静态渲染
   （搜索引擎抓得到），yaml 里没登记的新作者再由 /api/authors 在运行时补上昵称、
   头像、简介与个人站点。
+  这一页与文章底部作者框同源：都按「data/authors.yaml + 默认作者取 data/site.json」取值，
+  头像走同一条退化链（本人填的 → 邮箱 Gravatar/Cravatar/QQ → 站点默认图）。
+  文章数只算 /posts/ 里的文章，没写 author 的那几篇算在默认作者名下（与署名的口径一致）。
   /author/ 本身是作者一览。
   认证徽章已删除：资料页不再画对勾，作者身份靠「用户组：朋友 / 共创 / 站长」
   那句文字（账号页与后台维护）和这份资料本身表达。
@@ -18,41 +21,98 @@
 
 {{- define "main" -}}
 {{- $id := .Data.Term | default .Title -}}
+{{- $siteCfg := partial "site-config.html" . -}}
 {{- $data := hugo.Data.authors -}}
+{{- /* authors.yaml 的键、front matter 的 author、地址上的 term 三者只有在「键本来就是
+       小写英文 + 短横线」时才完全相等。历史上有人把 author 写成昵称（中文 / 大写 / 带空格），
+       Hugo 生成的 term 是 urlize 之后的样子，按 term 直接 index 就取不到那条资料 ——
+       于是文章底部作者框有名字有头像，点进作者页却是一片空、文章数也对不上。
+       这里反过来扫一遍表：谁的键 urlize 后等于 term 就认谁。 */ -}}
+{{- $entryKey := string $id -}}
+{{- if and $data (not (isset $data $entryKey)) -}}
+  {{- $want := string (urlize $id) -}}
+  {{- $hit := "" -}}
+  {{- range $k, $_ := $data -}}
+    {{- if and (not $hit) (eq (string (urlize $k)) $want) -}}{{- $hit = $k -}}{{- end -}}
+  {{- end -}}
+  {{- if $hit -}}{{- $entryKey = $hit -}}{{- end -}}
+{{- end -}}
 {{- $p := dict -}}
-{{- with $data -}}{{- with index $data $id -}}{{- $p = . -}}{{- end -}}{{- end -}}
+{{- with $data -}}{{- with index $data $entryKey -}}{{- $p = . -}}{{- end -}}{{- end -}}
 {{- $profile := .Site.Params.author_profile -}}
-{{- $default := trim (string (.Site.Params.default_author | default "")) " " -}}
+{{- /* 默认作者取 data/site.json（后台「站长作者资料」写的）优先，params 只兜底：
+       以前这一页只读 params.default_author，与署名 / 作者框那份不同源，站长换了标识这里不跟着换。 */ -}}
+{{- $default := trim (string ($siteCfg.defaultAuthor | default "")) " " -}}
+{{- $isOwner := eq (string $entryKey) $default -}}
 {{- $name := "" -}}
 {{- with $p.name -}}{{- $name = string . -}}{{- end -}}
-{{- if and (not $name) $profile (eq (string $id) $default) -}}
+{{- if and (not $name) $profile $isOwner -}}
   {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
 {{- end -}}
 {{- $known := ne $name "" -}}
 {{- if not $name -}}{{- $name = $id -}}{{- end -}}
-{{- $avatar := (.Site.Params.authorAvatar | default "img/avatar.png") | relURL -}}
-{{- with $p.avatar -}}{{- $avatar = . | relURL -}}{{- end -}}
+{{- $filled := "" -}}
+{{- with $p.avatar -}}{{- $filled = string . -}}{{- end -}}
+{{- $mail := "" -}}
+{{- with $p.email -}}{{- $mail = string . -}}{{- end -}}
+{{- $chain := slice -}}
+{{- if $filled -}}
+  {{- $chain = slice $filled -}}
+{{- else -}}
+  {{- range (partial "avatar-chain.html" (dict "email" $mail "size" 128)) -}}
+    {{- $chain = $chain | append (string .) -}}
+  {{- end -}}
+  {{- if not $chain -}}{{- $chain = slice (.Site.Params.authorAvatar | default "img/avatar.png") -}}{{- end -}}
+{{- end -}}
+{{- $urls := slice -}}
+{{- range $u := $chain -}}
+  {{- $s := string $u | relURL -}}
+  {{- if and $s (not (in $urls $s)) -}}{{- $urls = $urls | append $s -}}{{- end -}}
+{{- end -}}
+{{- $rest := slice -}}
+{{- range $i, $s := $urls -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $s -}}{{- end -}}{{- end -}}
+{{- $avatar := index $urls 0 -}}
 {{- $bio := "" -}}
 {{- with (or $p.bio $p.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
 {{- if not $bio -}}
-  {{- if and $profile (eq (string $id) $default) -}}
+  {{- if and $profile $isOwner -}}
     {{- with $profile.bio_zh -}}{{- $bio = string . -}}{{- end -}}
   {{- end -}}
 {{- end -}}
 {{- $site := "" -}}
 {{- with $p.website -}}{{- $site = string . -}}{{- end -}}
+{{- /* 这一页只数文章：/posts/ 里的那些。
+       没写 author 的文章按署名同一口径算到默认作者名下（署名显示的就是他，
+       作者页却不算，就是「数量对不上」的来源）。
+       比的是原文而不是 urlize 之后的地址片段：Hugo 的 .Data.Term 存的是 front matter
+       里那个原始值（"Big Name"），只有生成的 URL 才是 big-name —— 拿 urlize 过的值去比
+       会一条都匹配不上。 */ -}}
+{{- $all := where .Site.RegularPages "Section" "posts" -}}
+{{- $keys := slice -}}
+{{- range $post := $all -}}
+  {{- $raw := $post.Params.author | default $default -}}
+  {{- $list := $raw -}}
+  {{- if not (reflect.IsSlice $list) -}}{{- $list = slice $list -}}{{- end -}}
+  {{- $mine := false -}}
+  {{- range $list -}}
+    {{- if eq (lower (trim (string .) " ")) (lower (string $id)) -}}{{- $mine = true -}}{{- end -}}
+  {{- end -}}
+  {{- if $mine -}}{{- $keys = $keys | append $post.RelPermalink -}}{{- end -}}
+{{- end -}}
+{{- $pages := where $all "RelPermalink" "in" $keys -}}
 <main class="main" id="main">
   <section class="section">
     <div class="author-profile" data-author-id="{{ $id }}" data-known="{{ if $known }}1{{ else }}0{{ end }}">
       <div class="ap-head" data-initial="{{ substr $name 0 1 }}">
         <img class="ap-avatar" src="{{ $avatar }}" alt="{{ $name }}"
-             onerror="var h=this.closest('.ap-head');if(h)h.classList.add('is-fallback')">
+             data-chain="{{ delimit $rest " " }}"
+             onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.ap-head');if(h)h.classList.add('is-fallback')}">
         <div class="ap-title">
           <h1 class="ap-name">
             <span class="ap-name-text">{{ $name }}</span>
           </h1>
           <p class="ap-meta">
-            {{- printf "共 %d 篇文章" .Pages.Len -}}
+            {{- printf "共 %d 篇文章" $pages.Len -}}
             <a class="ap-site" href="{{ $site }}" target="_blank" rel="noopener nofollow"{{ if not $site }} hidden{{ end }}>
               <i class="fas fa-link"></i><span>{{ $site | replaceRE "^https?://" "" }}</span>
             </a>
@@ -66,7 +126,7 @@
     </div>
 
     <div class="archive-list">
-      {{- range .Pages.ByDate.Reverse }}
+      {{- range $pages.ByDate.Reverse }}
       <div class="archive-item">
         <span class="archive-date">{{ .Date.Format "2006-01-02" }}</span>
         <a href="{{ .RelPermalink }}" class="archive-title">{{ .Title }}</a>
@@ -74,6 +134,9 @@
         <span class="archive-category">{{ index . 0 }}</span>
         {{- end }}
       </div>
+      {{- end }}
+      {{- if not $pages.Len }}
+      <p class="links-empty">还没有查到这位作者的文章。</p>
       {{- end }}
     </div>
 
