@@ -48,17 +48,14 @@ analyticsEnabled = true             # 自建访问统计（进入页面记一次
 # --- Logo ---
 show_logo = true                    # 是否显示 Logo（true=显示 / false=隐藏）
 logo = "/img/logo-nav.png"          # Logo 图片路径（相对于 static 目录）
-logo_zh = ""                        # 中文 Logo（留空则使用 logo）
 
 # --- 网站名称 ---
 show_site_name = true               # 是否在导航栏显示网站名称
 site_name = "示例站点"              # 网站名称（默认显示）
-site_name_zh = "示例站点"           # 中文名称（留空则使用 site_name）
 
 # --- 作者 ---
 show_author = true                  # 是否显示全局作者信息
 author = "示例作者"                 # 默认作者名
-author_zh = "示例作者"              # 中文作者名（留空则使用 author）
 default_author = "default"           # 文章默认作者 ID（对应 data/authors.yaml 中的 key）
 
 # --- 其他 ---
@@ -88,7 +85,6 @@ default_theme = "auto"
 
 # 导航栏显示名（留空则使用 site_name）
 navName = "示例站点"
-navName_zh = "示例站点"
 
 
 # --------------------------------------------
@@ -99,7 +95,7 @@ navName_zh = "示例站点"
 [landing]
   # --- 诗词轮播 ---
   show_quotes = true                # 是否显示诗词轮播
-  quotes_zh = [
+  quotes = [
     "海上生明月 & 天涯共此时",
     "碧山幽人来 & 清酒酌满杯",
     "江南无所有 & 聊赠一枝春",
@@ -110,7 +106,7 @@ navName_zh = "示例站点"
 
   # --- 欢迎语 ---
   show_welcome = true               # 是否显示欢迎语
-  welcome_zh = "Hey，好久不见"       # 中文欢迎语
+  welcome = "Hey，好久不见"          # 问候语
 
   # --- 背景图片 ---
   show_background = true            # 是否显示背景图片
@@ -133,9 +129,7 @@ navName_zh = "示例站点"
   mainSections = ["posts"]
   show_images = true                # 是否显示文章封面图
   show_summary = true               # 是否显示文章摘要
-  summary_length = 120              # 摘要最大字数（旧参数：中/英文没单独配置时的回退值）
-  summary_length_zh = 120           # 中文摘要截断字数
-  summary_lines_zh = 3              # 中文摘要固定显示行数（超出省略号）
+  summary_length = 120              # 摘要最大字数
 
   # 主页描述文字（显示在页面标题下方）
   show_desc = true                  # 是否显示主页描述

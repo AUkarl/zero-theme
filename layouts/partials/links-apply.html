@@ -11,6 +11,11 @@
     · 「我的信息」「提交示例」各自裹在 .apply-block 里（复制按钮靠它定位）；
     · 复制按钮 .apply-copy[data-copy-target] 指向内容框的 id，
       links.js 取那个框的纯文本写进剪贴板，所以一行一条、行间用 <br>，不要塞别的元素。
+
+  值里的 @ 前面插了一个 <wbr>：Cloudflare 的「邮件地址保护」会把 HTML 里成串出现的
+  xxx@yyy.zz 改写成一枚 /cdn-cgi/l/email-protection 链接，页面上看着还是邮箱，
+  但「复制」按钮复制到剪贴板的是那句 [email protected] —— 等于这块最核心的用法被打断。
+  <wbr> 渲染出来零宽、也不进 innerText，只是让那一串字符在源码里断开，扫描器就不改了。
   ============================================================ */ -}}
 {{- $d := hugo.Data.apply | default dict -}}
 {{- $intro := partial "cms/text.html" (dict "data" $d "keys" (slice "intro" "requirements_intro") "fallback" "") -}}
@@ -37,14 +42,14 @@
   <div class="apply-block">
     <button type="button" class="apply-copy" data-copy-target="apply-myinfo" aria-label="复制我的信息" title="复制">复制</button>
     <h2>我的信息</h2>
-    <div id="apply-myinfo">{{ range $i, $r := . }}{{ if $i }}<br>{{ end }}{{ if $r.label }}{{ $r.label }}：{{ end }}{{ $r.value }}{{ end }}</div>
+    <div id="apply-myinfo">{{ range $i, $r := . }}{{ if $i }}<br>{{ end }}{{ if $r.label }}{{ $r.label }}：{{ end }}{{ range $j, $p := strings.Split $r.value "@" }}{{ if $j }}<wbr>@{{ end }}{{ $p }}{{ end }}{{ end }}</div>
   </div>
     {{- end }}
     {{- with $ex }}
   <div class="apply-block">
     <button type="button" class="apply-copy" data-copy-target="apply-template" aria-label="复制提交示例" title="复制">复制</button>
     <h2>提交示例</h2>
-    <div id="apply-template">{{ range $i, $r := . }}{{ if $i }}<br>{{ end }}{{ if $r.label }}{{ $r.label }}：{{ end }}{{ $r.value }}{{ end }}</div>
+    <div id="apply-template">{{ range $i, $r := . }}{{ if $i }}<br>{{ end }}{{ if $r.label }}{{ $r.label }}：{{ end }}{{ range $j, $p := strings.Split $r.value "@" }}{{ if $j }}<wbr>@{{ end }}{{ $p }}{{ end }}{{ end }}</div>
   </div>
     {{- end }}
 </div>
