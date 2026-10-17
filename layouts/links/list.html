@@ -6,7 +6,8 @@
     选项卡下方：评论系统（与文章页同一套）
 
   数据来源（全部是文件，构建时不需要联网）：
-    data/links.yaml        朋友站点 + 站点联盟（手写）
+    data/links.yaml        朋友站点 + 站点联盟（手写，后台「友链」会同步）
+    data/apply.json        申请友链那一栏的三段说明（后台「前端管理 → 友链申请」）
     data/linksstatus.json  检测脚本写入：在线状态 / 最后更新 / 分组 / 图标
     data/friendfeed.json   检测脚本写入：朋友们的最新动态（RSS 聚合，最多保留若干条）
   由 .github/scripts/check-links.mjs 在北京时间 02:00 / 11:00 / 20:00 自动更新。
@@ -211,12 +212,14 @@
     {{- end }}
 
     {{- /* ---------- 申请友链：站主写的说明 + 在线申请表单 ----------
+       三段说明（友链要求 / 我的信息 / 提交示例）走 partial：data/apply.json 优先
+       （后台「前端管理 → 友链申请」写的），一段都没配才回落本页正文。
        friendApplyEnabled 关掉时整块收起：外面再套一层 wrapper，
        面板自己的 hidden（选项卡切换用）不能被动开关脚本改动。 */ -}}
     {{- if $onApply }}
     <div class="links-apply-wrap"{{ $swA.attrs | safeHTMLAttr }}>
     <section class="links-panel links-apply{{ if eq $active "apply" }} is-active{{ end }}" id="panel-apply" role="tabpanel" aria-labelledby="tab-apply"{{ if ne $active "apply" }} hidden{{ end }}>
-      {{ .Content }}
+      {{- partial "links-apply.html" . -}}
       {{- partial "zero/apply.html" . -}}
     </section>
     </div>

@@ -133,8 +133,10 @@ npm run build        # hugo --minify 构建示例站
   > 主题 config/_default/params.toml           ← 全部默认值，24 段带注释
 ```
 
-- **`data/` 覆盖 params**：导航、首页、页脚、关于、工坊、时刻、SEO 这七块都同时存在两份，
+- **`data/` 覆盖 params**：导航、首页、页脚、关于、工坊、时刻、落地页背景图、SEO 这几块都同时存在两份，
   实际生效的是 `data/*.json`。想改标题 / 页脚 / 导航，走后台「前端管理」，不要去改 params。
+- **友链页的申请说明是另一套兜底**：`data/apply.json`（友链要求 / 我的信息 / 提交示例）没有对应 params，
+  它的兜底是友链页自己的正文 `content/links/_index.md`；三段全空时前台照旧显示正文里手写的 `.apply-col`。
 - **params 的键名大小写**：Hugo 会把 params 键小写化存储、读取时大小写不敏感，
   所以 params 里怎么写都行；但 `data/*.json` 的键**区分大小写**，SEO 那一份统一用 snake_case。
 - **只留差量**：站点 params 里不要照抄主题默认值，写了改不动，还看不出改了什么。
@@ -330,7 +332,7 @@ node scripts/sync-comment.mjs      # 接收 ../zero-stack 产出的评论组件
 | 未来日期的文章凭空消失 | 站点配置缺 `[build] future = true`；`enableFuture` 这种老写法无效 |
 | 评论区高度 0 / 组件没加载 | 组件脚本没随 `zero/boot.html` 输出（不要用 `.Scratch` 去重）；或 `apiBaseURL` 没填 |
 | 图片全是外链、没有 WebP | `[image] remote_fetch = false`，或图源不可达；`hugo server` 卡住就是抓取超时，调 `remote_timeout` |
-| 改了 `params.toml` 没反应 | 那一项已经有 `data/*.json` 覆盖（导航 / 首页 / 页脚 / 关于 / 工坊 / 时刻 / SEO 都是），改后台才对 |
+| 改了 `params.toml` 没反应 | 那一项已经有 `data/*.json` 覆盖（导航 / 首页 / 页脚 / 关于 / 工坊 / 时刻 / 基本信息 / SEO 都是），改后台才对 |
 | SEO 配置不生效 | `data/seo.json` 的键区分大小写，统一 snake_case；params 那份则大小写不敏感 |
 | 首屏字体抖动 / 空白久 | 主题不引外部字体；若你自己加了 `head_custom` 字体链接，用 `font-display: swap` 并预留尺寸 |
 | `hugo` 命令不返回 | 残留的 `.hugo_build.lock`，确认没进程后删掉 |

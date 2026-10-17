@@ -345,9 +345,11 @@
 
     /* ===== 主视觉区域 ===== */
     .box-intro {
-      {{- $landing := .Site.Params.landing -}}
-      {{- if and (ne $landing.show_background false) ($landing.background_image | default "img/bj.png") -}}
-      background: url('{{ $landing.background_image | default "img/bj.png" | relURL }}') center/cover no-repeat, linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      {{- $landing := .Site.Params.landing | default dict -}}
+      {{- /* 背景图取法：后台「基本信息 → 落地页背景图」（data/site.json）> params 的 [landing].background_image > 主题自带那张 */ -}}
+      {{- $bg := (partial "site-config.html" .).landingImage | default "img/bj.png" -}}
+      {{- if and (ne $landing.show_background false) $bg -}}
+      background: url('{{ $bg | relURL }}') center/cover no-repeat, linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       {{- else }}
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       {{- end }}

@@ -1,0 +1,11 @@
+{
+  "paginate": 10,
+  "showLocation": true,
+  "defaultLocation": "示例城市",
+  "bannerShowBackground": true,
+  "bannerImage": "img/bj2.png",
+  "showAvatar": true,
+  "showNickname": true,
+  "nickname": "Zero Author",
+  "avatar": "/img/avatar.png"
+}

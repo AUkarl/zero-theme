@@ -6,11 +6,14 @@
 
   只管 params 能管的那几样：baseURL 与 Site.Title 的兜底属于 config.toml，
   改那两份要重写带注释的配置文件，后台不碰（要改用「主题配置文件」子标签整份编辑）。
+  landingImage 是落地页（/index 第一屏）那张背景图：后台「基本信息 → 落地页背景图」写的是
+  data/site.json 的 landingImage，没写才用 [landing].background_image，再退到主题自带那张。
 
   define 块之间不共享变量，所以每个用到它的块各自调一次这个 partial。
   ============================================================ */ -}}
 {{- $d := hugo.Data.site | default dict -}}
 {{- $p := site.Params -}}
+{{- $lp := $p.landing | default dict -}}
 {{- $name := $d.name | default ($p.site_name | default site.Title) -}}
 {{- $logo := $d.logo | default ($p.logo | default $p.logo_zh) -}}
 {{- $showLogo := true -}}
@@ -35,5 +38,6 @@
   "author" ($d.author | default ($p.author | default $p.author_zh))
   "defaultAuthor" ($d.defaultAuthor | default $p.default_author)
   "ogImage" ($d.ogImage | default ($p.seo.og_image_default | default ""))
+  "landingImage" ($d.landingImage | default ($lp.background_image | default ""))
   "logoHomeLink" (cond (isset $p.nav "logo_home_link") (ne $p.nav.logo_home_link false) (ne $p.logo_home_link false))
 -}}

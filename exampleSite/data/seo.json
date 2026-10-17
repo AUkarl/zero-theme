@@ -1,0 +1,24 @@
+{
+  "defaultDescription": "占位的默认描述：出现在没写 description 的页面上。",
+  "defaultKeywords": [
+    "博客",
+    "示例"
+  ],
+  "descriptionLength": 160,
+  "titleSeparator": "·",
+  "siteAuthor": "Zero Author",
+  "ogImageDefault": "/img/logo-favicon.png",
+  "publisherLogo": "/img/logo-nav.png",
+  "enableCanonical": true,
+  "enableRobots": true,
+  "robotsDefault": "index, follow",
+  "robotsDisallow": [
+    "/account/",
+    "/admin/",
+    "/api/"
+  ],
+  "robotsAllow": [],
+  "enableRobotsSitemap": true,
+  "robotsCrawlDelay": 0,
+  "robotsHost": ""
+}

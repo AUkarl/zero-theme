@@ -1,0 +1,88 @@
+{
+  "items": [
+    {
+      "name": "主页",
+      "url": "/home/",
+      "weight": 1,
+      "icon": "fas fa-house",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "时刻",
+      "url": "/moments/",
+      "weight": 2,
+      "icon": "fas fa-camera",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "工具",
+      "url": "/tools/",
+      "weight": 3,
+      "icon": "fas fa-screwdriver-wrench",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "工坊",
+      "url": "/work/",
+      "weight": 4,
+      "icon": "fas fa-hammer",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "归档",
+      "url": "/archive/",
+      "weight": 5,
+      "icon": "fas fa-box-archive",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "友链",
+      "url": "/links/",
+      "weight": 6,
+      "icon": "fas fa-link",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    },
+    {
+      "name": "关于",
+      "url": "/about/",
+      "weight": 7,
+      "icon": "fas fa-circle-info",
+      "image": "",
+      "iconOnly": false,
+      "external": false,
+      "position": "",
+      "identifier": "",
+      "parent": ""
+    }
+  ]
+}

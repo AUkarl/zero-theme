@@ -1,0 +1,24 @@
+{{- /* ============================================================
+  cms/rows.html — 把后台的「标签 + 内容」行列表收成 [{label, value}]
+  ------------------------------------------------------------
+  用法：
+    {{- $rows := partial "cms/rows.html" (dict "list" $raw) -}}
+
+  只认数组里的对象项，两个字段都空的行丢掉（前台那一行本来就没内容，
+  留着只会让「复制」出来的文本中间多一个空行）。
+  非数组（后台手改坏了、或压根没写这个键）返回空切片，调用方照常渲染。
+  ============================================================ */ -}}
+{{- $list := .list -}}
+{{- $out := slice -}}
+{{- if reflect.IsSlice $list -}}
+  {{- range $list -}}
+    {{- if reflect.IsMap . -}}
+      {{- $label := partial "cms/str.html" (dict "value" (.label | default .name)) -}}
+      {{- $value := partial "cms/str.html" (dict "value" (.value | default .text)) -}}
+      {{- if or $label $value -}}
+        {{- $out = $out | append (dict "label" $label "value" $value) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}
