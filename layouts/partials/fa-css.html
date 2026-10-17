@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  fa-css.html — Font Awesome 的加载入口（head.html / index.html / 404.html 共用这一份）
+  ------------------------------------------------------------
+  默认用主题自带的 static/fa/（all.min.css + 四个 woff2，共 389KB）：
+    · 以前引的是 cdnjs —— 那个地址在国内经常连不上，图标整片空白，还要多一次 DNS + TLS 建连
+    · 同域静态文件由 Cloudflare 边缘缓存，翻完一页不再重新下载
+  [cdn].font_awesome_css 填了就改用那个地址（自建 CDN / 国内镜像），此时才补 preconnect。
+  非阻塞加载照旧：media=print 先挂上，onload 后切回 all，图标不挡首屏文字。
+  只放 woff2 不放 ttf：现代浏览器全都支持 woff2，ttf 那条后备永远不会被请求；
+  真要支持老浏览器，把 ttf 也放进 static/fa/webfonts/ 即可。
+  ============================================================ */ -}}
+{{- $cdn := .Site.Params.cdn | default dict -}}
+{{- $custom := trim (string ($cdn.font_awesome_css | default "")) " " -}}
+{{- $faURL := cond (gt (len $custom) 0) $custom ("fa/css/all.min.css" | relURL) -}}
+{{- $remote := or (hasPrefix $faURL "http://") (hasPrefix $faURL "https://") (hasPrefix $faURL "//") -}}
+{{- if $remote -}}
+  {{- $host := replaceRE `^(?:https?:)?//([^/]+).*$` "$1" $faURL -}}
+<link rel="preconnect" href="https://{{ $host }}" crossorigin>
+{{- end -}}
+<link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ $faURL }}"></noscript>

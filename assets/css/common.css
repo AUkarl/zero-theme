@@ -799,17 +799,27 @@ a {
 
 /* 页脚图标图片（partial "footer-icon.html" 输出）：中栏「支持服务」和右栏两排社交链接共用，
    选择器只限定在 .footer 内，别再按容器细分 —— 以前写成 .footer-services 专属，
-   社交行填了 img 也没样式，看着像图片没生效。字号跟随各自的 a（服务 0.82rem / 社交 1.1rem）。 */
+   社交行填了 img 也没样式，看着像图片没生效。
+   尺寸只约束高度、宽度一律放开：长条形的站点 logo（横幅那种）要按自身比例展开才看得清，
+   以前 height:1.05em + max-height:18px 把横幅压成一小条，等于没法用。 */
 .footer img.footer-service-img {
   width: auto;
-  height: 1.05em;
-  max-height: 18px;
+  height: auto;
   display: inline-block;
-  vertical-align: -0.15em;
+  vertical-align: middle;
   object-fit: contain;
   /* 默认跟随站点 logo 的处理方式：浅色模式原样、深色模式自动反色
      （深色 logo 在白底上看得见、在黑底上也不会糊成一片） */
   filter: var(--logo-filter, none);
+}
+
+/* 中栏带文字，图高一点；右栏是纯图标那一排，压到与图标差不多高 */
+.footer .footer-center .footer-services img.footer-service-img {
+  max-height: 30px;
+}
+
+.footer .footer-right .social-row img.footer-service-img {
+  max-height: 22px;
 }
 
 /* invert = true → 始终反色；no_invert = true → 从不反色 */

@@ -2,25 +2,37 @@
   rss.xml — RSS 订阅模板
   ------------------------------------------------------------
   输出策略（可在 config/_default/params.toml 的 [rss] 下调整）：
-  - full_content = true  正文字段输出「完整正文」而不是截断摘要
-  - 图片、代码块、列表、表格、公式（$...$ 原文）等全部保留
-  - 视频/音乐类短代码（iframe、audio 播放器、网易云占位脚本）会被剔除，
-    因为这些内容在阅读器里无法播放，且内嵌 <script> 会破坏 feed 结构
+  - full_content = true（默认）  正文字段输出「完整正文」，图片/代码块/列表/表格/公式全保留
+    = false 时只输出摘要（front matter 的 summary，没有就取正文开头）
+  - 封面：front matter 的 image/img/cover（或 images 第一张）→ 既写进正文第一张 <img>，
+    也写成 <enclosure> + <media:thumbnail>，列表缩略图和正文图都能看到
+  - 视频/音频/音乐播放器整块删掉：阅读器里播不了，内嵌 <script>/<iframe> 还会破坏 feed
   - 正文同时写入 <description> 与 <content:encoded>（兼容各类阅读器）
   - limit 控制条目数量，默认 50
+  - 站点名/描述/作者一律走 partials/site-config.html（后台「基本信息」写的 data/site.json），
+    和浏览器标签、落地页、404 同一个口径，避免 feed 里顶着示例站的旧名字
   ============================================================ */ -}}
-{{- $siteName := (partial "site-config.html" .).name | default .Site.Title -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $siteName := $siteCfg.name | default .Site.Title -}}
 {{- $rss := .Site.Params.rss | default dict -}}
 {{- if (ne $rss.enable false) -}}
 {{- $full := (ne $rss.full_content false) -}}
 {{- $limit := $rss.limit | default 50 -}}
-{{- $embedRe := `(?s)<div[^>]*class="[^"]*(?:video-embed|shortcode-embed|music163-embed|bilibili-embed|netease-music|kugou-music|qq-music|bilibili-video|tencent-video)[^"]*"[^>]*>.*?</div>` -}}
+{{- /* 媒体类短代码的外层容器：video-player/audio-player 是本地上传的播放器，
+       shortcode-embed / *-music / *-video 是第三方嵌入，全部整块剔除 */ -}}
+{{- $embedRe := `(?s)<div[^>]*class="[^"]*(?:video-embed|audio-player|video-player|shortcode-embed|music163-embed|bilibili-embed|netease-music|kugou-music|qq-music|bilibili-video|tencent-video|youku-video|youtube-video|youtube-embed)[^"]*"[^>]*>.*?</div>` -}}
+{{- /* 作者标识 → 显示名：data/authors.yaml 的 name > 站长名字 > 标识本身 */ -}}
+{{- $authorsData := hugo.Data.authors | default dict -}}
+{{- $ownerId := trim (string ($siteCfg.defaultAuthor | default .Site.Params.default_author | default "")) " " -}}
+{{- $ownerName := "" -}}
+{{- with index $authorsData $ownerId -}}{{- $ownerName = string .name -}}{{- end -}}
+{{- if not $ownerName -}}{{- $ownerName = trim (string ($siteCfg.author | default "")) " " -}}{{- end -}}
 {{- printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
-    <title>{{ if eq .Title $siteName }}{{ $siteName }}{{ else }}{{ with .Title }}{{.}} on {{ end }}{{ $siteName }}{{ end }}</title>
+    <title>{{ if or .IsHome (eq .Title $siteName) }}{{ $siteName }}{{ else }}{{ with .Title }}{{.}} on {{ end }}{{ $siteName }}{{ end }}</title>
     <link>{{ .Permalink }}</link>
-    <description>{{ .Site.Params.description | default (printf "Recent content on %s" $siteName) }}</description>
+    <description>{{ $siteCfg.description | default (printf "Recent content on %s" $siteName) }}</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>{{ site.Language.Locale }}</language>{{ with .Site.Copyright }}
     <copyright>{{.}}</copyright>{{end}}{{ if not .Date.IsZero }}
@@ -46,7 +58,7 @@
     {{- /* 正文里没有这张封面时，把它补到最前面：
            阅读器只看正文里的 <img>，正文有插图但没封面时照样要显示封面。
            已经出现过（同一个地址）就不重复插。 */ -}}
-    {{- if and $full $coverURL -}}
+    {{- if $coverURL -}}
       {{- $dup := or (in $html $coverURL) (in $html $cover) -}}
       {{- if not $dup -}}
         {{- $html = printf "<p><img src=%q alt=%q loading=\"lazy\"></p>%s" $coverURL (.Title | plainify) $html -}}
@@ -71,17 +83,14 @@
         {{- $html = replace $html $tag "" -}}
       {{- end -}}
     {{- end -}}
-    {{- /* ---------- 视频/音频：阅读器里播不了，改成可点的超链接 ----------
-           （原来是整块删掉，订阅者完全看不到；现在至少给一个能点开的链接） */ -}}
-    {{- $html = replaceRE `(?s)<(?:video|audio)\b[^>]*>.*?<source\b[^>]*[[:space:]]src="([^"]+)"[^>]*>.*?</(?:video|audio)>` `<p>▶ <a href="$1">$1</a></p>` $html -}}
-    {{- $html = replaceRE `(?s)<iframe\b[^>]*[[:space:]]src="([^"]+)"[^>]*>(?:.*?</iframe>)?` `<p>▶ <a href="$1">$1</a></p>` $html -}}
+    {{- /* ---------- 视频/音频：阅读器里播不了，整块隐藏 ----------
+           （以前会换成一条 ▶ 链接，用户要求 feed 里不出现这些，直接删） */ -}}
     {{- $html = replace $html `href="//` `href="https://` -}}
-    {{- /* 剔除脚本、残留的嵌入容器与无用的空标签（保留 <img>、<a> 等正文元素） */ -}}
     {{- $html = replaceRE `(?s)<script\b[^>]*>.*?</script>` "" $html -}}
     {{- $html = replaceRE $embedRe "" $html -}}
-    {{- $html = replaceRE `(?s)<iframe\b.*?</iframe>` "" $html -}}
-    {{- $html = replaceRE `(?s)<audio\b.*?</audio>` "" $html -}}
-    {{- $html = replaceRE `(?s)<video\b.*?</video>` "" $html -}}
+    {{- $html = replaceRE `(?s)<iframe\b[^>]*/?>(?:.*?</iframe>)?` "" $html -}}
+    {{- $html = replaceRE `(?s)<audio\b[^>]*/?>(?:.*?</audio>)?` "" $html -}}
+    {{- $html = replaceRE `(?s)<video\b[^>]*/?>(?:.*?</video>)?` "" $html -}}
     {{- $html = replaceRE `(?s)<!--.*?-->` "" $html -}}
     {{- /* XMLEscape 后由阅读器还原成 HTML：这是 RSS 的规范做法，避免 feed 结构非法 */ -}}
     {{- $html = $html | transform.XMLEscape -}}
@@ -90,23 +99,24 @@
       <link>{{ .Permalink }}</link>
       <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</pubDate>
       <guid>{{ .Permalink }}</guid>
-      {{- with .Params.author | default .Site.Params.default_author }}
-        {{- $src := cond (reflect.IsSlice .) . (slice .) -}}
-        {{- $names := slice -}}
-        {{- range $src -}}
-          {{- $id := trim (string .) " " -}}
-          {{- if $id -}}
-            {{- $n := $id -}}
-            {{- with hugo.Data.authors -}}
-              {{- with index . $id -}}
-                {{- with .name -}}{{- $n = string . -}}{{- end -}}
-              {{- end -}}
-            {{- end -}}
-            {{- $names = $names | append $n -}}
-          {{- end -}}
-        {{- end -}}
-        {{- if $names }}<dc:creator>{{ delimit $names ", " }}</dc:creator>{{ end -}}
-      {{- end }}
+      {{- /* 署名：文章 front matter 的 author（一个或一串标识）> 默认作者标识。
+             标识 → 显示名的顺序和文章页、seo.html 一致：authors.yaml 的 name → 站长名字 → 标识本身。
+             以前直接把标识写进 dc:creator，阅读器里就顶着个 "default"。 */ -}}
+      {{- $authorIds := slice -}}
+      {{- $authorParam := .Params.author | default $ownerId -}}
+      {{- if $authorParam -}}
+        {{- $src := cond (reflect.IsSlice $authorParam) $authorParam (slice $authorParam) -}}
+        {{- range $src -}}{{- $t := trim (string .) " " -}}{{- if $t -}}{{- $authorIds = $authorIds | append $t -}}{{- end -}}{{- end -}}
+      {{- end -}}
+      {{- $names := slice -}}
+      {{- range $id := $authorIds -}}
+        {{- $n := "" -}}
+        {{- with index $authorsData $id -}}{{- with .name -}}{{- $n = string . -}}{{- end -}}{{- end -}}
+        {{- if not $n -}}{{- $n = $ownerName -}}{{- end -}}
+        {{- if not $n -}}{{- $n = $id -}}{{- end -}}
+        {{- $names = $names | append $n -}}
+      {{- end -}}
+      {{- if $names }}<dc:creator>{{ delimit (uniq $names) ", " }}</dc:creator>{{ end }}
       {{- /* categories / tags 兼容两种写法：列表 或 单个字符串 */ -}}
       {{- with .Params.categories -}}
         {{- if reflect.IsSlice . -}}{{- range . }}<category>{{ . }}</category>{{ end -}}

@@ -62,17 +62,14 @@
 {{- end -}}
 
 {{- /* ===== 外部资源：预连接，提前建连 ===== */ -}}
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
 {{- /* 字体：只使用系统字体栈（见 common.css 的 --font）。
      原来这里引 Google Fonts，但它在国内基本不可达，还会多一次失败请求 + 字体晚到导致的
      文本重排（实测文章页 CLS 0.13 就是它引起的），因此彻底去掉。 */ -}}
 
-{{- /* Font Awesome 图标库（非阻塞）。[cdn].font_awesome_css 可换成自建 / 国内镜像 */ -}}
-{{- $faURL := .Site.Params.cdn.font_awesome_css | default "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" -}}
-<link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{{ $faURL }}"></noscript>
+{{- /* Font Awesome 图标库：默认走主题自带的 static/fa/，加载方式见那个 partial */ -}}
+{{ partial "fa-css.html" . }}
 
 {{- /* 外观令牌：params 里 [design] 填了值的项在这里覆盖 CSS 的默认变量 */ -}}
 {{- partial "zero/design.html" . -}}

@@ -35,8 +35,8 @@
 | 静态构建 | Hugo **extended**（主题用到图片处理，非 extended 会构建失败） | `min_version = 0.128.0`，本项目已验证 0.165.0 |
 | 样式 | 原生 CSS + `:root` 变量令牌，构建时 minify + 指纹，无预处理器 | — |
 | 脚本 | 手写 JS（`assets/js/*.js`），同样 minify + fingerprint，全部 `defer` | 支持到无模块化旧浏览器 |
-| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，由 zero-stack 产出后同步进来） | — |
-| 图标 | Font Awesome 6.4.2（CDN，可换成自建或国内镜像地址） | — |
+| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，122KB / gzip 44KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚组件进到视野附近才下载，落地页 / 关于 / 归档 / 404 一枚都没有，那 44KB 干脆不下 | — |
+| 图标 | Font Awesome 6.4.2 打进仓库（`static/fa/`，css + 四个 woff2，共 389KB），不请求任何外部域名；`cdn.font_awesome_css` 填了才改用你的镜像 | — |
 | 数学 | 页面 front matter `math: true` 才加载 MathJax（或 KaTeX 短代码） | — |
 | 字体 | **只用系统字体栈**（`--font`）。曾经引过 Google Fonts，国内不可达且字体晚到导致正文重排（文章页 CLS 0.13），已彻底去掉 | — |
 | 示例站部署 | Cloudflare Pages + GitHub Actions（`.github/workflows/demo.yml`） | — |
@@ -163,10 +163,10 @@ npm run build        # hugo --minify 构建示例站
 | 16 | 关于页 | 头像、简历块、联系项 |
 | 17 | 友链页 | 各 tab 开关、`friendsEnabled`、`friendApplyEnabled`、失联文案 |
 | 18 | 工具 / 工坊页 | 卡片列表来源与排序 |
-| 19 | RSS | 描述、限制条数 |
+| 19 | RSS | `rss.full_content`（默认输出完整正文，含封面与正文图）、`rss.limit` 条数、`rss.cover_image` 兜底封面 |
 | 20 | SEO 与结构化数据 | 默认描述、OG 图、`title_separator`、verification、`robots` 各项 |
 | 21 | 自定义注入 | `head_custom` / `body_custom`（统计代码、站长验证只在这里插一次） |
-| 22 | 第三方资源地址 | `cdn.font_awesome_css`、`cdn.katex_css` / `katex_js`，留空即退回 cdnjs / jsdelivr |
+| 22 | 第三方资源地址 | `cdn.font_awesome_css` 留空=用主题自带的 static/fa/（不请求外部域名）；`cdn.katex_css` / `katex_js` 留空=jsdelivr |
 | 23 | 作者资料 | 默认作者（站长）兜底：署名、简介、赞赏图、联系方式 |
 | 24 | 全局社交链接 | 作者资料没填时的兜底 |
 

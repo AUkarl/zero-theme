@@ -531,7 +531,7 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 
 [rss]
   enable = true                   # 生成 RSS
-  full_content = false            # true=输出完整正文，false=只输出摘要
+  full_content = true             # true=输出完整正文（封面图和正文图都在里面）；false=只输出摘要且不含图片
   limit = 30                      # 最近多少条
   cover_image = ""                # 条目没有封面时的兜底图
 
@@ -583,10 +583,11 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 # ------------------------------------------------------------
 # 22. 第三方资源地址（可换成自建 / 国内镜像）
 # ------------------------------------------------------------
-# 留空即退回主题内置的 cdnjs / jsdelivr 默认地址。
+# 图标库已经打进主题自己那份（static/fa/，留空就用它，不再请求任何外部域名）；
+# KaTeX 这类仍走 jsdelivr 的默认地址。填了下面任一项就改用你给的地址。
 
 [cdn]
-  font_awesome_css = ""           # 例 https://cdn.xxx/font-awesome@6.4.2/css/all.min.css
+  font_awesome_css = ""           # 留空=主题自带 static/fa/；例 https://cdn.xxx/font-awesome@6.4.2/css/all.min.css
   katex_css = ""                  # 数学公式（启用 math 时用到）
   katex_js = ""
 

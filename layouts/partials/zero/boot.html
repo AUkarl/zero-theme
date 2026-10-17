@@ -14,14 +14,16 @@
          都在这一步按 /api/config 露出或藏起，全站一次，页面脚本不用各写一套。 */ -}}
   {{- $switches := resources.Get "js/zero-switches.js" | minify | fingerprint -}}
 <script src="{{ $switches.RelPermalink }}"></script>
-  {{- /* 组件产物也在这里一次性引：注册 <zero-comment> / <zero-like> / <zero-subscribe> /
-         <zero-moments> / <zero-login> 五个自定义元素。
+  {{- /* 组件产物（<zero-comment> / <zero-like> / <zero-subscribe> / <zero-moments> / <zero-login>
+         五个自定义元素，122KB / gzip 44KB）不在这里直接引：
          曾在评论区、操作条、时刻页三处各引一次并靠 .Scratch 判重 —— hugo server 增量重建时
          页面节点的 Scratch 会残留，第二次之后永远判定「已输出」，本地测试就变成
-         评论区与点赞整体消失（只有走独立脚本的收藏还在）。生产是全量构建看不出来，
-         但这种只在开发期暴露的丢脚本不能留：改成单一输出点，没有任何运行期状态。 */ -}}
+         评论区与点赞整体消失（只有走独立脚本的收藏还在）。改成单一输出点，没有任何运行期状态。
+         现在再往前一步：输出一个几百字节的探针，等页面上真有一枚组件靠近视野时才下载整包，
+         落地页 / 关于 / 归档 / 404 这些一枚都没有的页面干脆不下。 */ -}}
   {{- $component := partial "zero/component-url.html" -}}
   {{- with $component }}
-<script src="{{ . }}"></script>
+  {{- $lazy := resources.Get "js/zero-component-lazy.js" | minify | fingerprint -}}
+<script src="{{ $lazy.RelPermalink }}" defer data-component-src="{{ . }}"></script>
   {{- end }}
 {{- end -}}

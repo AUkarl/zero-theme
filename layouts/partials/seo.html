@@ -65,8 +65,11 @@
 {{- if not $author -}}{{- $author = $siteCfg.author | default $seo.site_author | default $ownerName -}}{{- end -}}
 
 {{- /* ---------- 标题 / 站点名 ---------- */ -}}
-{{- $pageTitle := .Title | default (partial "site-config.html" .).name -}}
 {{- $siteName := (partial "site-config.html" .).navName -}}
+{{- /* 首页的 .Title 是 content/_index.md 里的标题（新建站时那份还是示例站的 "Example Site"），
+       分享卡片会顶着它 —— 和浏览器标签、RSS 统一：首页只用站点名 */ -}}
+{{- $pageTitle := .Title | default $siteName -}}
+{{- if .IsHome }}{{ $pageTitle = $siteName }}{{ end -}}
 
 {{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
 {{- if (ne $seo.enable_canonical false) }}

@@ -1,0 +1,7 @@
+Font Awesome Free 6.4.2 by Fonticons, Inc. — https://fontawesome.com
+  Icons: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+  Fonts: SIL OFL 1.1 (https://scripts.sil.org/OFL)
+  Code:  MIT (https://opensource.org/licenses/MIT)
+
+本目录只放了 css/all.min.css 与 webfonts/*.woff2（去掉了 .ttf 后备，
+现代浏览器一律走 woff2）。完整分发包见 https://github.com/FortAwesome/Font-Awesome

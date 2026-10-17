@@ -19,18 +19,12 @@
   {{- $favicon := (partial "site-config.html" .).favicon | default "img/logo-favicon.png" }}
   <link rel="icon" href="{{ $favicon | relURL }}">
   <link rel="apple-touch-icon" href="{{ $favicon | relURL }}">
-  {{- /* 预连接外部资源，减少首屏建连等待 */ -}}
-      <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  {{- /* 图标库非阻塞加载（原先是同步加载，占掉约 2.3s 首屏时间）。
+  {{- /* 图标库非阻塞加载（原先是同步加载，占掉约 2.3s 首屏时间），地址与全站同一个口径：
+         默认用主题自带的 static/fa/，[cdn].font_awesome_css 填了才走外部镜像 —— 见 partials/fa-css.html。
          这里以前还引 Google Fonts 和 animate.css：前者国内不可达且字体晚到引起文本重排，
          已改为只用系统字体栈（见 common.css 的 --font）；后者全项目没有一个 animate__ 类在用，
          落地页的动画由 home-bento.css / motion.css 自己的 keyframes 承担，于是少一个 CDN 请求。 */ -}}
-    {{- $cdnL := site.Params.cdn | default dict -}}
-    {{- $faURL := $cdnL.font_awesome_css | default "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" -}}
-  <link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
-  <noscript>
-        <link rel="stylesheet" href="{{ $faURL }}">
-  </noscript>
+  {{ partial "fa-css.html" . }}
   <style>
     /* ===== 主题变量 ===== */
     /* 这个页面不加载 common.css，字体变量要自己定义（否则 var(--font) 取不到值会退化成衬线体） */

@@ -495,6 +495,35 @@ zero-like {
   color: var(--text-secondary, #777);
 }
 
+/* 简介与联系方式要和昵称的左边缘对齐：它们在结构上是 .ap-head 的兄弟节点，
+   以前直接从卡片左缘开始，等于压在头像下面。缩进 = 头像宽 + .ap-head 的间距。 */
+.author-profile {
+  --ap-indent: calc(64px + 14px);
+}
+
+.author-profile .ap-bio,
+.author-profile .author-social {
+  margin-left: var(--ap-indent);
+}
+
+/* 联系方式在资料页以前完全没样式（只有文章底部那套 .article-author 作用域），补成与文章框一致 */
+.author-profile .author-social {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.author-profile .author-social a {
+  color: var(--text-secondary, #777);
+  font-size: 1.1rem;
+  transition: color 0.2s;
+}
+
+.author-profile .author-social a:hover {
+  color: var(--text, #222);
+}
+
 .ap-rich {
   color: var(--text, #222);
 }
@@ -523,6 +552,8 @@ zero-like {
 @media (max-width: 640px) {
   .author-profile {
     padding: 16px;
+    /* 窄屏头像缩到 52，缩进跟着变，否则简介又会跑到头像下面 */
+    --ap-indent: calc(52px + 14px);
   }
 
   .ap-avatar {
