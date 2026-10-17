@@ -21,6 +21,7 @@
   后端还没返回 alliance 字段时按空数组处理，两组都是空的就保持构建期的样子，不报错。
   图标退化：手填头像 → 定时任务抓的 favicon（data/linksicons.json）→ Gravatar → Cravatar → QQ，
   全取不到就留一个空框，不再顶站名首字母（三处共用 partials/links-icon.html 那一份实现）。
+  朋友动态的封面另加一档在最前：那条动态自己的图（抓 RSS 时记下的封面或正文首图）。
   文案全部是中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
   ============================================================ */ -}}
 
@@ -56,17 +57,23 @@
 {{- $alliance := $links.alliance | default slice -}}
 {{- $status := $d.linksstatus | default dict -}}
 {{- $icons := $d.linksicons | default dict -}}
-{{- /* 朋友 URL → 条目：朋友动态的封面要回查手填的 image / icon / email */ -}}
+{{- /* 三个对照表都按 cms/url-key.html 归一化后建键：links.yaml 里的写法、D1 里的写法、
+       定时任务写进 linksstatus.json / linksicons.json 的键只差一个末尾斜杠或协议头，
+       不归一就会整片查不到（表现就是图标与封面全空）。 */ -}}
 {{- $byURL := dict -}}
-{{- range $friends -}}{{- $byURL = merge $byURL (dict .url .) -}}{{- end -}}
+{{- range $friends -}}{{- $byURL = merge $byURL (dict (partial "cms/url-key.html" .url) .) -}}{{- end -}}
+{{- $statusN := dict -}}
+{{- range $k, $v := $status -}}{{- $statusN = merge $statusN (dict (partial "cms/url-key.html" $k) $v) -}}{{- end -}}
+{{- $iconsN := dict -}}
+{{- range $k, $v := $icons -}}{{- $iconsN = merge $iconsN (dict (partial "cms/url-key.html" $k) $v) -}}{{- end -}}
 {{- $feed := $d.friendfeed | default dict -}}
 {{- $items := $feed.items | default slice -}}
 {{- $online := slice -}}
 {{- $lost := slice -}}
 {{- range $friends -}}
-  {{- $st := index $status .url | default dict -}}
+  {{- $st := index $statusN (partial "cms/url-key.html" .url) | default dict -}}
   {{- /* 排序用：最近更新时间（ISO 字符串按字典序排就是时间序），没有的排最后 */ -}}
-  {{- $row := dict "site" . "st" $st "icons" $icons "sortKey" ($st.latestPost | default "") -}}
+  {{- $row := dict "site" . "st" $st "icons" $iconsN "sortKey" ($st.latestPost | default "") -}}
   {{- if eq ($st.group | default "active") "lost" -}}
     {{- $lost = $lost | append $row -}}
   {{- else -}}
@@ -113,11 +120,16 @@
       {{- if $items }}
       <div class="feed-grid" id="feedGrid" data-per-page="{{ $lc.per_page | default 10 }}">
         {{- range $items }}
-        {{- /* 左侧封面：这条动态自己的图（抓 RSS 时记下的封面）→ 提交友链时填的头像
-               → 邮箱那几家（Gravatar→Cravatar→QQ）→ 留白。
-               手填 image 排在手填 icon 前面：那个字段本来就是「这张卡片的图」，比方形小头像大。 */ -}}
-        {{- $fr := index $byURL .siteurl | default dict -}}
-        {{- $chain := slice (.image | default "") ($fr.image | default "") ($fr.icon | default "") -}}
+        {{- /* 左侧封面，按这个顺序找第一张能用的：
+               ① 这条动态自己的图（抓 RSS 时记下的封面 / 正文首图）
+               ② 网站图标：定时任务探到的 favicon（data/linksicons.json），其次检测记录里带回来的 icon
+               ③ 提交友链时手填的头像（image 优先，那是「这张卡片的图」；再 icon）
+               ④ 邮箱那几家：Gravatar → Cravatar →（QQ 号）QQ
+               ⑤ 都没有就留一个空框（不留首字母，也不硬塞一张站长的头像） */ -}}
+        {{- $k := partial "cms/url-key.html" .siteurl -}}
+        {{- $fr := index $byURL $k | default dict -}}
+        {{- $st := index $statusN $k | default dict -}}
+        {{- $chain := slice (.image | default "") (index $iconsN $k | default "") ($st.icon | default "") ($fr.image | default "") ($fr.icon | default "") -}}
         {{- range (partial "avatar-chain.html" (dict "email" ($fr.email | default "") "size" 256)) -}}
           {{- $chain = $chain | append . -}}
         {{- end -}}
@@ -178,7 +190,7 @@
             {{- range $alliance }}
             {{- /* 图标退化：links.yaml 手填 icon → data/linksicons.json（定时任务抓的 favicon）
                     → 邮箱那几家（Gravatar→Cravatar→QQ）→ 留白 */ -}}
-            {{- $chain := slice (.icon | default "") (index $icons .url | default "") -}}
+            {{- $chain := slice (.icon | default "") (index $iconsN (partial "cms/url-key.html" .url) | default "") -}}
             {{- range (partial "avatar-chain.html" (dict "email" (.email | default "") "size" 128)) -}}
               {{- $chain = $chain | append . -}}
             {{- end -}}

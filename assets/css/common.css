@@ -797,8 +797,10 @@ a {
   font-size: 0.9rem;
 }
 
-/* 服务项支持自定义图片（params: [[footer.services]] 里写 img = "…"） */
-.footer .footer-center .footer-services a img.footer-service-img {
+/* 页脚图标图片（partial "footer-icon.html" 输出）：中栏「支持服务」和右栏两排社交链接共用，
+   选择器只限定在 .footer 内，别再按容器细分 —— 以前写成 .footer-services 专属，
+   社交行填了 img 也没样式，看着像图片没生效。字号跟随各自的 a（服务 0.82rem / 社交 1.1rem）。 */
+.footer img.footer-service-img {
   width: auto;
   height: 1.05em;
   max-height: 18px;
@@ -811,11 +813,11 @@ a {
 }
 
 /* invert = true → 始终反色；no_invert = true → 从不反色 */
-.footer .footer-center .footer-services a img.footer-service-img-invert {
+.footer img.footer-service-img-invert {
   filter: invert(1);
 }
 
-.footer .footer-center .footer-services a img.footer-service-img-noinvert {
+.footer img.footer-service-img-noinvert {
   filter: none;
 }
 

@@ -13,7 +13,7 @@
 {{- $site := .site -}}
 {{- $st := .st | default dict -}}
 {{- $icons := .icons | default dict -}}
-{{- $chain := slice ($site.icon | default "") ($site.image | default "") (index $icons ($site.url | default "") | default "") ($st.icon | default "") -}}
+{{- $chain := slice ($site.icon | default "") ($site.image | default "") (index $icons (partial "cms/url-key.html" ($site.url | default "")) | default "") ($st.icon | default "") -}}
 {{- range (partial "avatar-chain.html" (dict "email" ($site.email | default "") "size" 128)) -}}
   {{- $chain = $chain | append . -}}
 {{- end -}}

@@ -1,0 +1,17 @@
+{{- /* ============================================================
+  footer-icon.html — 页脚图标本体：图片与 Font Awesome 类名二选一
+  ------------------------------------------------------------
+  用法：{{- partial "footer-icon.html" (dict "item" $svc) -}}
+  三组列表（中栏「支持服务」、右栏两排社交链接）共用这一份，条目形状一样
+  （name / icon / img / link / invert / no_invert），以前只有「支持服务」读 img，
+  社交两排只 <i class>，于是后台给社交行填了图片路径也不见图片，看着像坏了。
+
+  图片默认「浅色原样、深色反色」（跟站点 logo 一套）；强制口径：
+    invert = true     始终反色
+    no_invert = true  从不反色（图片本身就是浅色时用）
+  ============================================================ */ -}}
+{{- $it := .item -}}
+{{- $cls := "footer-service-img" -}}
+{{- if $it.invert }}{{ $cls = printf "%s footer-service-img-invert" $cls }}{{ end -}}
+{{- if $it.no_invert }}{{ $cls = printf "%s footer-service-img-noinvert" $cls }}{{ end -}}
+{{- with $it.img }}<img class="{{ $cls }}" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ else }}<i class="{{ $it.icon }}" aria-hidden="true"></i>{{ end -}}

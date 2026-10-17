@@ -874,9 +874,12 @@
     function panelAuthor() {
       return api('/api/account/author-request').then(function (d) {
         d = d || {};
+        /* 站长「退回改资料」：认证还在（verified=true），但表单要重新开放，
+           所以能不能申请只问后端的 canApply，别再自己拿 verified / pending 拼一套口径。 */
+        var returned = (d.latest || {}).status === 'returned';
         var head =
           '<p class="zsme-count">' +
-          esc(d.verified ? T.aVerified : d.pending ? T.aPending : T.aNone) +
+          esc(returned ? T.aReturned : d.verified ? T.aVerified : d.pending ? T.aPending : T.aNone) +
           (d.handle ? ' · ' + esc(T.aHandle) + ' ' + esc(d.handle) : '') +
           '</p>';
         var history = (d.history || []).length
@@ -893,15 +896,16 @@
             '</ul>'
           : '';
 
-        if (d.verified || d.pending || !d.canApply) {
+        if (!d.canApply) {
           var lockText = d.blocked || T.aLocked;
-          els.pane.innerHTML = '<div class="zsme-card">' + head + history + (d.canApply ? '' : '<p class="zsme-warn">' + esc(lockText) + '</p>') + '</div>';
+          els.pane.innerHTML = '<div class="zsme-card">' + head + history + '<p class="zsme-warn">' + esc(lockText) + '</p></div>';
           return;
         }
 
         var latest = d.latest || {};
+        var actLabel = returned ? T.aResubmit : T.aSubmit;
         els.pane.innerHTML =
-          '<div class="zsme-card"><h3>' + esc(T.aSubmit) + '</h3>' + head + history +
+          '<div class="zsme-card"><h3>' + esc(actLabel) + '</h3>' + head + history +
           '<div class="zsme-fields">' +
           field('penName', T.aPen, 'text', 'maxlength="64"', latest.penName) +
           field('avatar', T.aAvatar, 'text', 'maxlength="300" placeholder="https://（留空按邮箱取）"', latest.avatar) +
@@ -921,7 +925,7 @@
           }).join('') +
           '</div>' +
           '<label class="zsme-body"><span>' + esc(T.aReason) + '</span><textarea data-a="reason" rows="3" maxlength="500">' + esc(latest.reason || '') + '</textarea></label>' +
-          '<p class="zsme-acts"><button type="button" class="zsme-btn primary" id="zsMeAuthorSubmit">' + esc(T.aSubmit) + '</button></p>' +
+          '<p class="zsme-acts"><button type="button" class="zsme-btn primary" id="zsMeAuthorSubmit">' + esc(actLabel) + '</button></p>' +
           '</div>';
 
         var socialHost = els.pane.querySelector('#zsMeSocial');
@@ -1399,8 +1403,9 @@
         draft: T.stDraft,
         withdrawn: T.stWithdrawn,
         withdraw_requested: T.stWithdraw,
+        returned: T.stReturned,
       };
-      var cls = s === 'approved' ? 'is-ok' : s === 'pending' || s === 'withdraw_requested' ? 'is-warn' : s === 'spam' || s === 'rejected' ? 'is-bad' : '';
+      var cls = s === 'approved' ? 'is-ok' : s === 'pending' || s === 'withdraw_requested' || s === 'returned' ? 'is-warn' : s === 'spam' || s === 'rejected' ? 'is-bad' : '';
       return chip(map[s] || s || '—', cls);
     }
 
