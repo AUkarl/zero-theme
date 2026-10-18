@@ -12,8 +12,13 @@
 
 {{- define "main" -}}
 {{- $a := partial "about-content.html" . -}}
+{{- /* 后台开关 aboutEnabled（GET /api/config）：关掉时整页内容默认隐藏，换成一句「关于页已关闭」；
+       内容仓库带了 functions/_middleware.ts 的站，边缘还会直接把 /about/ 返回 404。
+       「前端管理 → 关于」里填的内容本身不受影响，开关只下线这个页面。 */ -}}
+{{- $zeroA := partial "zero/api.html" . -}}
+{{- $swAbout := partial "zero/switch.html" (dict "zero" $zeroA "key" "aboutEnabled") -}}
 <main class="main" id="main">
-  <section class="section">
+  <section class="section"{{ $swAbout.attrs | safeHTMLAttr }}>
     <h1 class="section-title" data-i18n="about-title">{{ i18n "about-title" | default "关于" }}</h1>
     {{- if $a.show_desc }}
     {{- if $a.desc }}
@@ -117,6 +122,7 @@
       {{- end }}
     </div>
   </section>
+  {{- partial "zero/closed.html" (dict "zero" $zeroA "key" "aboutEnabled" "text" "关于页已关闭。") -}}
 </main>
 {{- end -}}
 

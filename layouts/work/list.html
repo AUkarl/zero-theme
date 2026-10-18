@@ -4,6 +4,11 @@
   项目来源：data 目录里的 works.json（后台 CMS 写）优先，
   没这个文件时回落 params（[work] 的描述 + [[works]] 列表）。
   字段对照与取值规则见 partials/work-content.html。
+
+  两层开关，别混：
+    · params.work.enable = false（构建期）→ 这一页连内容都不渲染，只剩一句「配置里已关闭」
+    · workEnabled = false（后台开关，GET /api/config）→ 整页内容默认隐藏，拿到配置后换成
+      「工坊页已关闭」；内容仓库带了 functions/_middleware.ts 的站，边缘还会把 /work/ 直接返回 404
   ============================================================ */ -}}
 {{- define "styles" -}}
 {{- $workCSS := resources.Get "css/work.css" | minify | fingerprint -}}
@@ -12,9 +17,11 @@
 
 {{- define "main" -}}
 {{- $w := partial "work-content.html" . -}}
+{{- $zeroW := partial "zero/api.html" . -}}
+{{- $swWork := partial "zero/switch.html" (dict "zero" $zeroW "key" "workEnabled") -}}
 {{- if (ne .Site.Params.work.enable false) }}
 <main class="main" id="main">
-  <section class="section">
+  <section class="section"{{ $swWork.attrs | safeHTMLAttr }}>
     <h1 class="section-title" data-i18n="work-title">{{ i18n "work-title" | default "工坊" }}</h1>
     {{- if $w.show_desc }}
     {{- if $w.desc }}
@@ -43,6 +50,7 @@
       {{- end }}
     </div>
   </section>
+  {{- partial "zero/closed.html" (dict "zero" $zeroW "key" "workEnabled" "text" "工坊页已关闭。") -}}
 </main>
 {{- else }}
 <main class="main" id="main">

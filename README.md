@@ -228,6 +228,9 @@ author / toc / math / comments
 | 配置 | 效果 |
 | --- | --- |
 | `apiBaseURL` 为空 | 全站纯静态：评论 / 点赞 / 订阅 / 统计脚本都不加载，页面照常好看 |
+| `toolsEnabled = false` | /tools/ 整页换成「工具页已关闭」，导航里的「工具」入口消失 |
+| `workEnabled = false` | /work/ 工坊页同上（项目本身仍由「前端管理 → 工坊」维护） |
+| `aboutEnabled = false` | /about/ 关于页同上（文案仍由「前端管理 → 关于」维护） |
 | `accountSystemEnabled = false` | `/account/` 整页只留提示，导航上的登录图标消失，评论组件不再放「去登录」 |
 | `commentEnabled = false` | 文章页评论区整块消失（含「发表评论」） |
 | `likeEnabled` / `starEnabled = false` | 操作条里对应那颗胶囊不出现 |

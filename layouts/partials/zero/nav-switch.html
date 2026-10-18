@@ -9,7 +9,8 @@
     2. 账号入口（zero_account / zeroAccount 标记，或路径是 /account/）→ accountSystemEnabled：
        后台关掉前台账号系统时，导航上那个登录图标要整块不出现，而不是点进去才看到关闭提示
     3. 按站内路径猜：/moments/ → momentsEnabled，/links/ → friendsEnabled，
-       /subscribe/ → subscribeEnabled（外链不参与猜测）
+       /subscribe/ → subscribeEnabled，/tools/ → toolsEnabled，/work/ → workEnabled，
+       /about/ → aboutEnabled（外链不参与猜测）
   ============================================================ */ -}}
 {{- $e := .entry -}}
 {{- $key := trim (string ($e.Params.zero_switch | default "")) " " -}}
@@ -24,6 +25,12 @@
     {{- $key = "friendsEnabled" -}}
   {{- else if or (eq $u "/subscribe/") (hasSuffix $u "/subscribe/") -}}
     {{- $key = "subscribeEnabled" -}}
+  {{- else if or (eq $u "/tools/") (hasSuffix $u "/tools/") -}}
+    {{- $key = "toolsEnabled" -}}
+  {{- else if or (eq $u "/work/") (hasSuffix $u "/work/") -}}
+    {{- $key = "workEnabled" -}}
+  {{- else if or (eq $u "/about/") (hasSuffix $u "/about/") -}}
+    {{- $key = "aboutEnabled" -}}
   {{- end -}}
 {{- end -}}
 {{- return $key -}}

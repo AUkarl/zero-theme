@@ -2,6 +2,12 @@
   tools/list.html — 工具页
   分类展示实用工具，点击子项显示模拟界面
   数据从 data/tools.yaml 读取
+
+  两层开关，别混：
+    · params.tools.enable = false（构建期）→ 这一页连内容都不渲染，只剩一句「配置里已关闭」
+    · toolsEnabled = false（后台开关，GET /api/config）→ 整页内容默认隐藏，
+      拿到配置后换成「工具页已关闭」；内容仓库带了 functions/_middleware.ts 的，
+      边缘还会直接把 /tools/ 返回 404（旧链接与搜索引擎都拿不到内容）
   ============================================================ */ -}}
 {{- define "styles" -}}
 {{- $toolsCSS := resources.Get "css/tools.css" | minify | fingerprint -}}
@@ -9,9 +15,11 @@
 {{- end -}}
 
 {{- define "main" -}}
+{{- $zeroP := partial "zero/api.html" . -}}
+{{- $swPage := partial "zero/switch.html" (dict "zero" $zeroP "key" "toolsEnabled") -}}
 {{- if (ne .Site.Params.tools.enable false) }}
 <main class="main" id="main">
-  <section class="section">
+  <section class="section"{{ $swPage.attrs | safeHTMLAttr }}>
     <h1 class="section-title">{{ i18n "tools-title" | default "工具" }}</h1>
     {{- if (ne .Site.Params.tools.show_desc false) }}
     {{- $toolsDesc := .Site.Params.tools.desc | default .Site.Params.tools.desc_zh }}
@@ -61,6 +69,7 @@
     </section>
     {{- end -}}
   </section>
+  {{- partial "zero/closed.html" (dict "zero" $zeroP "key" "toolsEnabled" "text" "工具页已关闭。") -}}
 </main>
 {{- else }}
 <main class="main" id="main">
