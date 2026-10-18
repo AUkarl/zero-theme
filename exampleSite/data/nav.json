@@ -25,18 +25,6 @@
       "parent": ""
     },
     {
-      "name": "工具",
-      "url": "/tools/",
-      "weight": 3,
-      "icon": "fas fa-screwdriver-wrench",
-      "image": "",
-      "iconOnly": false,
-      "external": false,
-      "position": "",
-      "identifier": "",
-      "parent": ""
-    },
-    {
       "name": "工坊",
       "url": "/work/",
       "weight": 4,

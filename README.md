@@ -18,7 +18,7 @@
 | 时刻页 | `/moments/` | 卡片时间线，Git 里的 Markdown 与数据库动态混排，图片九宫格、音乐、地点、按需展开的评论 |
 | 归档页 | `/archive/` | 按年时间线 + 弹幕标签云（可关）+ 分类筛选 + 站内搜索 |
 | 友链页 | `/links/` | 四个 tab：朋友动态 / 左邻右舍 / 站点联盟 / 在线申请；失联自动进「迷失的小船」 |
-| 关于 / 工坊 / 工具 | `/about/` `/work/` `/tools/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
+| 关于 / 工坊 | `/about/` `/work/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
 | 订阅页 | `/subscribe/` | 邮箱订阅 + 双重确认，文章页内嵌订阅框 |
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
 | 分类 / 标签 / 作者 | `/categories/` `/tags/` `/authors/` | Hugo taxonomy，作者页带资料卡与文章列表 |
@@ -47,16 +47,16 @@
 layouts/
   index.html                落地页（自带内联样式的独立 <head>）
   _default/                 baseof / list / single / terms
-  home/ about/ archive/ links/ moments/ account/ privacy/ subscribe/ tools/ work/   各页面模板
+  home/ about/ archive/ links/ moments/ account/ privacy/ subscribe/ work/          各页面模板
   taxonomy/                 category / tag / author
   _markup/render-image.html Markdown 图片钩子（走下面的图片管线）
   shortcodes/               16 个短代码：audio(-163/-qq/-kugou) video(-bilibili/-tencent/-youku/-youtube)
                             music163 bilibili youtube katex notice blockquote code figure gallery
   partials/                 60 余个部件，其中 zero/ 是与后端联动的那一组
-assets/css/                 19 个样式表：common motion article archive links about work tools shuo
+assets/css/                 17 个样式表：common motion article archive links about work shuo
                             zero zero-account zero-apply zero-subscribe account account-me
                             home home-bento shortcodes
-assets/js/                  21 个脚本，运行时入口是 zero-runtime.js（挂 window.ZeroStack）
+assets/js/                  22 个脚本，运行时入口是 zero-runtime.js（挂 window.ZeroStack）
 assets/js/zero-comment.js   评论组件产物（Svelte 编译结果，直接提交进仓库）
 config/_default/params.toml 主题默认参数，24 段全带注释
 i18n/zh.yaml                界面文案，可整份复制到你自己的仓库里覆盖
@@ -228,7 +228,6 @@ author / toc / math / comments
 | 配置 | 效果 |
 | --- | --- |
 | `apiBaseURL` 为空 | 全站纯静态：评论 / 点赞 / 订阅 / 统计脚本都不加载，页面照常好看 |
-| `toolsEnabled = false` | /tools/ 整页换成「工具页已关闭」，导航里的「工具」入口消失 |
 | `workEnabled = false` | /work/ 工坊页同上（项目本身仍由「前端管理 → 工坊」维护） |
 | `aboutEnabled = false` | /about/ 关于页同上（文案仍由「前端管理 → 关于」维护） |
 | `accountSystemEnabled = false` | `/account/` 整页只留提示，导航上的登录图标消失，评论组件不再放「去登录」 |

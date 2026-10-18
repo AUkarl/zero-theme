@@ -7,7 +7,6 @@
 # ===== 导航 =====
 nav-home: "主页"
 nav-moments: "时刻"
-nav-tools: "工具"
 nav-blog: "博客"
 nav-work: "工坊"
 nav-archive: "归档"
@@ -182,11 +181,6 @@ work-title: "工坊"
 work-desc: "正在进行的创作项目，记录从灵感到成品的旅程。"
 work-title-zh: "工坊"
 work-desc-zh: "正在进行的创作项目，记录从灵感到成品的旅程。"
-# ===== 工具页 =====
-tools-title: "工具"
-tools-desc: "精选实用工具，点击子项即可使用（本站内，持续开发中）。"
-tools-title-zh: "工具"
-tools-desc-zh: "精选实用工具，点击子项即可使用（本站内，持续开发中）。"
 # ===== 隐私页 =====
 privacy-title: "隐私政策"
 privacy-content: "本站尊重您的隐私。本站不主动收集用户个人信息。评论区由第三方服务提供，其隐私政策请参考对应服务。"

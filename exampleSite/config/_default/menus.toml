@@ -23,17 +23,11 @@
   url = "/moments/"
   weight = 2
 
-# 工具
-[[main]]
-  name = "tools"
-  url = "/tools/"
-  weight = 3
-
 # 博客（外部链接）
 [[main]]
   name = "blog"
   url = "https://example.com"
-  weight = 4
+  weight = 3
   [main.params]
     external = true                   # 标记为外部链接（新标签页打开）
 
@@ -41,22 +35,22 @@
 [[main]]
   name = "work"
   url = "/work/"
-  weight = 5
+  weight = 4
 
 # 归档
 [[main]]
   name = "archive"
   url = "/archive/"
-  weight = 6
+  weight = 5
 
 # 账号
 [[main]]
   name = "account"
   url = "/account/"
-  weight = 7
+  weight = 6
 
 # 关于
 [[main]]
   name = "about"
   url = "/about/"
-  weight = 8
+  weight = 7
