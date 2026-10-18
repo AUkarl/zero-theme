@@ -1,7 +1,7 @@
 // ============================================================
 // account.js — 账号页（/account/）控制器
 //
-// 这一页只有「登录 / 注册」两件事，加上一个不请求接口的「找回密码」入口。
+// 这一页是「登录 / 注册 / 找回密码」三个标签，找回密码走真流程（发码 → 填码 + 新密码）。
 // 会话是 HttpOnly Cookie，所以每个请求都要带 credentials，由 ZeroStack.api
 // 统一处理（解包 {data}、把 {error,message} 变成 Error，err.body 留着
 // 给登录接口回的 {next:'totp'} 判断用）。
@@ -34,7 +34,6 @@
     var okEl = document.getElementById('accountSuccess');
     var btn = document.getElementById('accountSubmitBtn');
     var forgotBtn = document.getElementById('zaForgot');
-    var forgotNote = document.getElementById('zeroAccountForgot');
     if (!box || !tabsEl || !form || !content || !btn) return;
     if (!window.ZeroStack || !window.ZeroStack.enabled) return;
 
@@ -132,7 +131,7 @@
     function showGate() {
       tabsEl.hidden = true;
       form.hidden = true;
-      hideForgot();
+      if (forgotBtn) forgotBtn.classList.remove('is-open');
       if (document.getElementById('zeroAccountGate')) return;
       var g = document.createElement('div');
       g.className = 'za-gate';
@@ -159,15 +158,6 @@
       form.hidden = false;
       syncTabs();
       renderForm();
-    }
-
-    /** 找回密码那行文案收起 */
-    function hideForgot() {
-      if (forgotBtn) forgotBtn.classList.remove('is-open');
-      if (forgotNote) {
-        forgotNote.textContent = '';
-        forgotNote.hidden = true;
-      }
     }
 
     /** 后台关掉注册时注册标签整块不出现：按钮不在 DOM 里，不是禁用 */
@@ -197,9 +187,11 @@
       Array.prototype.forEach.call(tabsEl.querySelectorAll('button[data-tab]'), function (b) {
         b.classList.toggle('active-tab', b.dataset.tab === tab);
       });
-      // 找回密码只在登录页出现；注册页不需要它
-      if (forgotBtn) forgotBtn.hidden = tab !== 'login';
-      if (!forgotBtn || tab !== 'login') hideForgot();
+      // 找回密码这一档：登录页与它自己那一步都要显示，注册页不需要
+      if (forgotBtn) {
+        forgotBtn.hidden = tab !== 'login' && tab !== 'reset';
+        forgotBtn.classList.toggle('is-open', tab === 'reset');
+      }
     }
 
     function field(name, label, type, attrs) {
@@ -218,7 +210,7 @@
       return 'off';
     }
 
-    /** 找回密码：不请求任何接口，只给一段文案（管理员邮箱来自 /api/config） */
+    /** 找回密码表单底部那行退路文案：验证码收不到（邮件通道没配、邮箱写错）时让人知道还能找站长 */
     function forgotText() {
       var mail = String(cfg.adminContactEmail || '').trim();
       if (mail) return (T.forgotWithMail || '如密码遗失，可使用注册邮箱向管理员 {email} 发送邮件找回').replace('{email}', mail);
@@ -236,6 +228,16 @@
           html += '<p class="za-hint za-totp">' + esc(T.hintTotp || '本账号已开启两步验证，填身份验证器上当前的 6 位动态码。') + '</p>';
         }
         btn.textContent = T.btnLogin || '登 录';
+      } else if (tab === 'reset') {
+        html += field('code', T.labelCode || '邮箱验证码', 'text', 'required inputmode="numeric" maxlength="6"');
+        html +=
+          '<div class="form-group"><button type="button" class="btn-account" data-send-code>' +
+          esc(T.btnSendCode || '发送验证码') +
+          '</button><span class="za-hint" data-code-hint></span></div>';
+        html += field('password', T.labelNewPassword || '新密码', 'password', 'required minlength="8" maxlength="200"');
+        html += field('confirm', T.labelConfirm, 'password', 'required minlength="8" maxlength="200"');
+        html += '<p class="za-hint">' + esc(forgotText()) + '</p>';
+        btn.textContent = T.btnReset || '重置密码';
       } else {
         html += field('name', T.labelName, 'text', 'maxlength="64"');
         html += field('password', T.labelPassword, 'password', 'required minlength="8" maxlength="200"');
@@ -258,29 +260,12 @@
       renderForm();
     });
 
-    /* 找回密码：点击不发任何请求，只把那一行提示文案展开 / 收起 */
-    if (forgotBtn) {
-      forgotBtn.addEventListener('click', function () {
-        if (forgotNote && !forgotNote.hidden) {
-          hideForgot();
-          return;
-        }
-        var text = forgotText();
-        if (forgotNote) {
-          forgotNote.textContent = text;
-          forgotNote.hidden = false;
-          forgotBtn.classList.add('is-open');
-        } else {
-          say(okEl, text);
-        }
-      });
-    }
-
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (busy) return;
       clearMessages();
       if (tab === 'login') return doLogin();
+      if (tab === 'reset') return doReset();
       return doRegister();
     });
 
@@ -354,6 +339,52 @@
         })
         .catch(function (err) { say(errEl, err.message || (T.network || '出错了')); })
         .then(function () { busy = false; });
+    }
+
+    /* ---------------- 找回密码 ---------------- */
+
+    /** 这一步的「发送验证码」：邮件通道没配好时后端直接回人话，不假装发出去了 */
+    form.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-send-code]');
+      if (!b || busy) return;
+      var email = val('email');
+      if (!email) return say(errEl, T.fill || '请填写完整信息。');
+      clearMessages();
+      busy = true;
+      b.disabled = true;
+      window.ZeroStack.api('/api/auth/send-code', { method: 'POST', body: { email: email, scene: 'reset' } })
+        .then(function () {
+          var hint = content.querySelector('[data-code-hint]');
+          if (hint) hint.textContent = T.codeSent || '验证码已发出，10 分钟内有效；没收到的先去垃圾箱看一眼。';
+          return null;
+        })
+        .catch(function (err) { say(errEl, err.message || (T.network || '网络出错了，请稍后再试。')); })
+        .then(function () {
+          busy = false;
+          b.disabled = false;
+        });
+    });
+
+    function doReset() {
+      var email = val('email');
+      var code = val('code').replace(/\s/g, '');
+      var next = val('password');
+      if (!email || !/^\d{6}$/.test(code) || !next) return say(errEl, T.fill || '请填写完整信息。');
+      if (next.length < 8) return say(errEl, T.pwShort || '密码长度至少 8 位。');
+      if (next !== val('confirm')) return say(errEl, T.pwMatch || '两次输入的密码不一致。');
+
+      busy = true;
+      window.ZeroStack.api('/api/auth/reset-password', { method: 'POST', body: { email: email, code: code, newPassword: next } })
+        .then(function () {
+          // 改完不该停在「找回密码」这一步：回到登录表单，让人直接用新密码进门
+          tab = 'login';
+          paint2();
+          return say(okEl, T.resetDone || '密码已重置，请用新密码登录。');
+        })
+        .catch(function (err) { say(errEl, err.message || (T.network || '网络出错了，请稍后再试。')); })
+        .then(function () {
+          busy = false;
+        });
     }
 
     /* ---------------- 小工具 ---------------- */

@@ -1,24 +1,35 @@
 {
-  "defaultDescription": "占位的默认描述：出现在没写 description 的页面上。",
-  "defaultKeywords": [
+  "default_description": "占位的默认描述：出现在没写 description 的页面上。",
+  "default_keywords": [
     "博客",
     "示例"
   ],
-  "descriptionLength": 160,
-  "titleSeparator": "·",
-  "siteAuthor": "Zero Author",
-  "ogImageDefault": "/img/logo-favicon.png",
-  "publisherLogo": "/img/logo-nav.png",
-  "enableCanonical": true,
-  "enableRobots": true,
-  "robotsDefault": "index, follow",
-  "robotsDisallow": [
+  "description_length": 160,
+  "title_separator": "·",
+  "site_author": "Zero Author",
+  "og_image_default": "/img/logo-favicon.png",
+  "publisher_logo": "/img/logo-nav.png",
+  "enable_canonical": true,
+  "enable_robots": true,
+  "robots_default": "index, follow",
+  "robots_disallow": [
     "/account/",
     "/admin/",
     "/api/"
   ],
-  "robotsAllow": [],
-  "enableRobotsSitemap": true,
-  "robotsCrawlDelay": 0,
-  "robotsHost": ""
+  "robots_allow": [],
+  "enable_robots_sitemap": true,
+  "robots_crawl_delay": 0,
+  "robots_host": "",
+  "enable_keywords": true,
+  "enable_og": true,
+  "enable_twitter": true,
+  "twitter_site": "",
+  "twitter_creator": "",
+  "enable_jsonld": true,
+  "enable_breadcrumb": true,
+  "enable_search_action": false,
+  "theme_color_light": "#ffffff",
+  "theme_color_dark": "#1e1e1e",
+  "color_scheme": "light dark"
 }

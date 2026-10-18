@@ -15,9 +15,9 @@ locale = "zh-CN"                      # 站点语言区域标识
 enableRobotsTXT = true                # 是否生成 robots.txt（允许搜索引擎爬虫访问）
 defaultContentLanguage = "zh"         # 默认内容语言（未指定语言时使用）
 defaultContentLanguageInSubdir = false # 是否在 URL 中添加语言前缀（如 /zh/、/en/）
-# 时刻与文章的时间由后台自由填写，填成将来时间也要立刻上线，
-# 否则 Hugo 默认会把未来日期整页隐藏（页面凭空消失，很难查）。
-enableFuture = true
+# 「将来才上线」的内容没有配置项可开：实测 Hugo 0.165.0 既不认顶层 enableFuture，
+# 也不认 [build].future（hugo config 里查不到这两项），只有命令行 -F/--buildFuture 生效。
+# zero-stack 后台的做法是：发布时间填在将来时保存成显式草稿，到时间后取消草稿再保存。
 
 # ===== 分页 =====
 # 控制文章列表页的分页行为

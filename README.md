@@ -187,9 +187,9 @@ author / toc / math / comments
 
 - **修改时间只认 `lastmod`**：Hugo 的 `.Lastmod` 不看 `updated`，写 `updated` 不会显示「修改于」。
   后台那个「修改时间」框现在写的就是 `lastmod`。
-- **将来的日期要开 `[build] future = true`**（写在站点 `config/_default/config.toml`），
-  否则未来时间的整页被 Hugo 默认隐藏。老写法 `enableFuture = true` 从 0.146 起已经不认了，
-  写了没有任何效果。
+- **将来的日期配置里开不了**：实测 Hugo 0.165.0 既不认 `[build].future`，也不认老写法 `enableFuture = true`
+  （`hugo config` 里这两项根本不出现），未来时间的整页会被默认隐藏，只有命令行 `-F/--buildFuture` 才放行。
+  zero-stack 后台因此把「发布时间填在将来」的稿子保存成显式草稿并在回执里说明，到时间后取消草稿再保存一次即可上线。
 - **`draft: true` 的文章不会出现在任何地方**：列表、RSS、sitemap、直接访问都是 404。
   本地想预览草稿得临时 `hugo server -D`，但平时别加 `-D` —— 加了之后「本地能看到、上线凭空少一篇」会一直重演。
 
@@ -293,7 +293,8 @@ hugo --minify                      # 产物在 public/
 ```
 
 - **Cloudflare Pages**：构建命令 `hugo --minify`，输出目录 `public`，
-  需要一个 `HUGO_VERSION` 环境变量（用 extended，≥ 0.128）。
+  并设环境变量 `HUGO_VERSION`（extended 版；下限是 `min_version` 的 0.128，**zero-stack 这套按 0.165.0 验证并把生成仓库的两个 workflow 钉在同一版本**，两边不一致时容易出「本地和 Actions 都过、Pages 红」）。
+  站点仓库以子模块引主题时，Pages 直连 Git 的构建**不拉子模块**，构建命令要先自己 clone 主题 —— 见 zero-stack 的 `docs/DEPLOYMENT.md` §6.3。
 - **GitHub Actions**：`pnpm create:site` 生成的仓库里已经带好 workflow
   （`peaceiris/actions-hugo@v3` + Pages 部署），把 secrets 配好即可。
 - **一键部署本仓库的示例站**：见仓库主页的 Deploy Button 与 `.github/workflows/demo.yml`。
@@ -331,7 +332,7 @@ node scripts/sync-comment.mjs      # 接收 ../zero-stack 产出的评论组件
 | 后台改了文章 / 设置，前台还是旧的 | 前台是静态页，要触发站点重建；本地看 `hugo server` 有没有在跑、是不是 `--disableFastRender` |
 | 本地能看到某篇文章，线上没有 | 那篇是草稿（`draft: true`），本地服务是用 `-D` 起的；去掉 `-D` |
 | 「修改于 …」不显示 | 只认 `lastmod`，且要和 `date` 不同才会显示；`updated` 是旧写法，Hugo 不读 |
-| 未来日期的文章凭空消失 | 站点配置缺 `[build] future = true`；`enableFuture` 这种老写法无效 |
+| 未来日期的文章凭空消失 | Hugo 没有对应配置项（`[build].future` 与 `enableFuture` 都不认），只有构建命令加 `-F/--buildFuture` 才生成；后台保存时已把这类稿子转成显式草稿，到时间后取消草稿再保存 |
 | 评论区高度 0 / 组件没加载 | 组件脚本没随 `zero/boot.html` 输出（不要用 `.Scratch` 去重）；或 `apiBaseURL` 没填 |
 | 图片全是外链、没有 WebP | `[image] remote_fetch = false`，或图源不可达；`hugo server` 卡住就是抓取超时，调 `remote_timeout` |
 | 改了 `params.toml` 没反应 | 那一项已经有 `data/*.json` 覆盖（导航 / 首页 / 页脚 / 关于 / 工坊 / 时刻 / 基本信息 / SEO 都是），改后台才对 |

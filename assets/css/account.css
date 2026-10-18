@@ -170,19 +170,6 @@
   display: none;
 }
 
-/* ===== 找回密码：展开的那行文案（点入口按钮显示，不请求接口） ===== */
-.za-forgot {
-  margin: 2px 0 0;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--tag-bg);
-  font-size: 0.82rem;
-  line-height: 1.7;
-  color: var(--text-secondary);
-  word-break: break-all;
-}
-
 /* ===== 整页关闭（params.apiBaseURL 留空 / zeroEnabled=false）的收口提示 ===== */
 .za-gate {
   padding: 8px 2px 4px;
