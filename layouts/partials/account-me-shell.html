@@ -197,5 +197,5 @@
   "delWillDelete" (i18n "zero-me-del-will" | default "注销会一并删除")
   | jsonify | safeJS }}</script>
 {{- $meJS := resources.Get "js/account-me.js" | minify | fingerprint -}}
-<script src="{{ $meJS.RelPermalink }}"></script>
+<script defer src="{{ $meJS.RelPermalink }}"></script>
 {{- end -}}

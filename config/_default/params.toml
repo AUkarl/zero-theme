@@ -405,14 +405,11 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 
 
 # ------------------------------------------------------------
-# 14. 访问统计
+# 14. 访问统计（只有 zero-api 自建这一套；主题不再内置 Google / 百度统计，
+#     要加别的统计走 [custom].head_html 或 custom.extra_js）
 # ------------------------------------------------------------
 
 [analytics]
-  enable_google = false           # Google Analytics
-  google_ga_id = ""               # G-XXXXXXXXXX
-  enable_baidu = false            # 百度统计
-  baidu_site_id = ""              # 站点 ID
   beat_seconds = 300              # 停留时长兜底上报上限（秒）：正常访问只在切后台/关页时结算一次，页面一直开着才按这个间隔补报
   enable_zero = true              # 自建统计（进入记一次 PV + 心跳）。false 完全不发请求
   ignore_localhost = true         # 本地 hugo server 不记录，省掉开发时的脏数据
@@ -435,11 +432,16 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
     link = ""
   # 中部图标行：站点联盟 / 出行等，img 与 icon 二选一，invert=true 深色下反色。
   # 默认一条都不给：link 留空的条目模板会直接跳过，写一条全空的只会让人以为是配置坏了。
+  # name 必填（它是这条链接唯一的可读名，空着读屏只念得出「链接」）；
+  # show_service_name 是这一行的全站默认，条目自己写了 show_name / showName 就以条目为准
+  # —— 想「只挂图不写字」就在那一条上写 show_name = false。
+  show_service_name = true
   # [[footer.services]]
   #   name = "站点联盟"
   #   img = "/img/alliance.png"
   #   link = "https://example.com/"
   #   invert = false
+  #   show_name = true
   # 右侧社交图标（两行）
   [[footer.social_row1]]
     name = "GitHub"

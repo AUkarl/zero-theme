@@ -75,8 +75,19 @@
   {{- /* 页面级 JS（由子模板定义） */ -}}
   {{- block "scripts" . }}{{ end -}}
 
-  {{- /* 数学公式支持（按需加载）：单篇 front matter 的 math > [article].math > 顶层 math */ -}}
-  {{- if or .Params.math .Site.Params.article.math .Site.Params.math -}}
+  {{- /* 数学公式支持（按需加载）：
+         单篇 front matter 的 math 是最终裁定 —— 写 false 就真的不加载。以前这里是一条 or，
+         站点开着的时候单篇的 false 完全压不住，二十几篇写了 math: false 的文章一个都没生效。
+         单篇没写才看站点开关（[article].math / 顶层 math，默认关）；两边都关时再兜一次：
+         正文里出现 $$ 、\[ 、\( 或 katex 短代码就还是给加载，免得公式裸着给人看。 */ -}}
+  {{- $mathField := partial "cms/value.html" (dict "data" .Params "keys" (slice "math")) -}}
+  {{- $mathOn := or (.Site.Params.article | default dict).math .Site.Params.math -}}
+  {{- if $mathField.set -}}{{- $mathOn = $mathField.on -}}{{- end -}}
+  {{- if not $mathOn -}}
+    {{- $raw := .RawContent | default "" -}}
+    {{- if or (in $raw "$$") (in $raw "\\[") (in $raw "\\(") (.HasShortcode "katex") -}}{{- $mathOn = true -}}{{- end -}}
+  {{- end -}}
+  {{- if $mathOn -}}
     {{- partial "math.html" . -}}
   {{- end -}}
 

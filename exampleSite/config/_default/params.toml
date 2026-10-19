@@ -262,16 +262,8 @@ math = true                         # 是否全局启用数学公式（KaTeX）
     artalk_site = "default"           # 站点名称（在 Artalk 后台创建）
 
 
-# --------------------------------------------
-# 9. 网站统计
-# --------------------------------------------
-# 启用网站访问统计工具。
-
-[analytics]
-  enable_google = false             # 是否启用 Google Analytics
-  google_ga_id = ""                 # Google Analytics ID（格式: G-XXXXXXXXXX）
-  enable_baidu = false              # 是否启用百度统计
-  baidu_site_id = ""                # 百度统计站点 ID
+# （原先这一节是 Google / 百度统计的开关与站点 ID，主题已不再内置第三方统计。
+#   自建统计的参数在主题默认 params.toml 的 [analytics] 一节里，示例站不必重写。）
 
 
 # --------------------------------------------

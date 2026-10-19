@@ -8,10 +8,19 @@
   · 页面先显示内联的模糊占位，高清图进入视口前 200px 才加载（motion.js）
   · 宽高写进 width/height，图片没到也不会顶动下方文字
 */ -}}
+{{- /* 正文里 `![](url)` 没写说明时拿文件名兜底：空 alt 等于告诉读屏软件「这张图不重要」，
+       而正文配图几乎不存在不重要的。宽高由 img-pair 写（本地能处理的图）或由 .img-pair-ratio
+       这条 CSS 占位（外链抓不到时），所以这里不重复管尺寸。 */ -}}
+{{- $alt := .Text | default "" -}}
+{{- if not (trim $alt " ") -}}
+  {{- $clean := index (split .Destination "?") 0 -}}
+  {{- $name := path.BaseName (path.Base $clean) -}}
+  {{- if $name -}}{{- $alt = $name -}}{{- end -}}
+{{- end -}}
 <figure class="figure">
   {{ partial "img-pair.html" (dict
       "src" .Destination
-      "alt" .Text
+      "alt" $alt
       "page" .Page
       "sizes" "(max-width: 820px) 92vw, 760px") }}
   {{- with .Text }}

@@ -1,0 +1,35 @@
+{{- /* ============================================================
+  video-lite.html — 视频嵌入的「点了才加载」外壳
+  ------------------------------------------------------------
+  为什么要有这一层：iframe 一出现在 DOM 里浏览器就会去请求播放器（B站/YouTube/优酷/腾讯
+  各自连带一堆脚本），访客没打算看也得替它下载。这里先只画一个 16:9 的按钮，
+  访客真点了才由 common.js 把 iframe 插进去 —— 播放器本身、尺寸、圆角边框都照旧，
+  外观除了中间多个播放键之外没变化。
+
+  各家的 iframe 属性必须原样带着：allow 给不给、给哪些，是各家的差别
+  （B站那个原本根本没有 allow，统一加一个就会在控制台多出「accelerometer is not allowed」），
+  所以由各短代码把自己的属性传进来，这一层不自行发明。
+
+  容器类名也保持原样（video-embed / shortcode-embed + 各家后缀）：
+  shuo.js 按这些类名把正文里的媒体块拆出去单独摆（MEDIA_SEL），换类名会把时刻页打乱。
+
+  用法（外层容器仍由短代码自己输出）：
+    partial "video-lite.html" (dict "src" $src "title" $t "label" "B站"
+                               "allow" "" "fullscreen" false "referrer" "")
+
+  为什么不写 aria-label：按钮的可读名由里面那两行文字自己组成（「YouTube 视频 / 点击加载
+  （来自 YouTube）」）。再套一个 aria-label 反而会和可见文字不一致 —— axe 的
+  label-content-name-mismatch 就是查这个，读屏念出来的也必须和眼睛看到的对得上。
+  ============================================================ */ -}}
+<button type="button" class="video-lite"
+  data-video-src="{{ .src }}"
+  data-video-title="{{ .title }}"
+  {{- with .allow }} data-video-allow="{{ . }}"{{ end }}
+  {{- if .fullscreen }} data-video-fullscreen="1"{{ end }}
+  {{- with .referrer }} data-video-referrer="{{ . }}"{{ end }}>
+  <span class="video-lite-play" aria-hidden="true"></span>
+  <span class="video-lite-text">
+    <span class="video-lite-name">{{ .title | default "视频" }}</span>
+    <span class="video-lite-hint">点击加载{{ with .label }}（来自 {{ . }}）{{ end }}</span>
+  </span>
+</button>

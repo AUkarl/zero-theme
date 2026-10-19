@@ -130,6 +130,6 @@
   };
 </script>
 {{- $homeJS := resources.Get "js/home.js" | minify | fingerprint -}}
-<script src="{{ $homeJS.RelPermalink }}"></script>
+<script defer src="{{ $homeJS.RelPermalink }}"></script>
 {{- end -}}
 {{- end -}}

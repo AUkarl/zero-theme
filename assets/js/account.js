@@ -42,6 +42,8 @@
     var cfg = {};
     var user = null;
     var busy = false;
+    /** 站长邮箱：null = 还没取过；取到之后（哪怕是空串）就不再重复请求 */
+    var adminMail = null;
     /** 登录接口回 next:'totp' 时，登录表单补出动态码这一项 */
     var needTotp = false;
     var nextPath = readNextParam();
@@ -212,9 +214,25 @@
 
     /** 找回密码表单底部那行退路文案：验证码收不到（邮件通道没配、邮箱写错）时让人知道还能找站长 */
     function forgotText() {
-      var mail = String(cfg.adminContactEmail || '').trim();
+      var mail = (adminMail || '').trim();
       if (mail) return (T.forgotWithMail || '如密码遗失，可使用注册邮箱向管理员 {email} 发送邮件找回').replace('{email}', mail);
       return T.forgotNoMail || '请通过站内留言联系站长';
+    }
+
+    /**
+     * 站长邮箱不在整站公开配置里了（那是给爬虫看的），改成访客真打开找回密码面板才取一次。
+     * 取回来才重画表单，所以第一次渲染先显示「站内留言联系站长」这句兜底文案。
+     */
+    function ensureAdminMail() {
+      if (adminMail !== null) return;
+      window.ZeroStack.api('/api/config/admin-email')
+        .then(function (d) {
+          adminMail = String((d && d.data && d.data.email) || '');
+          if (tab === 'reset') renderForm();
+        })
+        .catch(function () {
+          adminMail = '';
+        });
     }
 
     function renderForm() {
@@ -237,6 +255,7 @@
         html += field('password', T.labelNewPassword || '新密码', 'password', 'required minlength="8" maxlength="200"');
         html += field('confirm', T.labelConfirm, 'password', 'required minlength="8" maxlength="200"');
         html += '<p class="za-hint">' + esc(forgotText()) + '</p>';
+        ensureAdminMail();
         btn.textContent = T.btnReset || '重置密码';
       } else {
         html += field('name', T.labelName, 'text', 'maxlength="64"');

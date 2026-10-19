@@ -12,15 +12,10 @@
   {{- partial "shortcodes/missing-param.html" (dict "name" "bilibili" "param" "id") -}}
 {{- else -}}
 <div class="video-embed bilibili-embed">
-  <iframe src="https://player.bilibili.com/player.html?bvid={{ $id }}&page={{ $page | default "1" }}&danmaku={{ $danmaku }}&high_quality=1"
-    scrolling="no"
-    border="0"
-    frameborder="no"
-    framespacing="0"
-    allowfullscreen="true"
-    loading="lazy"
-    referrerpolicy="no-referrer-when-downgrade"
-    style="width:100%;aspect-ratio:16/9;height:auto;">
-  </iframe>
+  {{- partial "video-lite.html" (dict
+        "src" (printf "https://player.bilibili.com/player.html?bvid=%s&page=%s&danmaku=%s&high_quality=1" $id ($page | default "1") $danmaku)
+        "title" (.Get "title" | default "B站视频")
+        "label" "B站"
+        "allow" "" "fullscreen" true "referrer" "no-referrer-when-downgrade") -}}
 </div>
 {{- end -}}

@@ -1,13 +1,14 @@
 {{- /* ============================================================
-  analytics.html — 访问统计
-  三套可并存：
-  1. zero-api 自建统计（默认，params.apiBaseURL 填了即启用）
-     进入页面 sendBeacon 记一次访问；停留时长在本地累加，只在切后台 / 关页面时
-     结算一次，页面一直开着才按 beat_seconds 兜底补报，省掉每分钟一次的心跳请求。
-  2. Google Analytics   —— params.analytics.enable_google
-  3. 百度统计           —— params.analytics.enable_baidu
-     总开关：[analytics].enable_zero = false 或 params.analyticsEnabled = false
-     都能关掉自建统计（前者是主题配置文件里的那一项，后者与后台「功能开关」同名）
+  analytics.html — 访问统计（只做 zero-api 自建那一套）
+  进入页面 sendBeacon 记一次访问；停留时长在本地累加，只在切后台 / 关页面时
+  结算一次，页面一直开着才按 beat_seconds 兜底补报，省掉每分钟一次的心跳请求。
+  总开关：[analytics].enable_zero = false 或 params.analyticsEnabled = false
+  都能关掉自建统计（前者是主题配置文件里的那一项，后者与后台「功能开关」同名）。
+
+  这里**不再有任何第三方统计**（Google / 百度都已在实测后整段删除）：
+  自建那套已经给出访问数、停留时长与设备分布，而第三方脚本会给每个访客拉一条
+  跨域请求并落下可被 Lighthouse 记名的 Cookie。真需要别的统计，走
+  [custom].head_html / extra_js 自己粘，主题不再内置。
   ============================================================ */ -}}
 {{- $zero := partial "zero/api.html" . -}}
 {{- $an := .Site.Params.analytics | default dict -}}
@@ -72,33 +73,4 @@
   window.addEventListener('pagehide', flush);
 })();
 </script>
-{{- end -}}
-
-{{- if .Site.Params.analytics -}}
-  {{- if .Site.Params.analytics.enable_google -}}
-    {{- with .Site.Params.analytics.google_ga_id -}}
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id={{ . }}"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '{{ . }}');
-  </script>
-    {{- end -}}
-  {{- end -}}
-  {{- if .Site.Params.analytics.enable_baidu -}}
-    {{- with .Site.Params.analytics.baidu_site_id -}}
-  <!-- 百度统计 -->
-  <script>
-    var _hmt = _hmt || [];
-    (function() {
-      var hm = document.createElement("script");
-      hm.src = "https://hm.baidu.com/hm.js?{{ . }}";
-      var s = document.getElementsByTagName("script")[0];
-      s.parentNode.insertBefore(hm, s);
-    })();
-  </script>
-    {{- end -}}
-  {{- end -}}
 {{- end -}}

@@ -97,7 +97,7 @@
   };
 </script>
 {{- $timelineJS := resources.Get "js/archive-timeline.js" | minify | fingerprint -}}
-<script src="{{ $timelineJS.RelPermalink }}"></script>
+<script defer src="{{ $timelineJS.RelPermalink }}"></script>
 {{- $archiveJS := resources.Get "js/archive.js" | minify | fingerprint -}}
-<script src="{{ $archiveJS.RelPermalink }}"></script>
+<script defer src="{{ $archiveJS.RelPermalink }}"></script>
 {{- end -}}

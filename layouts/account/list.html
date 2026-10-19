@@ -114,6 +114,6 @@
   "registerClosed" (i18n "zero-account-register-closed" | default "站点当前关闭了注册")
   | jsonify | safeJS }}</script>
 {{- $accountJS := resources.Get "js/account.js" | minify | fingerprint -}}
-<script src="{{ $accountJS.RelPermalink }}"></script>
+<script defer src="{{ $accountJS.RelPermalink }}"></script>
 {{- end -}}
 {{- end -}}

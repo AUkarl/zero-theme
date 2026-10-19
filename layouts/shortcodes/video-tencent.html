@@ -6,9 +6,10 @@
   {{- partial "shortcodes/missing-param.html" (dict "name" "video-tencent" "param" "vid") -}}
 {{- else -}}
 <div class="shortcode-embed tencent-video">
-  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
-    src="https://v.qq.com/txp/iframe/player.html?vid={{ $vid }}"
-    allowfullscreen allow="autoplay; encrypted-media"
-    loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  {{- partial "video-lite.html" (dict
+        "src" (printf "https://v.qq.com/txp/iframe/player.html?vid=%s" $vid)
+        "title" (.Get "title" | default "腾讯视频")
+        "label" "腾讯视频"
+        "allow" "autoplay; encrypted-media" "fullscreen" true "referrer" "no-referrer-when-downgrade") -}}
 </div>
 {{- end -}}

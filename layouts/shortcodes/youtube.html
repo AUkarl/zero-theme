@@ -12,13 +12,10 @@
   {{- partial "shortcodes/missing-param.html" (dict "name" "youtube" "param" "id") -}}
 {{- else -}}
 <div class="video-embed youtube-embed">
-  <iframe src="https://www.youtube-nocookie.com/embed/{{ $id }}{{ if $start }}?start={{ $start }}{{ end }}"
-    title="{{ $title }}"
-    frameborder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowfullscreen
-    loading="lazy"
-    style="width:100%;aspect-ratio:16/9;height:auto;">
-  </iframe>
+  {{- partial "video-lite.html" (dict
+        "src" (printf "https://www.youtube-nocookie.com/embed/%s%s" $id (cond (eq $start "") "" (printf "?start=%s" $start)))
+        "title" $title
+        "label" "YouTube"
+        "allow" "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" "fullscreen" true "referrer" "") -}}
 </div>
 {{- end -}}

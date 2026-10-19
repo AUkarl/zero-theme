@@ -7,9 +7,10 @@
   {{- partial "shortcodes/missing-param.html" (dict "name" "video-youtube" "param" "id") -}}
 {{- else -}}
 <div class="shortcode-embed youtube-video">
-  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
-    src="{{ $src }}"
-    allowfullscreen allow="autoplay; encrypted-media"
-    loading="lazy"></iframe>
+  {{- partial "video-lite.html" (dict
+        "src" $src
+        "title" (.Get "title" | default "YouTube 视频")
+        "label" "YouTube"
+        "allow" "autoplay; encrypted-media" "fullscreen" true "referrer" "") -}}
 </div>
 {{- end -}}

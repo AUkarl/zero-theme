@@ -75,5 +75,5 @@
   | jsonify | safeJS }}</script>
 
   {{- $applyJS := resources.Get "js/zero-apply.js" | minify | fingerprint -}}
-<script src="{{ $applyJS.RelPermalink }}"></script>
+<script defer src="{{ $applyJS.RelPermalink }}"></script>
 {{- end -}}

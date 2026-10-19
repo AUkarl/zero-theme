@@ -367,4 +367,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // ==================== 视频「点了才加载」 ====================
+  // 短代码只输出一个 16:9 的按钮（partials/video-lite.html），真要点才把播放器请进来：
+  // iframe 一挂在 DOM 上浏览器就会去拉各家播放器连带的那堆脚本，没打算看的人不该替它下载。
+  // 这里用事件委托而不是逐个绑定：shuo.js 会把正文里的媒体块搬进时刻卡片，节点会被重建，
+  // 绑在元素上的监听跟着节点一起没了，委托在 document 上就不受影响。
+  (function videoLite() {
+    function mount(btn) {
+      const src = btn.getAttribute('data-video-src') || '';
+      // 只放行 http(s)：这个属性是构建期写死的，但地址要进 iframe，就再挡一道
+      if (!/^https?:\/\//i.test(src)) return;
+      const frame = document.createElement('iframe');
+      frame.src = src;
+      frame.title = btn.getAttribute('data-video-title') || '视频';
+      // allow / allowfullscreen / referrerpolicy 由各短代码原样传进来：
+      // 各家播放器要的权限不一样（B站那个原本压根没有 allow），统一发一份会在控制台
+      // 多出「accelerometer is not allowed」这类策略违规，属性照旧才叫「点了才加载」而不是「换了个播放器」
+      const allow = btn.getAttribute('data-video-allow');
+      if (allow) frame.setAttribute('allow', allow);
+      if (btn.getAttribute('data-video-fullscreen')) frame.setAttribute('allowfullscreen', 'true');
+      const referrer = btn.getAttribute('data-video-referrer');
+      if (referrer) frame.setAttribute('referrerpolicy', referrer);
+      frame.setAttribute('loading', 'lazy');
+      frame.setAttribute('frameborder', '0');
+      frame.style.cssText = 'display:block;width:100%;aspect-ratio:16/9;height:auto;border:none;';
+      btn.replaceWith(frame);
+    }
+    document.addEventListener('click', function (e) {
+      const t = e.target;
+      const btn = t && t.closest ? t.closest('.video-lite') : null;
+      if (btn) mount(btn);
+    });
+  })();
+
 });

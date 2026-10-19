@@ -218,7 +218,7 @@
 <script src="{{ $shuoJS.RelPermalink }}"></script>
 {{- /* 图片点击放大查看（只在同一条时刻的图片之间切换） */ -}}
 {{- $lbJS := resources.Get "js/lightbox.js" | minify | fingerprint -}}
-<script src="{{ $lbJS.RelPermalink }}"
+<script defer src="{{ $lbJS.RelPermalink }}"
         data-close="关闭"
         data-prev="上一张"
         data-next="下一张"

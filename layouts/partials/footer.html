@@ -17,6 +17,8 @@
 
   无障碍：<footer role="contentinfo"> 是内容信息地标；
   纯图标链接用 aria-label 提供可读名称，装饰图标 aria-hidden。
+  「支持服务」与社交两排的 name 都是必填项（后台会拦）：只挂图不写名字的链接，
+  读屏用户听到的就只有「链接」两个字，所以 name 空着等于把这条链接对读屏藏起来。
   ============================================================ */ -}}
 {{- $footer := .Site.Params.footer | default dict -}}
 {{- $d := hugo.Data.footer -}}
@@ -82,6 +84,9 @@
   {{- $svcItems := partial "cms/list.html" (dict "data" $d "keys" (slice "services") "fallback" $footer.services) -}}
   {{- $row1Items := partial "cms/list.html" (dict "data" $d "keys" (slice "socialRow1" "social_row1") "fallback" $footer.social_row1) -}}
   {{- $row2Items := partial "cms/list.html" (dict "data" $d "keys" (slice "socialRow2" "social_row2") "fallback" $footer.social_row2) -}}
+  {{- /* 「支持服务」这条要不要把名字显示出来（全站默认）。条目自己写了 showName 就以条目为准，
+         因为有人就想只挂一张 logo、有人要「图标 + 文字」并排。名称本身必填：它是链接的唯一可读名。 */ -}}
+  {{- $svcShow := partial "cms/flag.html" (dict "data" $d "keys" (slice "showServiceName" "show_service_name") "default" (ne $footer.show_service_name false)) -}}
   <div class="footer-center">
     {{- with $svcItems }}
     <nav class="footer-services" aria-label="{{ i18n "footer-services-label" | default "支持服务" }}">
@@ -91,7 +96,10 @@
              社交两排共用同一份。 */ -}}
       {{- /* link 没填就整条不渲染：空 href 的 <a> 会指向当前页，看着是图标、点了没反应 */ -}}
       {{- if not $svc.link }}{{ continue }}{{ end -}}
-      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}">{{ partial "footer-icon.html" (dict "item" $svc) }} {{ $svc.name }}</a>
+      {{- $sn := $svcShow -}}
+      {{- $snField := partial "cms/value.html" (dict "data" $svc "keys" (slice "showName" "show_name")) -}}
+      {{- if $snField.set }}{{ $sn = $snField.on }}{{ end -}}
+      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}">{{ partial "footer-icon.html" (dict "item" $svc) }}{{ if $sn }} {{ $svc.name }}{{ end }}</a>
       {{- end }}
     </nav>
     {{- end }}

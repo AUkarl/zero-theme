@@ -7,9 +7,10 @@
   {{- partial "shortcodes/missing-param.html" (dict "name" "video-youku" "param" "id") -}}
 {{- else -}}
 <div class="shortcode-embed youku-video">
-  <iframe style="width:100%;aspect-ratio:16/9;border:none;"
-    src="{{ $src }}"
-    allowfullscreen allow="autoplay; encrypted-media"
-    loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  {{- partial "video-lite.html" (dict
+        "src" $src
+        "title" (.Get "title" | default "优酷视频")
+        "label" "优酷"
+        "allow" "autoplay; encrypted-media" "fullscreen" true "referrer" "no-referrer-when-downgrade") -}}
 </div>
 {{- end -}}

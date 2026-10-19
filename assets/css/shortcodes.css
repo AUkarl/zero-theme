@@ -134,6 +134,66 @@
   border: none;
 }
 
+/* 视频「点了才加载」外壳（partial video-lite.html）：
+   尺寸与被它替换的 iframe 一致（16:9 满宽），所以点开前后正文不会跳。
+   外观只用现成的主题变量，跟着深浅色走，不新造配色。 */
+.video-lite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.video-lite:hover,
+.video-lite:focus-visible {
+  background: var(--tag-bg);
+  color: var(--text);
+}
+
+.video-lite:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: -2px;
+}
+
+/* 播放键纯 CSS 画出来的三角，不引图标字体也有一眼能认的形状 */
+.video-lite-play {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 11px 0 11px 18px;
+  border-color: transparent transparent transparent var(--accent-color);
+}
+
+.video-lite-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.video-lite-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.video-lite-hint {
+  font-size: 0.8rem;
+  /* 这里不能再叠 opacity：一压就把 --text-secondary 推到对比度线下（axe 实测 color-contrast 命中） */
+  color: var(--text-secondary);
+}
+
 /* 网易云音乐播放器 — 不裁切 */
 .music163-embed,
 .netease-music {

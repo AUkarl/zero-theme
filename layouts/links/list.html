@@ -239,7 +239,7 @@
 {{- $lcS := site.Params.links | default dict -}}
 {{- $onAllianceS := (ne $lcS.alliance false) -}}
 {{- $linksJS := resources.Get "js/links.js" | minify | fingerprint -}}
-<script src="{{ $linksJS.RelPermalink }}"></script>
+<script defer src="{{ $linksJS.RelPermalink }}"></script>
 {{- /* 按 kind 分区：把 GET /api/friends 的 { friends, alliance } 各填进对应那一组。
        脚本内联在本页，只服务于这一页，不额外拉一份 JS。 */ -}}
 {{- if $onAllianceS -}}

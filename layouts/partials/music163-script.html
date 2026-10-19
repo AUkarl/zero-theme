@@ -31,6 +31,8 @@
         f.setAttribute('frameborder', 'no');
         f.setAttribute('loading', 'lazy');
         f.setAttribute('allow', 'autoplay; encrypted-media');
+        /* 没有 title 的 iframe 读屏只会念「框架」，访客不知道那是什么；外观不受影响 */
+        f.setAttribute('title', '网易云音乐播放器 ' + (box.getAttribute('data-id') || ''));
         f.src = src;
         f.style.cssText = 'width:100%;height:' + h + 'px;border:0;display:block;';
         box.innerHTML = '';

@@ -5,5 +5,5 @@
 {{- $zero := partial "zero/api.html" . -}}
 {{- if $zero.enabled -}}
 {{- $authorsJS := resources.Get "js/zero-authors.js" | minify | fingerprint -}}
-<script src="{{ $authorsJS.RelPermalink }}"></script>
+<script defer src="{{ $authorsJS.RelPermalink }}"></script>
 {{- end -}}

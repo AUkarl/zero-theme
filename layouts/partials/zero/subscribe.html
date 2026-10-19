@@ -71,5 +71,5 @@
   | jsonify | safeJS }}</script>
 </form>
   {{- $js := resources.Get "js/zero-subscribe.js" | minify | fingerprint -}}
-<script src="{{ $js.RelPermalink }}"></script>
+<script defer src="{{ $js.RelPermalink }}"></script>
 {{- end -}}

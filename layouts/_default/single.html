@@ -148,13 +148,13 @@
 {{- /* 图片点击放大查看（只在同一篇文章的图片之间左右切换）；[article].image_zoom = false 时整段不加载 */ -}}
 {{- if ne (.Site.Params.article | default dict).image_zoom false -}}
 {{- $lbJS := resources.Get "js/lightbox.js" | minify | fingerprint -}}
-<script src="{{ $lbJS.RelPermalink }}"
+<script defer src="{{ $lbJS.RelPermalink }}"
         data-close="{{ i18n "lightbox-close" | default "关闭" }}"
         data-prev="{{ i18n "lightbox-prev" | default "上一张" }}"
         data-next="{{ i18n "lightbox-next" | default "下一张" }}"
         data-view="{{ i18n "lightbox-view" | default "查看大图" }}"></script>
 {{- end -}}
 {{- $articleJS := resources.Get "js/article.js" | minify | fingerprint -}}
-<script src="{{ $articleJS.RelPermalink }}"></script>
+<script defer src="{{ $articleJS.RelPermalink }}"></script>
 {{- partial "zero/authors.html" . -}}
 {{- end -}}

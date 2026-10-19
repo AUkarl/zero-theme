@@ -106,7 +106,7 @@
 <script src="{{ $shuoJS.RelPermalink }}"></script>
 {{- /* 图片点击放大查看 */ -}}
 {{- $lbJS := resources.Get "js/lightbox.js" | minify | fingerprint -}}
-<script src="{{ $lbJS.RelPermalink }}"
+<script defer src="{{ $lbJS.RelPermalink }}"
         data-close="{{ i18n "lightbox-close" | default "关闭" }}"
         data-prev="{{ i18n "lightbox-prev" | default "上一张" }}"
         data-next="{{ i18n "lightbox-next" | default "下一张" }}"
