@@ -11,7 +11,12 @@
 
   开关一律用 isset 判断：bool 的 false 会被 default 当成「没填」，那样关不掉。
   ============================================================ */ -}}
-{{- $d := hugo.Data.moments | default dict -}}
+{{- /* data/moments.json 由后台写，是个对象；但老站点里这份常常是手写的**数组**
+       （一条时刻一个元素）。isset 拿到非 map 会直接报「unable to use key of type string
+       as index」把整站构建打死，所以先认类型：不是对象就当没填。 */ -}}
+{{- $raw := hugo.Data.moments -}}
+{{- $d := dict -}}
+{{- if and $raw (reflect.IsMap $raw) }}{{ $d = $raw }}{{ end -}}
 {{- $p := site.Params.moment | default dict -}}
 {{- $b := $p.banner | default dict -}}
 {{- $pr := $p.profile | default dict -}}

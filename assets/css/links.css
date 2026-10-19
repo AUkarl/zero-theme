@@ -125,21 +125,23 @@
   box-shadow: var(--links-card-shadow, 0 8px 22px rgba(0, 0, 0, 0.07));
 }
 
-/* 左侧封面：右侧用渐变淡出到卡片底色，图片本身淡入放大过渡 */
+/* 左侧封面：固定 132×99（4:3）的框，图绝对定位钉在里面 cover 裁切。
+   以前是 align-self:stretch 让框高等于卡片高，而卡片高由文字行数决定 —— 同一屏里
+   封面一会儿 89 一会儿 139，遇到两三行的标题就变成一条 132×250 的竖长条，横图被放大
+   裁成竖条又糊又撑。绝对定位是为了断掉「图把框顶大」这条路径（百分比高度在个别宿主
+   里会回落到图片自身比例）。右侧仍用渐变淡到卡片底色。 */
 .feed-cover {
   position: relative;
   flex: 0 0 132px;
   width: 132px;
-  align-self: stretch;
-  min-height: 84px;
+  height: 99px;
   border-radius: calc(var(--radius) + 2px);
   overflow: hidden;
   background: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 .feed-cover img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -171,9 +173,13 @@
   flex-direction: column;
   gap: 6px;
   padding: 4px 2px 2px 0;
+  /* 固定四行：作者+时间一行、标题一行、摘要两行（实测 114px @ 根字号 16px）。
+     用 rem 而不是 px：根字号变了这四行也跟着变，min-height 才不会低于真实行高。
+     min-height 让「这条没摘要」的动态也占满四行，于是同一屏里每张卡片一样高
+     （配合上面那个固定尺寸的封面框）。 */
+  min-height: 7.125rem;
 }
-/* 标题/摘要里可能有超长链接，允许从任意位置断行，避免把卡片顶宽 */
-.feed-title,
+/* 摘要里可能有超长链接，允许从任意位置断行，避免把卡片顶宽 */
 .feed-desc {
   overflow-wrap: anywhere;
 }
@@ -185,8 +191,24 @@
   font-size: 0.76rem;
   color: var(--text-secondary);
 }
-.feed-site { font-weight: 600; }
-.feed-title { margin: 0; font-size: 0.98rem; line-height: 1.5; font-weight: 700; }
+/* 站名再长也只占一行，超出省略；日期永远不被挤掉 */
+.feed-site {
+  font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed-date { flex: 0 0 auto; }
+.feed-title {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .feed-title a { color: var(--text); text-decoration: none; }
 .feed-title a:hover { color: var(--logo-accent-text, #0d8368); }
 .feed-desc {
@@ -455,8 +477,8 @@
      卡片里的封面 + 内容会把栅格顶宽（实测 358px 的栅格被撑到 381px） */
   .feed-grid { grid-template-columns: minmax(0, 1fr); }
   .alliance-list { grid-template-columns: 1fr; }
-  /* 窄屏封面窄一点，正文留够宽度 */
-  .feed-cover { flex: 0 0 96px; width: 96px; min-height: 72px; }
+  /* 窄屏封面窄一点，正文留够宽度；比例与桌面一致（96×72 = 4:3） */
+  .feed-cover { flex: 0 0 96px; width: 96px; height: 72px; }
   /* 窄屏格子改成"图标在上、信息在下"，避免左 3 右 7 太挤 */
   .neighbor { grid-template-columns: 56px minmax(0, 1fr); }
   .neighbor-icon { max-width: 56px; }
