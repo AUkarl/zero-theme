@@ -568,13 +568,34 @@
   white-space: nowrap;
 }
 
+/* 「我的评论」的正文现在走评论区那份渲染器：出的是 <p>/<img> 这些标签，
+   不能再 pre-wrap —— HTML 源码里的换行会变成第二道空行，每条都像空了一格。
+   行与行怎么分段由渲染器决定，和文章页评论区一致。 */
 .zsme-text {
   margin: 6px 0 0;
   font-size: 0.86rem;
   line-height: 1.75;
-  white-space: pre-wrap;
   word-break: break-word;
   color: var(--zsme-field-text);
+}
+
+.zsme-text p {
+  margin: 0.2rem 0;
+}
+
+.zsme-text img.zc-emoji-img {
+  display: inline-block;
+  height: 1.6em;
+  width: auto;
+  max-width: 1.6em;
+  vertical-align: -0.35em;
+  margin: 0 0.05em;
+}
+
+/* 几家图床都没取到时留下的 token，缩一点别撑破行 */
+.zsme-text .zc-emoji-tok {
+  font-size: 0.82em;
+  color: var(--zsme-ink-soft);
 }
 
 .zsme-hint {

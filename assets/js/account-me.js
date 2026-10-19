@@ -339,8 +339,34 @@
       return loadComments();
     }
 
+    /* 「我的评论」的正文要能出表情，用的就是评论区那份渲染器 —— 它只在评论组件的包里，
+       所以这一栏真要显示正文时才去拉（和文章页拉评论组件同一个路子），不给这一页白添体积。
+       拿不到就退回转义纯文本：列表照样能用，只是表情回到 token 原文。 */
+    var mdPromise = null;
+    function textRenderer() {
+      if (mdPromise) return mdPromise;
+      var plain = function (t) { return esc(t); };
+      var src = root.getAttribute('data-comment-src');
+      var base = root.getAttribute('data-short-base') || '/post/';
+      if (!src || !window.ZeroStack || !window.ZeroStack.loadScript) {
+        mdPromise = Promise.resolve(plain);
+        return mdPromise;
+      }
+      mdPromise = window.ZeroStack
+        .loadScript(src)
+        .then(function () {
+          var Z = window.ZeroComment;
+          if (!Z || !Z.renderMarkdown) return plain;
+          return function (t) { return Z.renderMarkdown(t, { shortBase: base }); };
+        })
+        .catch(function () { return plain; });
+      return mdPromise;
+    }
+
     function loadComments() {
-      return api('/api/account/comments?status=' + encodeURIComponent(status)).then(function (d) {
+      return Promise.all([api('/api/account/comments?status=' + encodeURIComponent(status)), textRenderer()]).then(function (res) {
+        var d = res[0];
+        var render = res[1];
         var host = els.pane.querySelector('#zsMeCList');
         if (!host) return;
         var items = (d && d.items) || [];
@@ -358,7 +384,7 @@
                 '<a href="' + esc(m.postSlug) + '">' + esc(m.postSlug) + '</a>' +
                 (m.editedAt ? '<span class="zsme-chip">' + esc(T.edited || '已编辑') + '</span>' : '') +
                 '<span class="zsme-time">' + esc(fmt(m.createdAt)) + '</span></div>' +
-                '<p class="zsme-text">' + esc(m.content) + '</p>' +
+                '<div class="zsme-text">' + render(m.content) + '</div>' +
                 (m.status !== 'approved' && m.spamReason ? '<p class="zsme-hint">' + esc(m.spamReason) + '</p>' : '') +
                 '<div class="zsme-acts">' +
                 '<button type="button" class="zsme-btn sm" data-act="edit">' + esc(T.btnEdit) + '</button>' +
@@ -404,7 +430,7 @@
               closeEdit(box);
               return;
             }
-            openCommentEdit(li, box, pick(items, id));
+            openCommentEdit(box, pick(items, id));
             return;
           }
           if (act === 'save') {
@@ -434,15 +460,16 @@
       return {};
     }
 
-    function openCommentEdit(li, box, row) {
+    function openCommentEdit(box, row) {
       if (!box) return;
       box.hidden = false;
       box.innerHTML =
         '<textarea rows="4" maxlength="5000"></textarea><div class="zsme-acts">' +
         '<button type="button" class="zsme-btn sm primary" data-act="save">' + esc(T.btnOk || '保存') + '</button>' +
         '<button type="button" class="zsme-btn sm" data-act="cancel">' + esc(T.btnCancel || '取消') + '</button></div>';
+      // 原文只认列表里那一条：正文现在是渲染过的 HTML，从 DOM 读回来会丢掉表情
       var area = box.querySelector('textarea');
-      area.value = row && row.content != null ? row.content : (li.querySelector('.zsme-text') || {}).textContent || '';
+      area.value = (row && row.content) || '';
       area.focus();
       area.setSelectionRange(area.value.length, area.value.length);
     }

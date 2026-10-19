@@ -8,9 +8,13 @@
   没配 params.apiBaseURL 时给一句人话提示，不空转。
   ============================================================ */ -}}
 {{- $zero := partial "zero/api.html" . -}}
+{{- /* 组件脚本地址：「我的评论」那一栏要用评论包里的渲染器（表情/加粗/链接），
+       account-me.js 等真要显示正文时才去拉它，平时不占这一页的流量。 */ -}}
+{{- $component := partial "zero/component-url.html" -}}
 <main class="main" id="main">
   <section class="section">
-    <div class="zsme" id="zsMe" data-api="{{ if $zero.enabled }}1{{ else }}0{{ end }}">
+    <div class="zsme" id="zsMe" data-api="{{ if $zero.enabled }}1{{ else }}0{{ end }}"
+      {{- with $component }} data-comment-src="{{ . }}" data-short-base="{{ partial "zero/short-base.html" }}"{{ end }}>
       <aside class="zsme-side">
         <div class="zsme-id">
           <img class="zsme-avatar" id="zsMeAvatar" alt="" width="52" height="52" hidden>
