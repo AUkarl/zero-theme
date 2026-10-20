@@ -227,8 +227,12 @@ author / toc / math / comments
 
 ### 2. 运行时接管
 
-页面加载后 `zero-runtime.js` 拉一次 `/api/config` 并缓存，把构建期写死的评论 provider、
-开关、文案对齐到后端配置（60 秒内生效，不用重新构建）。
+每次进页面 `zero-runtime.js` 真发一次 `/api/config`（同一次页面里评论 / 点赞 / 收藏 / 时刻
+共用那一次请求），把构建期写死的 provider、开关、文案对齐到后端配置，所以后台改完开关
+**下一次刷新就生效，不用重新构建**。缓存只有一份 sessionStorage 的垫底：只有这次请求
+打不回去时才拿它顶上，绝不拿它当答案 —— 曾经把它当答案，结果后台重新打开评论后访客要等
+60 秒才看得见评论区。首屏那一次不必等接口：`data/switches.json` 的快照会被 `boot.html`
+烘成 `window.__zeroSwitches`，接口回来再校正。
 所以：后台把评论区切成 `zero`，前台不用发版就会换过来。
 
 组件脚本只有一个输出点（`partials/zero/boot.html`），评论 / 点赞 / 收藏 / 时刻 / 友链申请都从那里挂载。

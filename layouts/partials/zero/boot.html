@@ -12,6 +12,12 @@
 <script src="{{ $runtime.RelPermalink }}"></script>
   {{- /* 开关挂接：凡是带 data-zero-switch 的区块（导航入口 / 时刻 / 友链 / 订阅 / 点赞收藏）
          都在这一步按 /api/config 露出或藏起，全站一次，页面脚本不用各写一套。 */ -}}
+  {{- /* 构建期烘进来的开关快照（内容由仓库里的 data/switches.json 提供，后台保存开关时写）。
+         没有这份文件时一行都不输出，行为与以前一致。 */ -}}
+  {{- $snap := hugo.Data.switches | default dict -}}
+  {{- if and (reflect.IsMap $snap) (gt (len $snap) 0) -}}
+<script>window.__zeroSwitches={{ $snap | jsonify | safeJS }};</script>
+  {{- end -}}
   {{- $switches := resources.Get "js/zero-switches.js" | minify | fingerprint -}}
 <script src="{{ $switches.RelPermalink }}"></script>
   {{- /* 组件产物（<zero-comment> / <zero-like> / <zero-subscribe> / <zero-moments> / <zero-login>

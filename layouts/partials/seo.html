@@ -11,14 +11,20 @@
 {{- $seo := partial "seo-config.html" . -}}
 {{- $is404 := eq .Kind "404" -}}
 
-{{- /* ---------- description：页面 description → .Description → 摘要 → 站点描述 → 默认描述 ---------- */ -}}
+{{- /* ---------- description：页面 description → .Description → 摘要 → SEO 默认描述 → 站点描述 ----------
+  「SEO 默认描述」排在「站点描述」前面是有意的：后台两个面板都写了一句话给 meta，
+  以前是站点描述压着默认描述，而 site-config.html 的 description 最差会兜到站点标题 ——
+  结果「前端管理 → SEO → 默认描述」实测一次都取不到（站长填了前台一个字不变，是个死控件）。
+  现在默认描述是全站 meta 的首选，站点描述退成兜底；两格都空就不出 description 标签，
+  不再拿站点名冒充描述（体检工具报「缺描述」是真缺，比假装有强）。
+  ---------- */ -}}
 {{- $descMax := $seo.description_length | default 160 -}}
 {{- $desc := "" -}}
 {{- with .Params.description }}{{ $desc = . }}{{ end -}}
 {{- if not $desc }}{{ with .Description }}{{ $desc = . }}{{ end }}{{ end -}}
 {{- if not $desc }}{{ with .Summary }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with $seo.default_description }}{{ $desc = . }}{{ end }}{{ end -}}
 {{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = . }}{{ end }}{{ end -}}
-{{- if not $desc }}{{ $desc = $seo.default_description | default (partial "site-config.html" .).name }}{{ end -}}
 {{- $desc = $desc | plainify | htmlUnescape | replaceRE `\s+` " " | strings.TrimSpace | truncate $descMax -}}
 
 {{- /* ---------- 分享图：页面 image/img → 配置默认 → 站点 logo ---------- */ -}}
@@ -87,7 +93,10 @@
 {{- end }}
 
 {{- /* ---------- 基础 meta ---------- */ -}}
-<meta name="description" content="{{ $desc }}">
+{{- /* 没写出描述时干脆不出这条标签：内容真的缺，就让它缺得可见，
+       不要用站点名凑一条假描述把体检工具糊过去。 */ -}}
+{{- with $desc }}<meta name="description" content="{{ . }}">
+{{- end }}
 {{- if (ne $seo.enable_keywords false) }}
   {{- with $keywords }}
 <meta name="keywords" content="{{ delimit . ", " }}">
@@ -100,7 +109,7 @@
 {{- /* ---------- Open Graph ---------- */ -}}
 {{- if (ne $seo.enable_og false) }}
 <meta property="og:title" content="{{ $pageTitle }}">
-<meta property="og:description" content="{{ $desc }}">
+{{- with $desc }}<meta property="og:description" content="{{ . }}">{{ end }}
 <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ $siteName }}">
@@ -125,7 +134,7 @@
 {{- if (ne $seo.enable_twitter false) }}
 <meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
 <meta name="twitter:title" content="{{ $pageTitle }}">
-<meta name="twitter:description" content="{{ $desc }}">
+{{- with $desc }}<meta name="twitter:description" content="{{ . }}">{{ end }}
 {{- with $image }}
 <meta name="twitter:image" content="{{ . }}">
 <meta name="twitter:image:alt" content="{{ $pageTitle }}">

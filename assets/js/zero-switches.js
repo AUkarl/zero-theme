@@ -62,6 +62,14 @@
 
   function boot() {
     if (!window.ZeroStack || !window.ZeroStack.enabled) return;
+    /* 先按构建期烘进来的快照定一次（data/switches.json → window.__zeroSwitches），
+       再等 /api/config 回来校正。
+       以前这里只能等那次接口：带 data-zero-switch 的区块在 HTML 里是 hidden 的，
+       线上实测 /about/ 的 zero-switches.js → /api/config 串在关键路径上 4.8 秒，
+       把本来就已经在 HTML 里的正文绘制一起拖成了 LCP。
+       运行期这一路必须保留：后台改开关还是要当场生效（最迟几秒内翻转），
+       快照只负责「首屏别排队」，不负责「说了算」。 */
+    if (window.__zeroSwitches) apply(window.__zeroSwitches);
     window.ZeroStack.ready(apply);
     // 后台改完开关后同一页面里重新拉配置（zero-runtime 会广播）也要跟上
     document.addEventListener('zero:config', function (e) { apply(e.detail || {}); });

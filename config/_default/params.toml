@@ -601,20 +601,25 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   bio = "独立创作者 · 极简主义践行者"   # 简介
   show_cc_license = true          # 作者框里显示协议（false 时改在页脚显示）
   donate_max = 3                  # 赞赏最多几张码（与 article.donate_max_qr 取小的那个）
-  [[author_profile.donate]]
-    qr = ""
-    name = "赞赏"
-  [[author_profile.contacts]]
-    name = "GitHub"
-    icon = "fab fa-github"
-    url = ""
+  # 赞赏码与联系方式不再放「空条目」当样例。
+  # 以前这里躺着 [[author_profile.donate]] qr="" 与 [[author_profile.contacts]] url=""，
+  # 结果是新建的站第一天的文章页会出一张 <img src="/">（赞赏弹窗里的空码），
+  # 侧栏/页脚多一个点了没反应的 GitHub 图标。要加就在后台或直接写：
+  #   [[author_profile.donate]]
+  #     qr = "img/donate-alipay.png"
+  #     name = "支付宝"
+  #   [[author_profile.contacts]]
+  #     name = "GitHub"
+  #     icon = "fab fa-github"
+  #     url = "https://github.com/你的用户名"
 
 
 # ------------------------------------------------------------
 # 24. 全局社交链接（作者资料没配时的兜底）
 # ------------------------------------------------------------
 
-[[social]]
-  name = "GitHub"
-  icon = "fab fa-github"
-  url = ""
+# 同上，不放 url="" 的空条目：空链接渲染出来就是页脚一个点不开的图标。
+#   [[social]]
+#     name = "GitHub"
+#     icon = "fab fa-github"
+#     url = "https://github.com/你的用户名"

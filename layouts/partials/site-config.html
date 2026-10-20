@@ -26,10 +26,13 @@
 {{- /* 导航栏名称：后台留空时先用同一页刚改过的站点名（data/site.json 的 name），
        再退到 params —— 原来直接退到 params，结果「基本信息」改了站点名、导航栏还顶着旧名字。 */ -}}
 {{- $navName := $d.navName | default (cond (gt (len ($d.name | default "")) 0) $d.name ($p.navName | default $name)) -}}
+{{- /* 描述不再兜到 site.Title：标题不是描述，兜上去会让「前端管理 → SEO → 默认描述」
+       永远取不到（seo.html 的链条上一层就有值了），前台还看着像配好了。
+       两格都留空时 seo.html 直接不出 description 标签 —— 缺就是缺，不拿站点名冒充。 */ -}}
 {{- return dict
   "name" $name
   "navName" $navName
-  "description" ($d.description | default ($p.description | default site.Title))
+  "description" ($d.description | default $p.description)
   "keywords" $keywords
   "logo" $logo
   "showLogo" $showLogo

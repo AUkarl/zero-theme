@@ -80,6 +80,17 @@
   {{- end -}}
 {{- end -}}
 
+{{- /* 空码不进列表：qr="" 时 donate-modal.html 里 `| relURL` 会得到 "/"，
+       前台就是一张永远加载失败的图；按钮也只在该作者真有一张码时才该出现。
+       出厂 params.toml 曾带一条 qr="" 的示例条目，新建的站第一篇文章页就中招。 */ -}}
+{{- $real := slice -}}
+{{- range $item := $list -}}
+  {{- $s := $item -}}
+  {{- if reflect.IsMap $item -}}{{- $s = $item.qr -}}{{- end -}}
+  {{- with $s -}}{{- $real = $real | append $item -}}{{- end -}}
+{{- end -}}
+{{- $list = $real -}}
+
 {{- $contacts := dict -}}
 {{- if or $entry.social $entry.email -}}
   {{- $contacts = $entry -}}
@@ -87,6 +98,14 @@
   {{- $contacts = dict "social" $profile.contacts -}}
 {{- else if and $isOwner .Site.Params.social -}}
   {{- $contacts = dict "social" .Site.Params.social -}}
+{{- end -}}
+{{- /* 同理剔掉 url="" 的联系方式：空链接渲染出来是页脚/作者框里一个点不开的图标 */ -}}
+{{- if $contacts -}}
+  {{- $soc := slice -}}
+  {{- range $s := $contacts.social -}}
+    {{- with $s.url -}}{{- $soc = $soc | append $s -}}{{- end -}}
+  {{- end -}}
+  {{- $contacts = merge (dict) $contacts (dict "social" $soc) -}}
 {{- end -}}
 
 {{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "avatarChain" $avatarChain "email" $email "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}

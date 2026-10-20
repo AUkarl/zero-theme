@@ -3,7 +3,8 @@
 //
 // 由 partials/zero/boot.html 引入，全站一次。职责只有三件：
 //   1. 记住 apiBase（构建期写死在 <html> 的 data 属性里）
-//   2. 拉一次 /api/config 并缓存，暴露给评论区 / 时刻页 / 账号页 / 友链页
+//   2. 每次进页面真拉一次 /api/config（同一次页面里多个调用点共享那一次请求），
+//      顺手写一份 sessionStorage 只作后端无应答时的垫底
 //   3. 统一 fetch：带 Cookie、解包 {data}、把 {error,message} 变成异常
 //
 // 后台改的开关要能在不重新构建站点的前提下生效，靠的就是这里。
@@ -16,18 +17,20 @@
   var root = document.documentElement;
   var base = (root.getAttribute('data-zero-api') || '').replace(/\/+$/, '');
   var CONFIG_KEY = 'zero:config:v1';
-  var TTL = 60 * 1000;
+  /* 这份 sessionStorage 缓存只能当「后端挂了也不至于什么都没有」的兜底，不能当答案本身：
+     实测原来 TTL=60 秒时，后台把评论重新打开，接口 0 秒就翻回 true，但访客在同一个标签页里
+     刷新 20 次（59 秒）看到的仍是「没有评论区」—— 因为 zero-comments.js 拿的是缓存里的
+     false，并且 mount.remove() 之后不会再挂第二次。开关晚生效是明确不接受的，
+     所以这里改成：每次进页面都真发一次请求（同一次页面里多个组件仍共享那一次），
+     缓存只在请求失败时垫底，不看新旧。 */
 
   var cached = null;
   var pending = null;
 
   function readCache() {
     try {
-      var raw = sessionStorage.getItem(CONFIG_KEY);
-      if (!raw) return null;
-      var box = JSON.parse(raw);
-      if (!box || typeof box.at !== 'number' || Date.now() - box.at > TTL) return null;
-      return box.config || null;
+      var box = JSON.parse(sessionStorage.getItem(CONFIG_KEY) || 'null');
+      return (box && box.config) || null;
     } catch (e) {
       return null;
     }
@@ -43,15 +46,12 @@
 
   /** 拉公开配置；多个调用点共享同一次请求 */
   function config(opts) {
-    if (cached && !(opts && opts.force)) return Promise.resolve(cached);
-    if (pending && !(opts && opts.force)) return pending;
+    var force = Boolean(opts && opts.force);
+    if (cached && !force) return Promise.resolve(cached);
+    if (pending && !force) return pending;
 
-    var fromCache = readCache();
-    if (fromCache && !(opts && opts.force)) {
-      cached = fromCache;
-      return Promise.resolve(fromCache);
-    }
-    if (!base) return Promise.resolve(fromCache || {});
+    var fallback = readCache();
+    if (!base) return Promise.resolve(fallback || {});
 
     pending = fetch(base + '/api/config', { credentials: 'include' })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('config ' + r.status)); })
@@ -64,7 +64,7 @@
       })
       .catch(function (e) {
         pending = null;
-        cached = cached || fromCache || {};
+        cached = cached || fallback || {};
         return cached;
       });
     return pending;

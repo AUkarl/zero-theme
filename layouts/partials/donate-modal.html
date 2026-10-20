@@ -21,10 +21,14 @@
       {{- $src := . -}}
       {{- $label := i18n "donate-title" | default "赞赏" -}}
       {{- if reflect.IsMap . -}}{{- $src = .qr -}}{{- $label = .name | default $label -}}{{- end -}}
+      {{- /* 空 qr 不出图：$src 为空时 relURL 会得到 "/"，前台就是一张加载失败的图
+             （出厂 params.toml 曾带一条 qr="" 的示例，新建的站第一篇文章页就中招）。 */ -}}
+      {{- if $src -}}
       <div class="donate-qr-item">
         <img src="{{ $src | relURL }}" alt="{{ $label }}" loading="lazy" decoding="async">
         <span class="qr-label">{{ $label }}</span>
       </div>
+      {{- end -}}
       {{- end -}}
     </div>
   </div>
