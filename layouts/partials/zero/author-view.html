@@ -99,13 +99,31 @@
 {{- else if and $isOwner .Site.Params.social -}}
   {{- $contacts = dict "social" .Site.Params.social -}}
 {{- end -}}
-{{- /* 同理剔掉 url="" 的联系方式：空链接渲染出来是页脚/作者框里一个点不开的图标 */ -}}
+{{- /* 同理剔掉 url="" 的联系方式：空链接渲染出来是作者框里一个点不开的图标。
+       但 social 有两种合法形状，两种都得原样留着：
+         ① 条目列表 [{name,url,icon}…] —— 出厂 params.social、params.author_profile.contacts 是这种；
+         ② 名字→地址的表 {github:"https://…", email:"mailto:…"} —— data/authors.yaml 里站长老那一条是这种。
+       只按 ① 过滤会把 ② 每个元素当成「没有 url 的字符串」整组清空（range 到 map 上拿到的是值不是项，
+       取 .url 直接报错打死构建）。沙箱那份作者表是 ①，所以这条只有在他真实站点的数据上才炸出来。 */ -}}
 {{- if $contacts -}}
-  {{- $soc := slice -}}
-  {{- range $s := $contacts.social -}}
-    {{- with $s.url -}}{{- $soc = $soc | append $s -}}{{- end -}}
+  {{- $soc := $contacts.social -}}
+  {{- if reflect.IsSlice $soc -}}
+    {{- $keep := slice -}}
+    {{- range $s := $soc -}}
+      {{- if reflect.IsMap $s -}}
+        {{- with $s.url -}}{{- $keep = $keep | append $s -}}{{- end -}}
+      {{- else -}}
+        {{- with $s -}}{{- $keep = $keep | append $s -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $contacts = merge (dict) $contacts (dict "social" $keep) -}}
+  {{- else if reflect.IsMap $soc -}}
+    {{- $keep := dict -}}
+    {{- range $k, $v := $soc -}}
+      {{- with $v -}}{{- $keep = merge $keep (dict $k $v) -}}{{- end -}}
+    {{- end -}}
+    {{- $contacts = merge (dict) $contacts (dict "social" $keep) -}}
   {{- end -}}
-  {{- $contacts = merge (dict) $contacts (dict "social" $soc) -}}
 {{- end -}}
 
 {{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "avatarChain" $avatarChain "email" $email "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}
