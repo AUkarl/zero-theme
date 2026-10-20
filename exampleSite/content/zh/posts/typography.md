@@ -2,7 +2,7 @@
 title: "排版样张：一篇把所有元素都排一遍"
 date: "2026-09-08"
 draft: false
-author: "zero-author"
+author: "shape-map"
 description: "标题、列表、引用、表格、代码块、脚注、图片与提示块的实际渲染效果。"
 categories:
   - "演示"

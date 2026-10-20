@@ -1,6 +1,12 @@
 # 作者资料表：键 = 文章 front matter 里 author 的值，也是 /author/<键>/ 的地址。
 # 顶部署名与文章底部作者框都读这里；联系方式取 social（没填就不显示那一排）。
 # 站长的这一条由后台「我的信息 → 站长作者资料」维护。
+#
+# social 允许两种形状，两种都得能渲染（zero/author-view.html 按形状分流）：
+#   ① 条目列表 —— 带 name/icon/url，能自定义图标；
+#   ② 名字→地址的表 —— 只写地址，图标按键名猜。
+# 下面两条就是这两种，改主题那两处判空逻辑时请保证这份 exampleSite 仍能 hugo --minify 构建通过：
+# 只用一种形状测试曾经放过一个打死整站构建的 bug 过去（真实站点写的是 ②，沙箱写的是 ①）。
 zero-author:
   name: "Zero Author"
   avatar: "/img/avatar.png"
@@ -11,3 +17,32 @@ zero-author:
     - name: "GitHub"
       url: "https://github.com/your-username"
       icon: "fab fa-github"
+
+shape-list:
+  name: "列表形状（①）"
+  avatar: "/img/avatar.png"
+  bio_zh: "联系方式写成条目列表，第三条 url 是空的，应当被剔掉而不是渲染成点不开的图标。"
+  website: ""
+  verified: false
+  social:
+    - name: "GitHub"
+      url: "https://github.com/example"
+      icon: "fab fa-github"
+    - platform: weibo
+      name: "微博"
+      url: "https://weibo.com/example"
+      icon: "fab fa-weibo"
+    - name: "Instagram"
+      url: ""
+      icon: "fab fa-instagram"
+
+shape-map:
+  name: "表形状（②）"
+  avatar: "/img/avatar.png"
+  bio_zh: "联系方式写成名字→地址的表，这种形状 range 拿到的是值不是项，模板不能再对它取 .url。"
+  website: ""
+  verified: false
+  social:
+    github: "https://github.com/example"
+    twitter: "https://x.com/example"
+    email: "mailto:you@example.com"

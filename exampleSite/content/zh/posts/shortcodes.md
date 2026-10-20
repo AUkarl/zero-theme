@@ -2,7 +2,7 @@
 title: "短代码清单：后台编辑器能插哪些"
 date: "2026-09-15"
 draft: false
-author: "zero-author"
+author: "shape-list"
 description: "figure、bilibili、note 等短代码的写法与在文章页里的效果。"
 categories:
   - "演示"
