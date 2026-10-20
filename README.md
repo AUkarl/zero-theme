@@ -21,7 +21,7 @@
 | 关于 / 工坊 | `/about/` `/work/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
 | 订阅页 | `/subscribe/` | 邮箱订阅 + 双重确认，文章页内嵌订阅框 |
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
-| 分类 / 标签 / 作者 | `/categories/` `/tags/` `/authors/` | Hugo taxonomy，作者页带资料卡与文章列表 |
+| 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份只声明了 `author`，`category` / `tag` 两行是注释掉的，所以新站默认没有 `/categories/` 与 `/tags/`，想去掉注释即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
 | RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置 |
 
 其它能力：暗色模式（跟随系统 + 手动切换 + 全站偏好持久化）、完整响应式（360 → 1920 无横向溢出）、
@@ -66,8 +66,12 @@ scripts/                    link-theme.mjs（把主题软链到 exampleSite）�
 theme.toml  LICENSE
 ```
 
-主题仓库**不含站点图片**：`static/` 是空的，示例图在 `exampleSite/static/img/`，
-你自己的站点把图片放在自己的 `static/img/` 里（模板按 `img/logo-nav.png` 这类相对地址引用）。
+主题仓库的 `static/` **不是空的**，里面有两类东西：
+`static/fa/`（Font Awesome 6.4.2 的 css 与四个 woff2，打进仓库、不请求外部域名，共 389KB），
+以及 `static/img/` 那五张**兜底图** —— `logo-nav.png`、`logo-favicon.png`、`bj.png`、`bj2.png`、`avatar.png`，
+模板在站点没配图时就按这些相对地址取（`img/logo-nav.png` 做站点 Logo 与 favicon、`img/bj.png` 做时刻页横幅兜底）。
+你自己的图片放在**你自己站点仓库**的 `static/img/` 里同名覆盖即可，或在后台「前端管理 → 基本信息」填地址；
+示例站的其它图在 `exampleSite/static/img/`，那是示例内容，不随主题分发。
 
 ---
 
@@ -139,6 +143,14 @@ npm run build        # hugo --minify 构建示例站
   它的兜底是友链页自己的正文 `content/links/_index.md`；三段全空时前台照旧显示正文里手写的 `.apply-col`。
 - **params 的键名大小写**：Hugo 会把 params 键小写化存储、读取时大小写不敏感，
   所以 params 里怎么写都行；但 `data/*.json` 的键**区分大小写**，SEO 那一份统一用 snake_case。
+- **`/robots.txt` 取决于站点有没有开 `enableRobotsTXT`**：Hugo 只有在配置里写了这一项才会渲染主题的
+  `layouts/robots.txt`；没开就是 404（不是「Hugo 用内置规则覆盖了本文件」）。`pnpm create:site` 生成的
+  `hugo.toml` 已带这一项，早先自己建的站补一行即可。
+- **`data/seo.json` 写成驼峰不是「报错」而是「整份作废」**：主题自带一份 `themes/zero/data/seo.json`（snake_case 默认值），
+  Hugo 先把主题那份与站点那份并成 `hugo.Data.seo`，`defaultDescription` 这种驼峰键只会作为「多出来的一个键」存在，
+  模板读的始终是 `default_description` —— 于是后台 SEO 面板显示的是文件里的值（接口按驼峰归一过）、
+  前台用的却是主题默认值，而站长随手点一次保存就把驼峰写成 snake_case，那一刻文件里的内容才真的生效。
+  改法只有一条：把这份文件的键名改成 snake_case（在后台 SEO 页存一次就够了），别指望模板兼容驼峰。
 - **只留差量**：站点 params 里不要照抄主题默认值，写了改不动，还看不出改了什么。
 
 ## params 的 24 段

@@ -113,7 +113,8 @@ html { scroll-behavior: smooth; }
   margin: 2px 0 0;
   font-size: 0.875rem;
   color: var(--text-secondary);
-  opacity: 0.8;
+  /* 0.8 时浅色模式只有 4.48（差一点点），提到 0.9 是 5.74；深色本来就过（5.09 → 5.75） */
+  opacity: 0.9;
 }
 
 #home-bento .hb-sec-link {
@@ -192,9 +193,32 @@ html { scroll-behavior: smooth; }
   color: var(--text-secondary);
 }
 
+/* 标签文字直接吃强调色时对比度不够（浅色 3.64、深色 2.91，要求 4.5），
+   而且它还坐在 .hb-meta 的 opacity .85 里。这里按模式把强调色往墨色方向压一压再上：
+   浅色混 40% 黑、深色混 55% 白，实测（含那层 opacity）浅色 5.2~8.3、深色 4.9~7.4，
+   常用色相全部过线；色相还是原来那个，只是深/浅一档。
+   color-mix 不支持时整段不生效，前台就按下面那条原样显示（宁可不达标也不要有别的副作用）。 */
 #home-bento .hb-meta .hb-tag,
 #home-bento .hb-a-tag {
   color: var(--global-color, var(--accent-color, #0d8368));
+}
+
+@supports (color: color-mix(in srgb, #000000 50%, #ffffff)) {
+  :root {
+    --hb-tag-fg: color-mix(in srgb, var(--global-color, var(--accent-color, #0d8368)) 60%, #000000);
+  }
+  [data-theme='dark'] {
+    --hb-tag-fg: color-mix(in srgb, var(--global-color, var(--accent-color, #0d8368)) 45%, #ffffff);
+  }
+  @media (prefers-color-scheme: dark) {
+    [data-theme='auto'] {
+      --hb-tag-fg: color-mix(in srgb, var(--global-color, var(--accent-color, #0d8368)) 45%, #ffffff);
+    }
+  }
+  #home-bento .hb-meta .hb-tag,
+  #home-bento .hb-a-tag {
+    color: var(--hb-tag-fg);
+  }
 }
 
 #home-bento .hb-meta .hb-dot {

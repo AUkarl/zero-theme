@@ -838,7 +838,9 @@ a {
   align-items: center;
   gap: 0 8px;
   font-size: 0.75rem;
-  opacity: 0.7;
+  /* 0.7 时备案行在明暗两种模式下都只有 3.54 / 4.22（要求 4.5）。
+     提到 0.9 后是 5.74 / 5.62，看起来还是「次要文字」的层级，但读得清了。 */
+  opacity: 0.9;
   text-align: center;
 }
 
