@@ -21,7 +21,7 @@
 | 关于 / 工坊 | `/about/` `/work/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
 | 订阅页 | `/subscribe/` | 邮箱订阅 + 双重确认，文章页内嵌订阅框 |
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
-| 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份只声明了 `author`，`category` / `tag` 两行是注释掉的，所以新站默认没有 `/categories/` 与 `/tags/`，想去掉注释即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
+| 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份把 `author` / `category` / `tag` 三行都声明了，新站开箱就有这三个聚合页；不想要哪一个，把站点 `hugo.toml` 里那行注释掉即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
 | RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置 |
 
 其它能力：暗色模式（跟随系统 + 手动切换 + 全站偏好持久化）、完整响应式（360 → 1920 无横向溢出）、

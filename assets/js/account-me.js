@@ -742,7 +742,7 @@
                   var editable = r.status === 'draft' || r.status === 'rejected';
                   return (
                     '<li data-id="' + esc(r.id) + '"><div class="zsme-line">' + statusChip(r.status) +
-                    '<b>' + esc(r.title) + '</b><span class="zsme-chip">' + esc(r.slug) + '</span>' +
+                    '<b>' + esc(r.title) + '</b><span class="zsme-chip">' + esc(/^draft-/.test(String(r.slug || '')) ? (T.dAuto || '发布时自动命名') : r.slug) + '</span>' +
                     '<span class="zsme-time">' + esc(fmt(r.updatedAt)) + '</span></div>' +
                     (r.reviewNote ? '<p class="zsme-hint">' + esc(T.dNote) + '：' + esc(r.reviewNote) + '</p>' : '') +
                     (r.publishedPath ? '<p class="zsme-hint">' + esc(T.dPath) + '：' + esc(r.publishedPath) + '</p>' : '') +

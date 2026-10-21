@@ -36,6 +36,9 @@
       var provider = String(cfg.momentCommentProvider || '').trim().toLowerCase();
       /* 评论总开关关掉时卡片底栏不再有点赞/评论，后台那一家的开关也不该把它拉回来 */
       if (cfg.commentEnabled === false) provider = '';
+      /* 配置里存着代码不认识的值时退回构建期那一家，别按一个不存在的服务商重绘卡片
+         （设置接口现在会拒绝枚举外的值，这一行是给历史数据兜底） */
+      if (provider && ['zero', 'waline', 'twikoo', 'giscus', 'artalk'].indexOf(provider) < 0) provider = build;
 
       var current = window.momentConfig || {};
       /* 时刻总开关：shuo.js 用它决定「卡片要不要绘制、<zero-comment> 要不要挂载」。

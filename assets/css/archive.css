@@ -414,7 +414,7 @@
 
 .tag-cloud-static .cloud-item .count {
   font-size: 0.72rem;
-  opacity: 0.8;
+  /* 不再压 opacity：0.8 的透明度把这项的对比度乘到 4.48:1，浅底上掉出 AA（去掉后 7.46:1） */
   margin-left: 2px;
 }
 
@@ -480,7 +480,7 @@
 
 .danmaku-lane .cloud-item .count {
   font-size: 0.7rem;
-  opacity: 0.8;
+  /* 同 .tag-cloud-static：透明度会把对比度乘下去，两处一起撤掉 */
   margin-left: 2px;
 }
 

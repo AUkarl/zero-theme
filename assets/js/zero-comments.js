@@ -18,6 +18,9 @@
   // 第三方评论服务（Waline / Twikoo / Giscus / Artalk）的界面语言：站点只中文
   var COMMENT_LANG = 'zh-CN';
 
+  /** loader 的 render() 只认这几个值；配置里出现别的（拼错的、旧的）就不覆盖服务端那一版 */
+  var KNOWN_PROVIDERS = ['zero', 'waline', 'twikoo', 'giscus', 'artalk'];
+
   function boot() {
     var mount = document.querySelector('[data-zero-comment]');
     if (!mount) return;
@@ -31,6 +34,10 @@
       var provider = normalizeProvider(cfg.commentProvider);
       var build = mount.getAttribute('data-build-provider') || '';
       if (!provider || provider === build) return;
+      /* 值不在已知集合里就什么都不做，留着服务端渲染的那一版：
+         render() 的分支里没这个值时会掉进 fallback()，整站评论区变成一句没有原因的
+         「暂时不可用」（后台配置项已经改成接口层拒绝枚举外的值，这里是不必重新构建的第二道保险）。 */
+      if (KNOWN_PROVIDERS.indexOf(provider) < 0) return;
 
       var settings = mergeSettings(provider, cfg, mount);
       render(mount, provider, settings);
