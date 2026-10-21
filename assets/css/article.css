@@ -88,7 +88,8 @@
   display: block;
   padding: 4px 8px;
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text);
   border-radius: var(--radius);
   transition: all 0.2s ease;
   text-decoration: none;
@@ -108,6 +109,17 @@
 
 /* Hugo 的 TableOfContents 输出的是嵌套 ul/li，没有 level-N 类，
    缩进与层级样式一律按 .article-toc ul ul 这类结构选择器写。 */
+
+/* 二级条目（h3）：靠缩进 + 字号 + 字重拉开层级，颜色退回次级色。
+   次级色本身在两套配色下都过 WCAG AA（亮色 #555/#fff = 7.46:1，暗色 #aaa/#2a2a2a = 6.18:1），
+   所以「更浅」不是靠降低对比度做出来的。
+   选择器比上面 :hover / .active 少一个类，高亮态仍然压得过它。 */
+.article-toc ul ul li a {
+  padding-left: 20px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
 
 /* ===== 文章头部 ===== */
 .article-header {
