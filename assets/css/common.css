@@ -1130,3 +1130,26 @@ body.lightbox-open {
   .lightbox-prev, .lightbox-next { width: 38px; height: 38px; font-size: 1.3rem; }
   .lightbox-img { max-width: 96vw; max-height: 80vh; }
 }
+/* ============================================================
+   R35：全站「减少动态效果」兜底
+
+   motion.css 里那段只覆盖了 [data-reveal] 与图片对两件事，实测开着系统偏好时
+   首页仍有 38 个可见元素带着 50ms 以上的过渡/动画（<img> 0.3s、.nav-link 0.25s、
+   .ctrl-btn 0.2s……）。这里补一道全局的：只把时长压到近乎 0，
+   不改颜色、不改布局、不动 transform 的终态（该显示的位置还是显示）。
+
+   html[data-motion-force] 是主题原有的开关（params.motion.reduced_motion_respect = false
+   时挂在 <html> 上）—— 带着它就说明站长明确要保留动效，所以这段跟着失效。
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion-force]) *,
+  html:not([data-motion-force]) *::before,
+  html:not([data-motion-force]) *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -428,17 +428,17 @@ html { scroll-behavior: smooth; }
   line-height: 1.4;
 }
 
+/* 这两层 opacity 曾把 #463c34 压到奶黄底上只剩 4.11:1（日期 2.94:1），低于 WCAG AA 的 4.5：
+   这俩恰恰是卡片里最小的字（12px / 11px），淡色本来就靠字色做，不需要再乘一层透明。 */
 #home-bento .hb-text .hb-card-desc {
   font-size: 12px;
   line-height: 1.7;
   margin: 6px 0 0;
-  opacity: 0.75;
 }
 
 #home-bento .hb-text .hb-text-date {
   margin-top: 12px;
   font-size: 11px;
-  opacity: 0.6;
 }
 
 #home-bento .hb-text .hb-pill {

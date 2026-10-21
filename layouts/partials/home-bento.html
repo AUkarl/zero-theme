@@ -170,7 +170,9 @@
         <h2 class="hb-sec-title">{{ $articlesTitle }}</h2>
         <p class="hb-sec-sub" data-hb-sub>{{ printf (i18n "hb-sub-latest" | default "共 %d 篇 · 按时间排序") $total }}</p>
       </div>
-      <div class="hb-tabs" role="tablist" aria-label="{{ $articlesTitle }}">
+      {#/* 这一排是排序切换（按钮自带 aria-pressed），不是真 tablist：
+           声明 role="tablist" 会让读屏去找必须存在的 role="tab" 子元素，找不到就整组读成空（axe critical）。 */#}
+      <div class="hb-tabs" role="group" aria-label="{{ $articlesTitle }}">
         <button type="button" class="hb-tab is-active" data-hb-sort="latest" aria-pressed="true">{{ i18n "hb-tab-latest" | default "最新" }}</button>
         <button type="button" class="hb-tab" data-hb-sort="earliest" aria-pressed="false">{{ i18n "hb-tab-earliest" | default "最早" }}</button>
         {{- if $enableHot }}
