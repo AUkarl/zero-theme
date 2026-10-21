@@ -4,8 +4,13 @@
   才会渲染本文件（没开就压根不产出 robots.txt，不是「用内置规则覆盖本文件」）。
   ============================================================ */ -}}
 {{- $seo := partial "seo-config.html" . -}}
+{{- /* robots_allow / robots_disallow 在 data/seo.json 里是手写得到的（data 优先），
+       漏掉方括号写成字符串时，下面两处 range 会直接把整站构建打死（Hugo: range can't iterate over …），
+       而 Pages 的规矩是「构建失败就不换部署」—— 表现是站点静默停止更新。所以非数组先包一层。 */ -}}
 {{- $disallow := $seo.robots_disallow | default (slice "/account/" "/admin/") -}}
+{{- if not (reflect.IsSlice $disallow) -}}{{- $disallow = (slice $disallow) -}}{{- end -}}
 {{- $allow := $seo.robots_allow | default (slice) -}}
+{{- if not (reflect.IsSlice $allow) -}}{{- $allow = (slice $allow) -}}{{- end -}}
 {{- $clean := $seo.robots_crawl_delay | default 0 -}}
 User-agent: *
 {{- range $allow }}
