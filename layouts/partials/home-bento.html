@@ -170,8 +170,10 @@
         <h2 class="hb-sec-title">{{ $articlesTitle }}</h2>
         <p class="hb-sec-sub" data-hb-sub>{{ printf (i18n "hb-sub-latest" | default "共 %d 篇 · 按时间排序") $total }}</p>
       </div>
-      {#/* 这一排是排序切换（按钮自带 aria-pressed），不是真 tablist：
-           声明 role="tablist" 会让读屏去找必须存在的 role="tab" 子元素，找不到就整组读成空（axe critical）。 */#}
+      {{- /* 这一排是排序切换（按钮自带 aria-pressed），不是真 tablist：
+             声明 role="tablist" 会让读屏去找必须存在的 role="tab" 子元素，找不到就整组读成空（axe critical）。
+             模板注释只用本文件另外十三处那种花括号双写形式 —— Go 模板那套「单花括号加井号」的原始写法
+             Hugo 0.165 不认，会当正文原样吐进 HTML，标题下面就多出一行汉字（这次自己踩出来的）。 */ -}}
       <div class="hb-tabs" role="group" aria-label="{{ $articlesTitle }}">
         <button type="button" class="hb-tab is-active" data-hb-sort="latest" aria-pressed="true">{{ i18n "hb-tab-latest" | default "最新" }}</button>
         <button type="button" class="hb-tab" data-hb-sort="earliest" aria-pressed="false">{{ i18n "hb-tab-earliest" | default "最早" }}</button>
