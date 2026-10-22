@@ -190,6 +190,20 @@
   text-align: center;
 }
 
+/* meta 行里的「分类」链接：外观与这一行其余文字逐字相同（同色、无下划线、不加边框），
+   与标签那条一样 —— 只有 hover / 键盘聚焦时出现下划线。
+   刻意不引入新颜色：这样深浅两套主题的对比度都不变（浅色 7.46:1、深色 7.5:1），
+   也不会因为多一条边框把这一行的行高顶高 1px。 */
+.article-header .article-meta a.article-meta-cat {
+  color: inherit;
+  text-decoration: none;
+}
+
+.article-header .article-meta a.article-meta-cat:hover,
+.article-header .article-meta a.article-meta-cat:focus-visible {
+  text-decoration: underline;
+}
+
 .article-header .article-tags {
   margin-top: 12px;
   display: flex;

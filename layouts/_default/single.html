@@ -45,7 +45,14 @@
           <span><i class="far fa-edit"></i> {{ i18n "article-updated-label" | default "修改于 " }}{{ .Lastmod.Format ($art.date_format | default "2006-01-02") }}</span>
           {{- end -}}
           {{- if and (ne $art.show_meta_category false) .Params.categories }}
-          <span><i class="far fa-folder"></i> {{ i18n "article-category-label" | default "分类：" }}{{ index .Params.categories 0 }}</span>
+          {{- /* 分类名进 /categories/<分类>/，与标签同一套写法：
+                 ① 站点没在 [taxonomies] 里声明 category 时 Hugo 不生成聚合页，这时继续当文字，
+                    否则 meta 行是一条点不开的死链；
+                 ② 取值走 partials/home-taxo.html —— front matter 里 categories 写成列表或单个字符串
+                    都吃得下（以前这里直接 index .Params.categories 0，字符串写法会在构建上报错）。 */ -}}
+          {{- $cat := partial "home-taxo.html" (dict "p" . "key" "categories") }}
+          {{- $catPages := isset .Site.Taxonomies "categories" }}
+          <span><i class="far fa-folder"></i> {{ i18n "article-category-label" | default "分类：" }}{{ if and $cat $catPages }}<a class="article-meta-cat" href="{{ "categories/" | relLangURL }}{{ $cat | urlize }}/">{{ $cat }}</a>{{ else }}{{ $cat }}{{ end }}</span>
           {{- end -}}
           {{- if ne $art.show_word_count false }}
           <span><i class="far fa-file-alt"></i> {{ i18n "article-wordcount-label" | default "字数：" }}<span id="wordCount">{{ .WordCount }}</span></span>

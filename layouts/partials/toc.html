@@ -27,9 +27,13 @@
     #tocNav li::before { content: counters(toc, ".") " "; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
     {{- end }}
   </style>
-<aside class="article-toc" id="articleToc">
-  <div class="toc-title" data-i18n="article-toc">{{ i18n "article-toc" | default "目录" }}</div>
-  <nav id="tocNav">
+{{- /* 这块区域以前对读屏是「没名字的」：aside 与 nav 都没有可访问名字，标题又是个 div，
+       于是整页的 landmark 列表里出现两个无名导航 + 一个无名补充内容，分不清哪个是目录。
+       现在用 aria-labelledby 指向那句可见的「目录」（同一个 id，不额外造一份文字），
+       翻译脚本换 .toc-title 文字时名字会跟着变；视觉、位置、标题层级一律不动。 */ -}}
+<aside class="article-toc" id="articleToc" aria-labelledby="tocTitle">
+  <div class="toc-title" id="tocTitle" data-i18n="article-toc">{{ i18n "article-toc" | default "目录" }}</div>
+  <nav id="tocNav" aria-labelledby="tocTitle">
     {{ .TableOfContents }}
   </nav>
 </aside>
