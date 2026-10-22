@@ -22,6 +22,10 @@
   --shuo-submit-color: #ffffff;
   /* 品牌色 #7beec7 在浅色底上只有 1.4:1，文字场景用这个加深版（白底 4.7:1） */
   --logo-accent-text: #0d8368;
+  /* 正文链接与文章页分类牌用的强调色。以前主题里只写了 var(--accent, #4a7c6b) 却从没定义过它，
+     于是深浅两档一起吃同一个 #4a7c6b：浅底 4.79:1 没问题，深底只有 2.64~3.00:1。这里把它定义出来，
+     浅色沿用同一个值（外观不变），深色另给一档。 */
+  --accent: #4a7c6b;
   --shuo-name: #576b95;   /* 朋友圈式卡片的昵称色（浅色） */
 }
 
@@ -42,6 +46,9 @@
   --scroll-btn-color: #aaaaaa;
   --shuo-submit-color: #000000;
   --logo-accent-text: #7beec7;
+  /* #4a7c6b 压在这两档深色底上只有 2.64:1（分类牌 #333）和 3.00:1（正文 #2a2a2a）。
+     这个是同色相提亮的版本：分类牌 5.08:1、正文链接 5.77:1，绿色还是那支绿，只是把亮度抬到过线。 */
+  --accent: #6bb298;
   --shuo-name: #7f9ed0;   /* 朋友圈式卡片的昵称色（深色下用亮一点的蓝） */
 }
 
@@ -74,6 +81,12 @@
     --scroll-btn-bg: rgba(30, 30, 30, 0.9);
     --scroll-btn-color: #aaaaaa;
     --shuo-submit-color: #000000;
+    /* 这一档以前漏抄了 --logo-accent-text：手动切到 dark 走上面那份是 #7beec7，
+       而系统深色 + auto（绝大多数访客）还停在浅色的 #0d8368 —— 导航站名只剩 3.54:1，
+       评论正文里的链接（靠 var(--zc-accent, var(--logo-accent-text)) 兜底）也只有 2.6:1。
+       两份深色变量表本来就该同集合，这里补齐。 */
+    --logo-accent-text: #7beec7;
+    --accent: #6bb298;
     --shuo-name: #7f9ed0;
   }
 }

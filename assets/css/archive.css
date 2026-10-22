@@ -30,6 +30,9 @@
     --tl-accent: #7beec7;
     --tl-accent-soft: rgba(123, 238, 199, 0.16);
     --tl-accent-glow: rgba(123, 238, 199, 0.15);
+    /* 上面 [data-theme="dark"] 那份有这一条，这里以前漏抄：漏了就一路吃 .archive-wrapper
+       浅色规则里的 #0b7a63，压在这档的深底上只剩 2.4:1 —— 而系统深色 + auto 正是绝大多数访客那一路 */
+    --tl-accent-text: #7beec7;
   }
 }
 

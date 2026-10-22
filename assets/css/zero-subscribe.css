@@ -3,6 +3,21 @@
    视觉沿用 zero-apply.css：同样的圆角、边框、主色，保证和友链表单是一家人。
    ============================================================ */
 
+/* 主按钮的底与字必须成对翻：--logo-accent-text 是「文字用的强调色」，
+   浅色是加深版 #0d8368（白字 4.7:1），深色是薄荷 #7beec7 —— 白字压上去只剩 1.41:1。
+   所以这里跟 zero-apply.css / zero.css 同一套写法：深色档把字换成深绿，底色不动。 */
+:root {
+  --zsf-accent-fg: #ffffff;
+}
+[data-theme="dark"] {
+  --zsf-accent-fg: #06251b;
+}
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --zsf-accent-fg: #06251b;
+  }
+}
+
 .zsf-lead {
   margin: 0 0 10px;
   font-size: 0.88rem;
@@ -42,7 +57,7 @@
   padding: 8px 20px;
   font: inherit;
   font-weight: 600;
-  color: #fff;
+  color: var(--zsf-accent-fg, #fff);
   background: var(--logo-accent-text, #0d8368);
   border: none;
   border-radius: 999px;
