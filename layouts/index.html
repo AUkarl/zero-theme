@@ -98,7 +98,7 @@
     .box-intro h1 {
       color: var(--heading-color);
     }
-    .box-intro h3 {
+    .box-intro .box-headline {
       color: var(--heading-color);
     }
     .footer-home a {
@@ -151,6 +151,15 @@
       color: var(--text-color);
       background: none;
       border: none;
+      /* 这颗现在是真的 <button>：抹掉浏览器给的边框外观与外距，尺寸仍由上面这几行说了算
+         （故意不写 `font: inherit` —— 那是简写属性，会把这行的 font-size:22px 顶掉） */
+      appearance: none;
+      -webkit-appearance: none;
+      margin: 0;
+      /* 按钮的 UA 默认是 Arial + border-box，这两行把计算样式拉回换标签之前的样子：
+         字体跟随页面（图标自己带 FA 字体，不受影响），盒模型回到 content-box（宽 22 + 内距 6×2） */
+      font-family: inherit;
+      box-sizing: content-box;
       backdrop-filter: none;
       border-radius: 0;
       width: auto;
@@ -437,7 +446,7 @@
       word-break: break-word;
       line-height: 1.4;
     }
-    .box-intro h3 {
+    .box-intro .box-headline {
       font-family: var(--font);
       font-size: 14px;
       letter-spacing: 10px;
@@ -455,7 +464,7 @@
         overflow-wrap: anywhere;
         max-width: 92%;
       }
-      .box-intro h3 {
+      .box-intro .box-headline {
         font-size: clamp(12px, 3.4vw, 16px);
         letter-spacing: clamp(1px, 1vw, 5px);
         line-height: 2.4;
@@ -513,9 +522,12 @@
         {{- if $nav.themeSwitch }}
         <div class="index-toolbar">
           {{- $themeTitle := i18n "theme-toggle" | default "切换主题" -}}
-          <div class="toolbar-btn" id="themeToggle" title="{{ $themeTitle }}" aria-label="{{ $themeTitle }}" onclick="event.stopPropagation()">
-            <i id="themeIcon" class="fas fa-adjust"></i>
-          </div>
+          {{- /* 与 partials/header.html、404.html 同一颗按钮：以前这里是裸 div，
+                 aria-label 落在无 role 的 div 上属非法用法，而且没有 tabindex/keydown，
+                 只用键盘的人根本切不了主题（T3-1）。改成 button 后外观由 .toolbar-btn 兜住。 */}}
+          <button type="button" class="toolbar-btn" id="themeToggle" title="{{ $themeTitle }}" aria-label="{{ $themeTitle }}" onclick="event.stopPropagation()">
+            <i id="themeIcon" class="fas fa-adjust" aria-hidden="true"></i>
+          </button>
         </div>
         {{- end }}
       </div>
@@ -525,14 +537,16 @@
         <section class="box-intro{{ if (ne $landing.background_fade false) }} bg-film{{ end }}" id="main" role="main">
           <div class="table-cell">
             {{- if ne $landing.show_quotes false }}
-            <h3 class="box-headline letters rotate-2">
+            {{- /* 签名诗不是标题：它排在 h1 之前，用 h3 会让读屏用户先碰到一个三级标题（T3-10）。
+                   标签换成 p，样式靠 .box-intro .box-headline 那三条走，位置字号行高一字不变。 */}}
+            <p class="box-headline letters rotate-2">
               <span class="box-words-wrapper">
                 {{- $quotes := $landing.quotes | default (slice "海上生明月 & 天涯共此时") -}}
                 {{- range $i, $q := $quotes -}}
                 <b{{ if eq $i 0 }} class="is-visible"{{ end }}>&nbsp;{{ $q }} </b>
                 {{- end }}
               </span>
-            </h3>
+            </p>
             {{- end }}
             {{- if ne $landing.show_welcome false }}
             <h1 class="index-greeting">{{ $landing.welcome | default (i18n "index-greeting" | default "Hey，好久不见") }}</h1>
