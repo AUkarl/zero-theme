@@ -211,7 +211,10 @@
   gap: 6px;
 }
 
-.article-header .article-tags .tag {
+/* 类名以前写的是 .tag，而模板输出的是 .article-tag（single.html 的标签那排）——
+   这条胶囊规则从来没命中过，文章页标签一直是裸文字。按站长的决定改选择器把它接上。
+   对比度实测：浅色 #555 on #f8f8f8 = 7.0:1、深色 #aaa on #333 = 5.4:1，两套都过 AA 4.5:1，颜色不动。 */
+.article-header .article-tags .article-tag {
   display: inline-block;
   padding: 2px 12px;
   background: var(--tag-bg);
