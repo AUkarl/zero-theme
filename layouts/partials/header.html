@@ -70,10 +70,10 @@
         {{- if not .controls -}}
           {{- $name := .name -}}
           {{- $icon := .icon -}}
-          {{- $image := .image -}}
+          {{- $image := partial "one-string.html" .image -}}
           {{- $external := .external -}}
           {{- $iconOnly := .iconOnly -}}
-          {{- $href := .url -}}
+          {{- $href := partial "one-string.html" .url -}}
           {{- if and $href (not $external) -}}{{- $href = $href | relLangURL -}}{{- end -}}
           {{- /* 当前页高亮：先按地址比（data 项只有地址可比），菜单项再问一次
                  HasMenuCurrent，让 menus.*.toml 的父子关系也能参与 —— 与改造前一致 */ -}}

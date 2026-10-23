@@ -26,7 +26,7 @@
       也能被处理），路径里带上文件大小，文件换了自动重新处理
     · 处理结果的 WebP 只在构建产物里，不进 Git
   ============================================================ */ -}}
-{{- $src := .src | default "" -}}
+{{- $src := partial "one-string.html" .src -}}
 {{- $page := .page -}}
 {{- $sizes := .sizes | default "100vw" -}}
 {{- $widths := .widths | default (slice 400 800 1200) -}}

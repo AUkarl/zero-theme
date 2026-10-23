@@ -34,7 +34,10 @@
 <aside class="article-toc" id="articleToc" aria-labelledby="tocTitle">
   <div class="toc-title" id="tocTitle" data-i18n="article-toc">{{ i18n "article-toc" | default "目录" }}</div>
   <nav id="tocNav" aria-labelledby="tocTitle">
-    {{ .TableOfContents }}
+    {{- /* Hugo 自己生成的那份 <nav id="TableOfContents"> 是**第二层 landmark**，且没带可访问名字。
+       （JS 开着时 article.js 会用纯 <ul> 把它整块换掉，所以只有无 JS 那一路看得到它 —— 正因如此更要命名。）
+       只补属性、不动 id：#TableOfContents 还被上面那几条折叠样式指着。 */ -}}
+    {{ .TableOfContents | replaceRE `<nav id="TableOfContents">` `<nav id="TableOfContents" aria-labelledby="tocTitle">` | safeHTML }}
   </nav>
 </aside>
 {{- end -}}

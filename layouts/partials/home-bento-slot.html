@@ -22,7 +22,7 @@
 {{- $url := .url | default "#" -}}
 {{- $title := .title | default "" -}}
 {{- $desc := .desc | default "" -}}
-{{- $image := .image | default "" -}}
+{{- $image := partial "one-string.html" .image -}}
 {{- $date := .date | default "" -}}
 {{- $cat := .cat | default "" -}}
 {{- $tg := .tags | default "" -}}

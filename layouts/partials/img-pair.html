@@ -17,7 +17,7 @@
     · 高清加载完成 → 淡入盖住 LQIP；加载失败 → 保留 LQIP（不会出现破图）
     · 抓取失败时退回原始外链，行为跟改造前一致
   ============================================================ */ -}}
-{{- $src := .src | default "" -}}
+{{- $src := partial "one-string.html" .src -}}
 {{- $alt := .alt | default "" -}}
 {{- $cls := .class | default "" -}}
 {{- $imgCls := .imgClass | default "hb-img" -}}

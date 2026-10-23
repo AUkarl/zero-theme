@@ -47,7 +47,7 @@
            支持的写法：image / img / cover 单个字段，或 images 列表（取第一张）。
            注意：这里刻意不调用 img-src.html —— 那会为每篇文章做一次远程取图，
            既拖慢构建又多一次网络依赖；直接用原地址转绝对路径就够了。 */ -}}
-    {{- $cover := .Params.image | default .Params.img | default .Params.cover -}}
+    {{- $cover := partial "one-string.html" (.Params.image | default .Params.img | default .Params.cover) -}}
     {{- if not $cover -}}
       {{- with .Params.images -}}
         {{- if reflect.IsSlice . -}}{{- $cover = index . 0 -}}{{- else -}}{{- $cover = . -}}{{- end -}}

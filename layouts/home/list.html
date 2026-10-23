@@ -68,7 +68,7 @@
       {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" $page) -}}
       {{- $cat := "" -}}
       {{- with $page.Params.categories }}{{ $cat = index . 0 }}{{ end -}}
-      {{- $imgRaw := $page.Params.image | default $page.Params.img -}}
+      {{- $imgRaw := partial "one-string.html" ($page.Params.image | default $page.Params.img) -}}
       {{- if and $imgRaw (not (or (hasPrefix $imgRaw "http://") (hasPrefix $imgRaw "https://"))) }}{{ $imgRaw = $imgRaw | absURL }}{{ end -}}
       {{- $imgInfo := partial "img-src.html" (dict "src" $imgRaw "page" $page "sizes" "(max-width: 768px) 92vw, (max-width: 1024px) 45vw, 28vw" "widths" (slice 400 800)) -}}
       {{- $item := dict

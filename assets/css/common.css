@@ -902,6 +902,13 @@ a {
   color: var(--text-secondary);
   font-size: 1.1rem;
   transition: color 0.2s, transform 0.2s;
+  /* 纯图标链接原本只有字形那么宽（线上实测 16×32=512px²），够不到 WCAG 2.5.8 的 24×24 面积；
+     这一排本来就在 grid 里（repeat(4,1fr) + justify-items:center），钉成 24 不会挤破布局 */
+  min-width: 24px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .footer .footer-right .social-row a:hover {

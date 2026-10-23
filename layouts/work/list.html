@@ -35,14 +35,14 @@
       {{- $link := $item.url -}}
       {{- if $link }}
       <a class="work-card work-card-link" data-reveal href="{{ $link }}" target="_blank" rel="noopener">
-        <h4 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h4>
+        <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
         <p data-i18n="work-card-{{ $i }}-desc">{{ $item.desc }}</p>
         {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
         {{- if $w.show_url_icon }}<i class="fas fa-external-link-alt work-ext-icon"></i>{{ end }}
       </a>
       {{- else }}
       <div class="work-card" data-reveal>
-        <h4 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h4>
+        <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
         <p data-i18n="work-card-{{ $i }}-desc">{{ $item.desc }}</p>
         {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
       </div>

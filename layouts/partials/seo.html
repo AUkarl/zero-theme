@@ -20,17 +20,21 @@
   ---------- */ -}}
 {{- $descMax := $seo.description_length | default 160 -}}
 {{- $desc := "" -}}
-{{- with .Params.description }}{{ $desc = . }}{{ end -}}
-{{- if not $desc }}{{ with .Description }}{{ $desc = . }}{{ end }}{{ end -}}
+{{- /* 每一档都过 one-string：data/*.json 与 front matter 里的描述写成数组/对象时，
+       以前会一路撞到下面那句 plainify 上，报 `unable to cast map[string]interface{}`
+       把**整站构建**打死（每一页都跑这个 partial）。切片就取第一项，映射等怪形状当没填。 */ -}}
+{{- with .Params.description }}{{ $desc = partial "one-string.html" . }}{{ end -}}
+{{- if not $desc }}{{ with .Description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
 {{- if not $desc }}{{ with .Summary }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
-{{- if not $desc }}{{ with $seo.default_description }}{{ $desc = . }}{{ end }}{{ end -}}
-{{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with $seo.default_description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
+{{- if or (reflect.IsSlice $desc) (reflect.IsMap $desc) }}{{ $desc = "" }}{{ end -}}
 {{- $desc = $desc | plainify | htmlUnescape | replaceRE `\s+` " " | strings.TrimSpace | truncate $descMax -}}
 
 {{- /* ---------- 分享图：页面 image/img → 配置默认 → 站点 logo ---------- */ -}}
-{{- $image := .Params.image | default .Params.img -}}
-{{- if not $image }}{{ $image = $seo.og_image_default }}{{ end -}}
-{{- if not $image }}{{ $image = (partial "site-config.html" .).favicon | default "img/logo-nav.png" }}{{ end -}}
+{{- $image := partial "one-string.html" (.Params.image | default .Params.img) -}}
+{{- if not $image }}{{ $image = partial "one-string.html" $seo.og_image_default }}{{ end -}}
+{{- if not $image }}{{ $image = partial "one-string.html" ((partial "site-config.html" .).favicon | default "img/logo-nav.png") }}{{ end -}}
 {{- /* 抓得到就换成构建时处理过的 1200w WebP（外链也能处理），拿不到就退回原地址 */ -}}
 {{- $ogInfo := partial "img-src.html" (dict "src" $image "page" . "widths" (slice 1200) "lqip" false) -}}
 {{- if $ogInfo.ok -}}
@@ -74,7 +78,9 @@
 {{- $siteName := (partial "site-config.html" .).navName -}}
 {{- /* 首页的 .Title 是 content/_index.md 里的标题（新建站时那份还是示例站的 "Example Site"），
        分享卡片会顶着它 —— 和浏览器标签、RSS 统一：首页只用站点名 */ -}}
-{{- $pageTitle := .Title | default $siteName -}}
+{{- /* 标题口径只有一份：见 partials/page-title.html（没写 title 的内容会退正文摘要→日期→站名，
+       以前这里 `.Title | default $siteName` 会让分享卡片顶着站点名） */ -}}
+{{- $pageTitle := partial "page-title.html" . -}}
 {{- if .IsHome }}{{ $pageTitle = $siteName }}{{ end -}}
 
 {{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
@@ -99,7 +105,13 @@
 {{- end }}
 {{- if (ne $seo.enable_keywords false) }}
   {{- with $keywords }}
+    {{- /* delimit 只吃切片：keywords 被人写成一句字符串（后台那格就是逗号分隔的输入框）时，
+           以前这句会让整站构建死在 delimit 上，与 description 那条是同一家族 */ -}}
+    {{- if reflect.IsSlice . }}
 <meta name="keywords" content="{{ delimit . ", " }}">
+    {{- else if eq (printf "%T" .) "string" }}
+<meta name="keywords" content="{{ . }}">
+    {{- end }}
   {{- end }}
 {{- end }}
 {{- with $author }}
@@ -113,9 +125,13 @@
 <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
 <meta property="og:url" content="{{ .Permalink }}">
 <meta property="og:site_name" content="{{ $siteName }}">
-<meta property="og:locale" content="{{ replace (.Language.Lang | default "zh") "-" "_" }}">
+{{- /* og:locale 要的是 zh_CN 这种形状：hugo.toml 顶层那句 locale = "zh-CN" 进的是 .Language.Locale，
+       以前取的 .Language.Lang 只有 "zh"（里面没有 "-" 可替换），所以线上一直是 og:locale=zh。
+       不要写成 Locale | default LanguageCode | default Lang —— default 是急切求值的，
+       中间那档 v0.158 起已废弃，就算永远取不到也会**每页**喷一条 deprecated WARN（实测）。 */ -}}
+<meta property="og:locale" content="{{ replace (.Language.Locale | default .Language.Lang | default "zh") "-" "_" }}">
 {{- range .Translations }}
-<meta property="og:locale:alternate" content="{{ replace (.Language.Lang | default "zh") "-" "_" }}">
+<meta property="og:locale:alternate" content="{{ replace (.Language.Locale | default .Language.Lang | default "zh") "-" "_" }}">
 {{- end }}
 {{- with $image }}
 <meta property="og:image" content="{{ . }}">
@@ -182,16 +198,19 @@
     {{- end -}}
 <script type="application/ld+json">{{ $article | jsonify | safeJS }}</script>
 
-    {{- /* 面包屑：站点 → 栏目 → 文章 */ -}}
+    {{- /* 面包屑：站点 → 栏目 → 文章
+       栏目那一级只有在**真的渲染出来了**才写：内容仓给 `_index.md` 写 `build: { render: never }`
+       （主题 exampleSite 出厂就是这份写法）时，`.CurrentSection.Permalink` 是空串，
+       以前会照样 append 出一条 `"item":""` 的无效项 —— Google 富结果校验就是卡在这。 */ -}}
     {{- if (ne $seo.enable_breadcrumb false) -}}
       {{- $pos := 1 -}}
       {{- $items := slice (dict "@type" "ListItem" "position" $pos "name" $siteName "item" .Site.Home.Permalink) -}}
-      {{- if and .CurrentSection (not .CurrentSection.IsHome) -}}
+      {{- if and .CurrentSection (not .CurrentSection.IsHome) .CurrentSection.Permalink -}}
         {{- $pos = add $pos 1 -}}
         {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) -}}
       {{- end -}}
       {{- $pos = add $pos 1 -}}
-      {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) -}}
+      {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" $pageTitle "item" .Permalink) -}}
 <script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BreadcrumbList" "itemListElement" $items | jsonify | safeJS }}</script>
     {{- end -}}
   {{- else -}}

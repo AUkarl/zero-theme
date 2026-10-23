@@ -142,7 +142,7 @@
 }
 
 /* --- 标题：最多 N 行，固定占 N 行高度（保证卡片等高） --- */
-.garden-card h3 {
+.garden-card h2 {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text);
@@ -176,7 +176,6 @@
   font-size: 0.75rem;
   color: var(--text-secondary);
   margin-top: 10px;
-  opacity: 0.7;
 }
 
 .garden-card .card-meta {

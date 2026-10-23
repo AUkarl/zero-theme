@@ -1,0 +1,25 @@
+{{- /* ============================================================
+  one-string.html — 把「给人直接编辑的图片/链接/描述字段」归一成字符串
+    · 为什么需要：data/*.json 与 front matter 里的 image/img/logo/favicon/ogImage/description
+      常被写成 `- a.png`（切片）或 `{url: …}`（映射），而 hugo 的 hasPrefix / absURL / plainify / delimit
+      拿到非字符串会**直接抛错**，这些 partial 又每页都跑 —— 一处形状不对就是整站构建死
+      （R31-3 的作者框、本轮的 description 都是同一家族）。
+    · 归一规则：切片 → 第一个字符串元素；映射/空 → 空串（调用方本来就有「空就当没填」的退路）；
+      数字与布尔 → 转成文字，别把作者真写的值抹掉。
+    · 两个坑（本轮各撞过一次）：
+        ① Hugo 的 reflect 命名空间只有 IsMap / IsSlice / IsNil，**没有 IsString**
+           —— 写 reflect.IsString 会「can't evaluate field IsString」当场把渲染打死；判字符串只能 printf "%T"。
+        ② `return` 只认「一个变量」：写成 `return (printf "%v" $v)` 会报
+           「wrong number of args for return: want 0 got 1」→ 先落到 $out，最后一句 return $out。
+    · 用法：{{ $img := partial "one-string.html" .Params.image }}
+  ============================================================ */ -}}
+{{- $v := . -}}
+{{- $out := "" -}}
+{{- if reflect.IsSlice $v -}}
+  {{- range $v -}}
+    {{- if and (not $out) (eq (printf "%T" .) "string") }}{{ $out = . }}{{ end -}}
+  {{- end -}}
+{{- else if and (not (reflect.IsMap $v)) $v -}}
+  {{- $out = (printf "%v" $v) -}}
+{{- end -}}
+{{- return $out -}}

@@ -104,7 +104,7 @@
           {{- if $page -}}
             {{- $cat := partial "home-taxo.html" (dict "p" $page "key" "categories") -}}
             {{- $tg := partial "home-taxo.html" (dict "p" $page "key" "tags") -}}
-            {{- $img := $slot.image | default $page.Params.image | default $page.Params.img | default $defaultImage -}}
+            {{- $img := partial "one-string.html" ($slot.image | default $page.Params.image | default $page.Params.img | default $defaultImage) -}}
             {{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
             {{- $desc := $slot.desc | default ($page.Description | default $page.Summary | plainify | truncate $descLen) -}}
             {{- partial "home-bento-slot.html" (dict
@@ -134,7 +134,7 @@
           {{- $page := $item.page -}}
           {{- $cat := partial "home-taxo.html" (dict "p" $page "key" "categories") -}}
           {{- $tg := partial "home-taxo.html" (dict "p" $page "key" "tags") -}}
-          {{- $img := $page.Params.image | default $page.Params.img | default $defaultImage -}}
+          {{- $img := partial "one-string.html" ($page.Params.image | default $page.Params.img | default $defaultImage) -}}
           {{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
           {{- $badge := "" -}}
           {{- if $item.pinned }}
@@ -188,7 +188,7 @@
         {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" $page) -}}
         {{- $cat := partial "home-taxo.html" (dict "p" $page "key" "categories") -}}
         {{- $tg := partial "home-taxo.html" (dict "p" $page "key" "tags") -}}
-        {{- $img := $page.Params.image | default $page.Params.img | default $defaultImage -}}
+        {{- $img := partial "one-string.html" ($page.Params.image | default $page.Params.img | default $defaultImage) -}}
         {{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
         {{- $hidden := ge $i $initialVisible -}}
         {{- $info := partial "img-src.html" (dict "src" $img "page" $page "sizes" $acSizes "widths" $acWidths) -}}

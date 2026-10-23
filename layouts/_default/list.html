@@ -30,7 +30,7 @@
             {{- with .Params.categories }}
             <span class="tag">{{ index . 0 }}</span>
             {{- end }}
-            <h3>{{ .Title }}</h3>
+            <h2>{{ .Title }}</h2>
             <p>{{ .Description | default .Summary | plainify | truncate $summaryLen }}</p>
             <div class="meta">{{ .Date.Format "2006-01-02" }} · {{ .ReadingTime }} min</div>
           </div>

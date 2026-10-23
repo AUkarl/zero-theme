@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  page-title.html — 页面标题的唯一口径
+    · <title>（head.html）、og:title / twitter:title / JSON-LD headline（seo.html）都取这一个值，
+      免得两处各自 `.Title | default 站名` 手抄两份、改一处就漂。
+    · 没写 title 的内容文件（后台发时刻只写 date/images）以前会一路空到
+      标签页只剩一个「· 站名」，分享卡片顶着的还是站点名。现在的退路是
+      .Title → 正文摘要（24 字）→ 日期 → 站名。
+    · 摘要只在真的没有 title 时才算：.Plain 要过一遍正文，不该每页都白算。
+    · 两个坑（本轮在台架上撞出来的）：
+        ① 别拿 `.Section` 当兜底 —— 它是页面对象，打印出来是 "moments" 这种路径串；
+        ② 别加「必须是 string」的类型护栏 —— `truncate` 返回的是 template.HTML，
+           那种护栏会把自己的成果抹成空串，等于没兜底。要挡的只是切片/映射这两种怪形状。
+  ============================================================ */ -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $fallback := $siteCfg.name | default $siteCfg.navName | default "站点" -}}
+{{- $t := .Title -}}
+{{- if or (reflect.IsSlice $t) (reflect.IsMap $t) }}{{ $t = "" }}{{ end -}}
+{{- if not $t }}{{ $t = printf "%s" (.Plain | plainify | replaceRE `\s+` " " | strings.TrimSpace | truncate 24 "…") }}{{ end -}}
+{{- if not $t }}{{ $t = .Date.Format "2006-01-02" }}{{ end -}}
+{{- if not $t }}{{ $t = $fallback }}{{ end -}}
+{{- return $t -}}

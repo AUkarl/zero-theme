@@ -41,7 +41,7 @@
   {{- else if .Params.seoTitle -}}
     {{ .Params.seoTitle }} {{ $sep }} {{ $siteName }}
   {{- else -}}
-    {{ .Title }} {{ $sep }} {{ $siteName }}
+    {{ partial "page-title.html" . }} {{ $sep }} {{ $siteName }}
   {{- end -}}
 </title>
 
