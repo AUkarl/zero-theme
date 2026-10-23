@@ -8,13 +8,13 @@
     [page_loader]
       enable = true          # 关掉就完全不输出
       text   = ""            # 留空则用 i18n 的 loader-text
-      min_ms = 320           # 最短停留，加载再快也先显示这么久
+      min_ms = 120           # 最短停留，加载再快也先显示这么久（原来 320，纯等待，压到一帧半）
       max_ms = 2600          # 资源一直加载不完也强制收场的兜底
   ============================================================ */ -}}
 {{- $pl := site.Params.page_loader | default dict -}}
 {{- if ne $pl.enable false -}}
 {{- $text := $pl.text | default (i18n "loader-text" | default "我们的相逢，恰如其实") -}}
-{{- $minMs := $pl.min_ms | default 320 -}}
+{{- $minMs := $pl.min_ms | default 120 -}}
 {{- $maxMs := $pl.max_ms | default 2600 -}}
 <div class="page-loader" id="pageLoader" aria-hidden="true">
   <div class="page-loader-inner">

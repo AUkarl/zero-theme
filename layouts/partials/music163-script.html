@@ -14,6 +14,27 @@
    ============================================================ */ -}}
 <script>
 (function () {
+  /* 播放器等到快进视野（上下 300px）才真正设 src：iframe 一有 src 就开始连 music.163.com，
+     实测量到两枚播放器各卡 7.3~7.5s，把整页的 load 从 2.2s 拖到 9.6s（load 之后还有别的逻辑在等）。
+     占位、尺寸、圆角都不变，只是把请求推迟到真要看见的时候。
+     没有 IntersectionObserver 的老浏览器直接设 src，与改动前一致。 */
+  function queue(box, frame, src) {
+    if (!('IntersectionObserver' in window)) { frame.src = src; return; }
+    var io = window.__zeroMusic163IO;
+    if (!io) {
+      io = window.__zeroMusic163IO = new IntersectionObserver(function (entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (!entries[i].isIntersecting) continue;
+          var f = entries[i].target.querySelector('iframe[data-src]');
+          if (f) { f.src = f.getAttribute('data-src'); f.removeAttribute('data-src'); }
+          io.unobserve(entries[i].target);
+        }
+      }, { rootMargin: '300px 0px' });
+    }
+    frame.setAttribute('data-src', src);
+    io.observe(box);
+  }
+
   if (!window.__zeroMusic163) {
     window.__zeroMusic163 = function () {
       var mobile = /Mobi|Android|iPhone|iPod|Windows Phone|BlackBerry|Opera Mini/i.test(navigator.userAgent);
@@ -33,10 +54,10 @@
         f.setAttribute('allow', 'autoplay; encrypted-media');
         /* 没有 title 的 iframe 读屏只会念「框架」，访客不知道那是什么；外观不受影响 */
         f.setAttribute('title', '网易云音乐播放器 ' + (box.getAttribute('data-id') || ''));
-        f.src = src;
         f.style.cssText = 'width:100%;height:' + h + 'px;border:0;display:block;';
         box.innerHTML = '';
         box.appendChild(f);
+        queue(box, f, src);
       }
     };
   }

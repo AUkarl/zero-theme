@@ -63,6 +63,13 @@
 
 {{- /* ===== 外部资源：预连接，提前建连 ===== */ -}}
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+{{- /* 接口域：评论、点赞、统计、作者资料首屏就要连它。实测新建一条 TLS 连接 0.5~0.6s，
+       而评论区从滚动到出内容总共才 1.2s —— 这一段白等掉将近一半。
+       只建连、不预取任何内容；crossorigin 与页面里那些 fetch 的口径一致（不提前带凭据）。 */ -}}
+{{- $zeroAPI := partial "zero/api.html" . -}}
+{{- if $zeroAPI.enabled -}}
+<link rel="preconnect" href="{{ $zeroAPI.base }}" crossorigin>
+{{- end -}}
 
 {{- /* 字体：只使用系统字体栈（见 common.css 的 --font）。
      原来这里引 Google Fonts，但它在国内基本不可达，还会多一次失败请求 + 字体晚到导致的
