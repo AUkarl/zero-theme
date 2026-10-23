@@ -28,6 +28,15 @@
   ============================================================ */ -}}
 {{- $src := partial "one-string.html" .src -}}
 {{- $page := .page -}}
+{{- /* R44：调用方声明了 variant 角色（article/moment/cover）时，先查上传期生成的变体清单。
+       命中就直接返回（360/720 显示 + data-orig 1080 放大），不再走构建期抓取；
+       没命中继续原来的路径（本地图构建期处理 / 远程图回退原链）。
+       og:image 那一路不传 variant，所以分享图仍然是原来的 1200w 处理结果。 */ -}}
+{{- $variantHit := false -}}
+{{- with .variant -}}
+  {{- $v := partial "variants-lookup.html" (dict "src" $src "role" .) -}}
+  {{- if $v.ok }}{{ $variantHit = $v }}{{ end -}}
+{{- end -}}
 {{- $sizes := .sizes | default "100vw" -}}
 {{- $widths := .widths | default (slice 400 800 1200) -}}
 {{- /* 全局图片管线参数在 params.toml 的 [image]：调用方传了 quality / lqip 就以调用方为准 */ -}}
@@ -49,6 +58,7 @@
 {{- $reqTimeout := $img.remote_timeout | default (site.Params.remote_image_timeout | default "20s") -}}
 
 {{- $out := dict "ok" false "src" $src "orig" $src "srcset" "" "sizes" $sizes "lqip" "" "width" 0 "height" 0 -}}
+{{- if $variantHit }}{{ $out = $variantHit }}{{- else -}}
 
 {{- if $src -}}
   {{- $isRemote := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") -}}
@@ -151,5 +161,6 @@
     {{- /* 主动关掉抓取（[image].remote_fetch = false）不是故障，不出告警；真的抓失败了才提醒 */ -}}
     {{- if $allowRemote -}}{{- warnf "img-src: 抓取失败，已退回原始链接 → %s" $src -}}{{- end -}}
   {{- end -}}
+{{- end -}}
 {{- end -}}
 {{- return $out -}}

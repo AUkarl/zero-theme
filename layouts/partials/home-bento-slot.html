@@ -40,7 +40,7 @@
   {{- $widths = slice 400 800 1200 -}}
 {{- end -}}
 
-{{- $info := partial "img-src.html" (dict "src" $image "page" $page "sizes" $sizes "widths" $widths) -}}
+{{- $info := partial "img-src.html" (dict "src" $image "page" $page "sizes" $sizes "widths" $widths "variant" "cover") -}}
 {{- $bg := "" -}}
 {{- with $info.lqip -}}
   {{- $bg = printf "background-image:url(%s);background-size:cover;background-position:center;" . | safeCSS -}}
@@ -56,7 +56,7 @@
   {{- end -}}
   {{- $imgAttrs = printf `%s sizes="%s" width="%d" height="%d" alt="%s" decoding="async"` $load $info.sizes $info.width $info.height ($title | plainify) -}}
 {{- else -}}
-  {{- $imgAttrs = printf ` src="%s" alt="%s" loading="%s" decoding="async"` $image ($title | plainify) (cond $eager "eager" "lazy") -}}
+  {{- $imgAttrs = printf ` src="%s" alt="%s" loading="%s" decoding="async"%s` $image ($title | plainify) (cond $eager "eager" "lazy") (cond $eager ` fetchpriority="high"` ``) -}}
 {{- end -}}
 {{- $statusCls := cond $info.ok "" " is-loaded" -}}
 

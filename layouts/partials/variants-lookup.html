@@ -1,0 +1,70 @@
+{{- /* ============================================================
+  variants-lookup.html — 从「构建期清单」里查一张图的三档变体（R44）
+  ------------------------------------------------------------
+  入参（dict）：
+    src   图片地址（外链或 /api/media 代理地址都行；会归一成桶内键去查）
+    role  article | moment | cover —— 决定显示上限与 sizes
+  返回与 img-src.html 同一套键，另加：
+    dataOrig  点击放大用的 1080 地址（灯箱读 data-orig）
+    variant   true，调用方据此知道这是变体而不是构建期处理的结果
+
+  为什么查清单而不是直接拼地址：变体是上传时生成的，构建期并不知道某张图有没有；
+  清单里没有就**干净地回退原图**（不出 srcset、不产生 404）。清单文件在内容仓
+  data/media-variants.json，由后台上传/「重建图片变体」维护。
+  ============================================================ */ -}}
+{{- $src := partial "one-string.html" .src -}}
+{{- $role := .role | default "article" -}}
+{{- $out := dict "ok" false "variant" false -}}
+{{- $manifest := index hugo.Data "media-variants" -}}
+
+{{- /* 地址 → 桶内键：去协议域名，去 /api/media/<桶>/ 前缀，去前导斜杠 */ -}}
+{{- $key := $src -}}
+{{- if or (hasPrefix $key "http://") (hasPrefix $key "https://") (hasPrefix $key "//") -}}
+  {{- $key = replaceRE `^(?:https?:)?//[^/]+` "" $key -}}
+{{- end -}}
+{{- $key = replaceRE `^/api/media/[^/]+/` "" $key -}}
+{{- $key = strings.TrimPrefix "/" $key -}}
+{{- $key = strings.TrimSuffix "/" $key -}}
+
+{{- if and $manifest $key -}}
+  {{- $entry := index $manifest $key -}}
+  {{- if and $entry (reflect.IsMap $entry) -}}
+    {{- $tiers := $entry.v -}}
+    {{- $aspect := float ($entry.a | default 0) -}}
+    {{- /* 显示上限：正文/时刻/封面都到 720；1080 只给点击放大 */ -}}
+    {{- $maxH := 720 -}}
+    {{- $sizes := "(max-width: 900px) 100vw, 840px" -}}
+    {{- if eq $role "moment" }}{{ $sizes = "(max-width: 600px) 33vw, 220px" }}{{ end -}}
+    {{- if eq $role "cover" }}{{ $sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" }}{{ end -}}
+    {{- if and $tiers (reflect.IsMap $tiers) -}}
+      {{- $cands := slice -}}
+      {{- range (slice "360" "720") -}}
+        {{- $u := index $tiers . -}}
+        {{- if $u }}{{ $cands = $cands | append (dict "h" (int .) "u" $u) }}{{ end -}}
+      {{- end -}}
+      {{- if $cands -}}
+        {{- $last := index $cands (sub (len $cands) 1) -}}
+        {{- $srcset := slice -}}
+        {{- range $cands -}}
+          {{- $w := int (math.Round (mul (float .h) $aspect)) -}}
+          {{- $srcset = $srcset | append (printf "%s %dw" .u $w) -}}
+        {{- end -}}
+        {{- $w720 := int (math.Round (mul (float $last.h) $aspect)) -}}
+        {{- $orig := index $tiers "1080" | default $last.u -}}
+        {{- $out = dict
+          "ok" true
+          "variant" true
+          "src" $last.u
+          "srcset" (delimit $srcset ", ")
+          "sizes" $sizes
+          "lqip" ""
+          "width" $w720
+          "height" $last.h
+          "orig" $src
+          "dataOrig" $orig
+        -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

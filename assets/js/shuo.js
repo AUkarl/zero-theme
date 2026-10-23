@@ -206,7 +206,9 @@ function __shuoBoot__() {
       // 外层用按钮：点了只放大查看，不跳转外链
       html += '<button type="button" class="' + linkCls + '" aria-label="' + esc(t.view || '查看大图') + '"' + linkStyle + '>';
       if (src) {
-        html += '<img class="shuo-img" data-src="' + esc(src) + '" data-srcset="' + esc(srcset) + '" sizes="' + esc(sizes) + '"' + dims + bg + ' alt="" decoding="async">';
+        /* data-orig 给灯箱用（1080 变体）；没有就按 data-src 放大，行为与以前一致 */
+        var origFull = img && img.dataOrig ? ' data-orig="' + esc(img.dataOrig) + '"' : '';
+        html += '<img class="shuo-img" data-src="' + esc(src) + '" data-srcset="' + esc(srcset) + '" sizes="' + esc(sizes) + '"' + origFull + dims + bg + ' alt="" decoding="async">';
       } else {
         html += '<img class="shuo-img" src="' + esc(orig) + '" alt="" loading="lazy">';
       }

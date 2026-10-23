@@ -95,7 +95,7 @@
   {{- end -}}
   {{- $imgs := slice -}}
   {{- range $img := ($p.Params.images | default slice) -}}
-    {{- $imgs = $imgs | append (partial "img-src.html" (dict "src" $img "page" $p "sizes" $sizes "widths" (slice 400 800))) -}}
+    {{- $imgs = $imgs | append (partial "img-src.html" (dict "src" $img "page" $p "sizes" $sizes "widths" (slice 400 800) "variant" "moment")) -}}
   {{- end -}}
   {{- /* 链接卡片：支持 link 写成 map（url/title/desc/image），也兼容直接写一个地址字符串 */ -}}
   {{- $lk := $p.Params.link -}}

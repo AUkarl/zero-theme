@@ -45,6 +45,27 @@
   {{- end -}}
 </title>
 
+{{- /* R44：给「本页会用到图片的那个域」预连接一次。
+   图片通常放在独立媒体域（R2 自定义域），跨域要 DNS+TLS 两趟；首屏图因此常见「字节不多、却慢半秒」。
+   只从本页 front matter 的图片字段里取域（封面/时刻图），最多三个，跳过与站点同源的。 */ -}}
+{{- $imgCands := slice -}}
+{{- with .Params.image }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- with .Params.img }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- with .Params.images }}{{ range . }}{{ $imgCands = $imgCands | append . }}{{ end }}{{ end -}}
+{{- with .Params.music_cover }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- $siteHost := (urls.Parse site.BaseURL).Host -}}
+{{- $hosts := slice -}}
+{{- range $imgCands -}}
+  {{- $s := partial "one-string.html" . -}}
+  {{- if or (hasPrefix $s "http://") (hasPrefix $s "https://") -}}
+    {{- $h := (urls.Parse $s).Host -}}
+    {{- if and $h (ne $h $siteHost) }}{{ $hosts = $hosts | append $h }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+{{- range first 3 ($hosts | uniq) }}
+<link rel="preconnect" href="https://{{ . }}" crossorigin>
+{{- end }}
+
 {{- /* SEO 元数据（description / canonical / robots / OG / Twitter / JSON-LD） */ -}}
 {{- partial "seo.html" . -}}
 

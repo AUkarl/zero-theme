@@ -1,0 +1,21 @@
+{{- /* ============================================================
+  render-image.html — 正文 markdown 图片的渲染钩子（R44）
+  ------------------------------------------------------------
+  在这之前，正文里的 `![]()` 是 Hugo 原样输出的 `<img src=原图>`：
+  没有 srcset、没有宽高、手机也只能下原图 —— 全站图片慢的主要来源。
+  这里接上「上传期三档变体」的清单：
+    · 有变体：显示 720（备 360），`data-orig` 给灯箱 1080，带 width/height 防抖动
+    · 没变体（还没回填 / 第三方图源）：原样输出，只补 lazy 与解码提示
+  首图（.Ordinal == 0）给 eager + fetchpriority=high：它往往就是 LCP 元素，
+  以前它也是 lazy，等于让浏览器等布局完成才去下。
+  ============================================================ */ -}}
+{{- $src := .Destination -}}
+{{- $eager := eq .Ordinal 0 -}}
+{{- $alt := .PlainText -}}
+{{- if not $alt }}{{ $alt = .Text | plainify }}{{ end -}}
+{{- $v := partial "variants-lookup.html" (dict "src" $src "role" "article") -}}
+{{- if $v.ok -}}
+<img src="{{ $v.src }}" srcset="{{ $v.srcset }}" sizes="{{ $v.sizes }}" width="{{ $v.width }}" height="{{ $v.height }}"{{ with $v.dataOrig }} data-orig="{{ . }}"{{ end }} alt="{{ $alt }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="{{ cond $eager "eager" "lazy" }}" decoding="async"{{ if $eager }} fetchpriority="high"{{ end }}>
+{{- else -}}
+<img src="{{ $src | safeURL }}" alt="{{ $alt }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="{{ cond $eager "eager" "lazy" }}" decoding="async"{{ if $eager }} fetchpriority="high"{{ end }}>
+{{- end -}}
