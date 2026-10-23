@@ -62,6 +62,10 @@
     {{- if and $h (ne $h $siteHost) }}{{ $hosts = $hosts | append $h }}{{ end -}}
   {{- end -}}
 {{- end -}}
+{{- /* R45：评论头像的三个常见源，只做 dns-prefetch（真正建连交给组件按需） */ -}}
+<link rel="dns-prefetch" href="https://cravatar.cn">
+<link rel="dns-prefetch" href="https://secure.gravatar.com">
+<link rel="dns-prefetch" href="https://q1.qlogo.cn">
 {{- range first 3 ($hosts | uniq) }}
 <link rel="preconnect" href="https://{{ . }}" crossorigin>
 {{- end }}
