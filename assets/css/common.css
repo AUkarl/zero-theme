@@ -101,6 +101,19 @@
 html {
   font-size: 17px;
   scroll-behavior: smooth;
+  /* 全站不显示滚动条（滚动本身不受影响）。这与主题里 .nav-inner / .article-toc /
+     .links-tabs / .tl-chips 已有的做法同源：scrollbar-width 给 Firefox，::-webkit-scrollbar 给
+     Chrome/Safari/Edge，-ms-overflow-style 留给旧 Edge。
+     顺带消掉一个布局跳变：滚动条占的那 7px 会让「有滚动条的页」与「没有的页」正文宽度不一致，
+     开关区块在运行时展开、页面从不可滚变成可滚时，整页会横向挪一下。 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 body {

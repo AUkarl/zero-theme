@@ -199,7 +199,10 @@ function __shuoBoot__() {
         orig = img.orig || src;
         srcset = img.srcset || '';
         sizes = img.sizes || '';
-        if (img.w && img.h) { dims = ' width="' + img.w + '" height="' + img.h + '"'; ratio = img.w + ' / ' + img.h; }
+        /* 构建期那份清单的键就叫 width/height（partials/img-src.html），
+           以前这里读的是 img.w / img.h —— 于是时刻页每张图都拿不到宽高：
+           既写不进 <img>，单图的 aspect-ratio 也永远走 no-ratio 兜底。 */
+        if (img.width && img.height) { dims = ' width="' + img.width + '" height="' + img.height + '"'; ratio = img.width + ' / ' + img.height; }
         if (img.lqip) bg = ' style="background-image:url(' + img.lqip + ');background-size:cover;background-position:center"';
       } else if (img) {
         src = String(img);

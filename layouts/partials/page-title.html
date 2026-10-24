@@ -14,6 +14,12 @@
 {{- $siteCfg := partial "site-config.html" . -}}
 {{- $fallback := $siteCfg.name | default $siteCfg.navName | default "站点" -}}
 {{- $t := .Title -}}
+{{- /* /author/ 是 Hugo 自动生成的分类法一览页，标题会回退成 taxonomy 的英文名（中文站显示
+       「Author」）。这里按 i18n 取语言化的名字，与 taxonomy/author.html 那处同一个口径；
+       单个作者的资料页（kind=term）不受影响。 */ -}}
+{{- if and (eq .Kind "taxonomy") (eq (strings.ToLower (string .Data.Singular)) "author") -}}
+  {{- $t = i18n "author" | default $t -}}
+{{- end -}}
 {{- if or (reflect.IsSlice $t) (reflect.IsMap $t) }}{{ $t = "" }}{{ end -}}
 {{- if not $t }}{{ $t = printf "%s" (.Plain | plainify | replaceRE `\s+` " " | strings.TrimSpace | truncate 24 "…") }}{{ end -}}
 {{- if not $t }}{{ $t = .Date.Format "2006-01-02" }}{{ end -}}

@@ -76,6 +76,10 @@
 
 <main class="main" id="main">
 <section id="home-bento">
+  {{- /* 后台没填顶部大标题时，页面就一个 h1 都没有（读屏进首页听不到主标题，
+         axe 报 page-has-heading-one）。这里补一个只给读屏的 h1，视觉零变化；
+         填了就走下面那条 <h1 class="hb-title">，两个分支互斥、不会多出第二个。 */ -}}
+  {{- if not $introTitle }}<h1 class="zero-sr-only">{{ i18n "home-title" | default "主页" }}</h1>{{ end }}
   {{- /* ===== 顶部简介 ===== */ -}}
   {{- if or $introEyebrow $introTitle $introDesc }}
   <div class="hb-intro">

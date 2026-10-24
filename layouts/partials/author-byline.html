@@ -76,7 +76,9 @@
   {{- end -}}
   <span class="byline-item" data-author="{{ $id }}" data-initial="{{ substr $name 0 1 }}" data-raw="{{ if $known }}0{{ else }}1{{ end }}">
     {{- $open | safeHTML -}}
-    <img class="byline-avatar" src="{{ $avatar }}" alt="{{ $name }}" loading="lazy"
+    {{- /* 名字紧跟着就摆在旁边（<span class="byline-name">），alt 再写一遍会被读屏念两遍
+           （axe: image-redundant-alt）。头像是装饰图，退成 alt="" + aria-hidden。 */ -}}
+    <img class="byline-avatar" src="{{ $avatar }}" alt="" aria-hidden="true" loading="lazy"
          data-chain="{{ delimit $rest " " }}"
          onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.byline-item');if(h)h.classList.add('is-fallback')}">
     <span class="byline-name">{{ $name }}</span>

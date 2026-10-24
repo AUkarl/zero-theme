@@ -17,5 +17,24 @@
 {{- if $v.ok -}}
 <img src="{{ $v.src }}" srcset="{{ $v.srcset }}" sizes="{{ $v.sizes }}" width="{{ $v.width }}" height="{{ $v.height }}"{{ with $v.dataOrig }} data-orig="{{ . }}"{{ end }} alt="{{ $alt }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="{{ cond $eager "eager" "lazy" }}" decoding="async"{{ if $eager }} fetchpriority="high"{{ end }}>
 {{- else -}}
-<img src="{{ $src | safeURL }}" alt="{{ $alt }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="{{ cond $eager "eager" "lazy" }}" decoding="async"{{ if $eager }} fetchpriority="high"{{ end }}>
+  {{- /* 没进清单的图：本地图在构建期取真尺寸补 width/height（CSS 是 max-width:100% + height:auto，
+         补上属性只是让浏览器提前留出这块比例，**不改任何视觉效果**）；
+         远程图与 svg 拿不到尺寸就照旧不写，绝不为了补属性在构建期去联网。 */ -}}
+  {{- $w := 0 -}}
+  {{- $h := 0 -}}
+  {{- $remote := or (hasPrefix $src "http://") (hasPrefix $src "https://") (hasPrefix $src "//") (hasPrefix $src "data:") -}}
+  {{- $clean := strings.TrimPrefix "/" $src -}}
+  {{- $noSize := or (hasSuffix (lower $clean) ".svg") (hasSuffix (lower $src) ".svg") -}}
+  {{- if and (not $remote) (not $noSize) -}}
+    {{- $res := $.Page.Resources.GetMatch $clean -}}
+    {{- if and $res $res.Width $res.Height -}}
+      {{- $w = $res.Width -}}{{- $h = $res.Height -}}
+    {{- else -}}
+      {{- $fp := printf "static/%s" $clean -}}
+      {{- if fileExists $fp -}}
+        {{- $ic := imageConfig $fp -}}{{- $w = $ic.Width -}}{{- $h = $ic.Height -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+<img src="{{ $src | safeURL }}" alt="{{ $alt }}"{{ with .Title }} title="{{ . }}"{{ end }}{{ if and $w $h }} width="{{ $w }}" height="{{ $h }}"{{ end }} loading="{{ cond $eager "eager" "lazy" }}" decoding="async"{{ if $eager }} fetchpriority="high"{{ end }}>
 {{- end -}}

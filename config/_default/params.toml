@@ -474,10 +474,13 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
     text = "这个站点用来记录我读过的、写过的和想过的东西。"
   [[about.declaration]]
     text = "本站所有内容除特别声明外均采用 CC BY-NC-SA 4.0 许可协议。"
+  # 联系方式留空 = 关于页不出「找到我」那一栏（跟上面 footer 的 icp_items / social_row1 同一个约定：
+  # 保留块与写法，只把演示值清空）。这里一旦写着 you@example.com，任何没在后台填过联系方式的站
+  # 都会把这个假邮箱摆到访客面前 —— 后台 data/about.json 填了才会覆盖这一段。
   [[aboutContacts]]
-    label = "Email"
-    text = "you@example.com"
-    url = "mailto:you@example.com"
+    label = ""
+    text = ""
+    url = ""
     external = true
 
 

@@ -122,7 +122,9 @@
 <link rel="stylesheet" href="{{ . | relURL }}">
 {{- end -}}
 
-{{- /* 自定义 head_html */ -}}
-{{- with .Site.Params.custom.head_html -}}
+{{- /* 自定义 head_html —— 过 one-string 护栏：写成映射/数组时当没填，而不是让 safeHTML
+       把整站构建打死（T7-02；与 R43 给 seo 那批字段用的是同一把护栏）。 */ -}}
+{{- $headHtml := partial "one-string.html" .Site.Params.custom.head_html -}}
+{{- with $headHtml -}}
 {{ . | safeHTML }}
 {{- end -}}

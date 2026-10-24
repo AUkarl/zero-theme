@@ -98,7 +98,9 @@
   {{- range .Site.Params.custom.extra_js }}
   <script src="{{ . | relURL }}"></script>
   {{- end }}
-  {{- /* 自定义 footer HTML */ -}}
-  {{- with .Site.Params.custom.footer_html }}{{ . | safeHTML }}{{ end -}}
+  {{- /* 自定义 footer HTML —— 同 head.html 那处，先过 one-string 护栏：
+         写成映射/数组时当没填，不让 safeHTML 把整站构建打死（T7-02）。 */ -}}
+  {{- $footerHtml := partial "one-string.html" .Site.Params.custom.footer_html -}}
+  {{- with $footerHtml }}{{ . | safeHTML }}{{ end -}}
 </body>
 </html>

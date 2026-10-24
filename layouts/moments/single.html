@@ -45,7 +45,7 @@
             <button type="button" class="shuo-img-link{{ if and (eq $n 1) (not (and $info.width $info.height)) }} no-ratio{{ end }}"
                     aria-label="{{ i18n "lightbox-view" | default "查看大图" }}"{{ if and (eq $n 1) $info.width $info.height }} style="aspect-ratio:{{ $info.width }} / {{ $info.height }}"{{ end }}>
               {{- if $info.ok }}
-              <img class="shuo-img" data-src="{{ $info.src }}" data-srcset="{{ $info.srcset }}"{{ with $info.dataOrig }} data-orig="{{ . }}"{{ end }} sizes="{{ $info.sizes }}"{{ with $info.lqip }} style="background-image:url({{ . }});background-size:cover;background-position:center"{{ end }} alt="" decoding="async">
+              <img class="shuo-img" data-src="{{ $info.src }}" data-srcset="{{ $info.srcset }}"{{ with $info.dataOrig }} data-orig="{{ . }}"{{ end }} sizes="{{ $info.sizes }}"{{ with $info.width }} width="{{ . }}"{{ end }}{{ with $info.height }} height="{{ . }}"{{ end }}{{ with $info.lqip }} style="background-image:url({{ . }});background-size:cover;background-position:center"{{ end }} alt="" decoding="async">
               {{- else }}
               <img class="shuo-img" src="{{ $href }}" alt="" loading="lazy">
               {{- end }}

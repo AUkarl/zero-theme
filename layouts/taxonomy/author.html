@@ -108,8 +108,13 @@
              data-chain="{{ delimit $rest " " }}"
              onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.ap-head');if(h)h.classList.add('is-fallback')}">
         <div class="ap-title">
+          {{- /* /author/ 这一页是 Hugo 自动生成的分类法一览，没有 term 也就没处取名字，
+                 .Title 会回退成 taxonomy 的英文名 → 中文站顶着一个英文「作者」页标题。
+                 有 term 的资料页不受影响（仍用表里的真名）。 */ -}}
+          {{- $displayName := $name -}}
+          {{- if and (not .Data.Term) (eq .Kind "taxonomy") }}{{ $displayName = i18n "author" | default $name }}{{ end -}}
           <h1 class="ap-name">
-            <span class="ap-name-text">{{ $name }}</span>
+            <span class="ap-name-text">{{ $displayName }}</span>
           </h1>
           <p class="ap-meta">
             {{- printf "共 %d 篇文章" $pages.Len -}}

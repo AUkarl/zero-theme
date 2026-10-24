@@ -13,6 +13,12 @@
 {{- $component := partial "zero/component-url.html" -}}
 <main class="main" id="main">
   <section class="section">
+    {{- /* 这一页的主标题：游客态下 .zsme-main 整块被 .zsme-guest 的规则 display:none
+           （account-me.css:691），把原来那个可见 h1 一起藏了 —— 未登录的人（首次访问的
+           绝大多数）这一页就没有 h1，读屏只听得见两张卡片里的 h2。
+           所以这里放一个两态都在的 sr-only h1，原来那个可见标题降成 h2：
+           .zsme-title 自己写死了 margin 与 font-size，按类名选中，换标签不动一处样式。 */ -}}
+    <h1 class="zero-sr-only">{{ i18n "zero-me-title" | default "个人中心" }}</h1>
     <div class="zsme" id="zsMe" data-api="{{ if $zero.enabled }}1{{ else }}0{{ end }}"
       {{- with $component }} data-comment-src="{{ . }}" data-short-base="{{ partial "zero/short-base.html" }}"{{ end }}>
       <aside class="zsme-side">
@@ -32,7 +38,7 @@
 
       <div class="zsme-main">
         <header class="zsme-head">
-          <h1 class="zsme-title" id="zsMeTitle">{{ i18n "zero-me-title" | default "个人中心" }}</h1>
+          <h2 class="zsme-title" id="zsMeTitle">{{ i18n "zero-me-title" | default "个人中心" }}</h2>
           <p class="zsme-note" id="zsMeNote"></p>
         </header>
         <div class="zsme-pane" id="zsMePane">

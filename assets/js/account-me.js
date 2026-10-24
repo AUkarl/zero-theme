@@ -90,6 +90,10 @@
           if (err && (err.status === 401 || err.status === 403)) return guest(err.message);
           /* 接口不可达时 ov 仍是 null：原写法直接 showTab 会去读 ov.counts 抛 TypeError，
              提示还没显示整页就断了。没有账号数据时不切页签，只把网络错误说出来。 */
+          /* 静态壳子里那行「正在加载…」此时没有归属者（不切页签 → 不会有人来替换它），
+             会和下面的错误提示同时挂在页上，看着像「还在加载、马上就好」。收掉它，
+             错误只从 msg() 说一次。 */
+          if (els.pane && !ov) els.pane.innerHTML = '';
           if (ov && ov.account) showTab(tab);
           msg(err && err.status && err.message ? err.message : (T.net || '网络出错了，请稍后再试。'), true);
         });

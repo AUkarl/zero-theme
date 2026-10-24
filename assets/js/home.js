@@ -130,7 +130,9 @@ function renderGarden() {
       if (im.src) {
         // 构建时处理过的封面：先显示 LQIP 占位，进入视口前 200px 再加载高清（motion.js）
         if (im.lqip) imgBg = ` style="background-image:url(${im.lqip});background-size:cover;background-position:center"`;
-        const dims = (im.w && im.h) ? ` width="${im.w}" height="${im.h}"` : '';
+        // 键名跟着 partials/img-src.html 走（width/height）：写 im.w 时这一条永远不成立，
+        // 首页卡片图于是全部不带宽高 —— 图一到达就顶一下版面。
+        const dims = (im.width && im.height) ? ` width="${im.width}" height="${im.height}"` : '';
         imgHtml = `<img data-src="${im.src}" data-srcset="${im.srcset || ''}" sizes="${im.sizes || '100vw'}"${dims} alt="${title}" decoding="async" />`;
       } else {
         imgHtml = article.image

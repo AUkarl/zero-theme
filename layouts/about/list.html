@@ -75,8 +75,9 @@
       <hr class="about-divider">
       {{- end }}
 
-      {{- /* 找到我 */ -}}
-      {{- if $a.show_social }}
+      {{- /* 找到我：一条联系方式都没有就别留一个空标题 —— 后台还没填时（新建站就这样）
+             这一栏整块不出现，填上第一条自动回来，不需要额外的开关。 */ -}}
+      {{- if and $a.show_social $a.contacts }}
       <div class="about-section">
         <div class="about-block-title"><i class="fas fa-link"></i> <span data-i18n="about-findme-title">{{ i18n "about-findme-title" | default "找到我" }}</span></div>
         {{- /* 同一 label 归成一组（params 侧的 labelKey 只是历史字段，模板从未用它取过文案） */ -}}

@@ -77,6 +77,14 @@
 
   window.ZeroSwitches = { apply: apply, isOn: isOn };
 
+  /* 构建期快照现在就同步应用一次，不等 DOMContentLoaded（T7 P1-01）。
+     快照 `window.__zeroSwitches` 就在上面那行内联脚本里、带 data-zero-switch 的区块也都在本脚本之前
+     解析完成，所以这一刻既能拿到数据也找得到元素；再等 DCL 就等于让首屏先按「内容隐藏」排版、
+     等脚本跑完才整块撑开 —— 线上 /about/ 桌面 Lighthouse CLS 因此稳定 0.57（真浏览器窄屏 0.4）。
+     下面 boot() 里那一路原样保留：运行期 /api/config 的校正是「后台改了当场生效」的凭据，
+     关掉的功能仍然由 apply 藏回去，不会闪。 */
+  if (window.__zeroSwitches && window.ZeroStack && window.ZeroStack.enabled) apply(window.__zeroSwitches);
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
