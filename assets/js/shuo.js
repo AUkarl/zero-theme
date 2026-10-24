@@ -130,6 +130,12 @@ function __shuoBoot__() {
     if (!item) return '';
     return item.slug || (item.id ? '/moments/' + item.id + '/' : '');
   }
+  /* 时刻不再有详情页：卡片自己当锚点，站内其它地方（用户中心的点赞/收藏、后台评论、
+     评论提醒邮件）一律链到 /moments/#moment-<文件名>。id 与 slug 的末段保持同一口径。 */
+  function momentAnchor(item) {
+    var m = String(momentSlug(item) || '').match(/^\/?moments\/([^/?#]+)/);
+    return m ? 'moment-' + m[1] : '';
+  }
   function slugOf(el) { return el && el.dataset.slug ? el.dataset.slug : ''; }
 
   function likedKey(slug) { return 'shuo-liked:' + slug; }
@@ -287,7 +293,8 @@ function __shuoBoot__() {
         '</div>'
       : '';
 
-    return '<article class="shuo-item" data-id="' + id + '" data-slug="' + slug + '">' +
+    var anchor = momentAnchor(item);
+    return '<article class="shuo-item"' + (anchor ? ' id="' + esc(anchor) + '"' : '') + ' data-id="' + id + '" data-slug="' + slug + '">' +
       '<div class="shuo-avatar"><img src="' + esc(item.avatarUrl || '/img/avatar.png') + '" alt="" loading="lazy"></div>' +
       '<div class="shuo-body">' +
         '<div class="shuo-name">' + esc(item.nickname || '博主') + '</div>' +
@@ -749,6 +756,28 @@ function __shuoBoot__() {
     list.innerHTML = '';
     renderedCount = 0;
     appendBatch();
+    /* 从用户中心/后台评论/提醒邮件带着 #moment-xxx 进来：目标卡片可能还没被懒加载出来，
+       先把它补渲染出来再滚过去，否则浏览器找不到锚点就停在页首。 */
+    setTimeout(function () { scrollToAnchor(0); }, 80);
+  }
+
+  /* 带 #moment-xxx 进来时把它滚到视口里并高亮。
+     不能只在 80ms 时试一次：这一页会被重绘（运行期换评论供应商、配置回来之后再渲染一遍），
+     重绘前 shuoData 还可能是空的，此时 renderedCount 与 shuoData.length 同为 0，
+     「还有批次没渲染」的判断直接不成立，锚点就永远找不到了。所以只要没找到就继续补渲染、继续找。 */
+  function scrollToAnchor(tries) {
+    var hash = String(location.hash || '').replace(/^#/, '');
+    if (hash.indexOf('moment-') !== 0) return;
+    var el = document.getElementById(hash);
+    if (el) {
+      el.scrollIntoView({ block: 'start' });
+      el.classList.add('is-target');
+      return;
+    }
+    if ((tries || 0) < 25) {
+      if (renderedCount < shuoData.length) appendBatch();
+      setTimeout(function () { scrollToAnchor((tries || 0) + 1); }, 100);
+    }
   }
 
   /* 卡片要不要在渲染时就把评论组件挂上：只有 zero 那一家（本地组件，没有 CDN 负担） */

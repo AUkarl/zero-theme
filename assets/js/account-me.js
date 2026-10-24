@@ -22,6 +22,13 @@
 (function () {
   'use strict';
 
+  /* 时刻不再有详情页：接口回的是 /moments/<文件名>/ 这个「键」，展示时改成
+     时刻页里那一条的锚点（与 shuo.js 卡片上的 id、后台与提醒邮件的口径一致）。 */
+  function momentLink(slug) {
+    var m = String(slug || '').match(/^\/?moments\/([^/?#]+)/);
+    return m ? '/moments/#moment-' + m[1] : slug;
+  }
+
   var CMS_ONLINE = '/admin/';
 
   var PLATFORMS = ['GitHub', 'Twitter / X', '微博', '知乎', 'Bilibili', '小红书', 'Mastodon', '邮箱 / 其它'];
@@ -383,7 +390,7 @@
               return (
                 '<li data-id="' + esc(m.id) + '">' +
                 '<div class="zsme-line">' + statusChip(m.status) +
-                '<a href="' + esc(m.postSlug) + '">' + esc(m.postSlug) + '</a>' +
+                '<a href="' + esc(momentLink(m.postSlug)) + '">' + esc(m.postSlug) + '</a>' +
                 (m.editedAt ? '<span class="zsme-chip">' + esc(T.edited || '已编辑') + '</span>' : '') +
                 '<span class="zsme-time">' + esc(fmt(m.createdAt)) + '</span></div>' +
                 '<div class="zsme-text">' + render(m.content) + '</div>' +
@@ -518,7 +525,7 @@
                   ? ''
                   : '<span class="zsme-chip is-warn">' + esc(T.notArchived || '这篇文章没在仓库里（可能已删除）') + '</span>';
               return (
-                '<li><div class="zsme-line"><a href="' + esc(r.slug) + '">' + esc(label) + '</a>' +
+                '<li><div class="zsme-line"><a href="' + esc(momentLink(r.slug)) + '">' + esc(label) + '</a>' +
                 chip +
                 '<span class="zsme-chip">' + esc(r.kind === 'star' ? T.kindStar : T.kindLike) + '</span>' +
                 '<span class="zsme-time">' + esc(fmt(r.createdAt)) + '</span>' +

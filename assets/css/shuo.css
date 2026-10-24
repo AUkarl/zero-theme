@@ -113,10 +113,39 @@
   gap: 12px;
   padding: 18px 2px;
   border-bottom: 1px solid var(--border);
+  /* 锚点跳转用：卡片顶部停在固定导航下方，不被盖住 */
+  scroll-margin-top: calc(var(--nav-height) + 16px);
 }
 
 .shuo-item:last-child {
   border-bottom: 0;
+}
+
+/* 带 #moment-xxx 进来时高亮那一条：时刻没有详情页，锚点就是唯一的落点提示。
+   亮一会儿自己退掉，不影响正常浏览。 */
+.shuo-item.is-target {
+  animation: shuo-target 2.4s ease-out 1;
+  border-radius: 8px;
+}
+
+@keyframes shuo-target {
+  0%,
+  55% {
+    background: rgba(87, 107, 149, 0.14);
+    box-shadow: inset 3px 0 0 #576b95;
+  }
+  100% {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shuo-item.is-target {
+    animation: none;
+    background: rgba(87, 107, 149, 0.1);
+    box-shadow: inset 3px 0 0 #576b95;
+  }
 }
 
 /* 左头像：朋友圈是小圆角方形 */
