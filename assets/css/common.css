@@ -122,6 +122,19 @@ a {
 }
 
 /* ===== 无障碍：跳过链接（键盘聚焦时才出现） ===== */
+/* 只给读屏的标题：页面上要有一级标题，但不能改变现有版式 */
+.zero-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skip-link {
   position: absolute;
   left: -9999px;
@@ -777,6 +790,9 @@ a {
   display: flex;
   align-items: center;
   gap: 0;
+  /* 图标是 lazy 外链：图没到时这一行只有 padding 的高度，图到了会顶一下页脚。
+     30px 图 + 上下 4px padding＝38px，先把槽位占住；加载完尺寸不变。 */
+  min-height: 38px;
 }
 
 .footer .footer-center .footer-services a {

@@ -41,6 +41,7 @@
 {{- $cmsFallback := cond hugo.IsServer "http://127.0.0.1:5173/" "/admin/" -}}
 {{- $cms := $cmsFromParams | default $cmsFallback -}}
 <main class="main" id="main">
+  <h1 class="zero-sr-only">{{ .Title | default "账号" }}</h1>
   <section class="section">
     <div class="account-wrapper">
       <div class="account-box" id="zeroAccountBox">

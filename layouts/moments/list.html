@@ -35,6 +35,7 @@
 {{- $swM := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled") -}}
 
 <main class="main" id="main">
+  <h1 class="zero-sr-only">{{ .Title | default (i18n "nav-moments" | default "时刻") }}</h1>
   {{- /* ====== 顶部横幅 ======
         后台「前端管理 → 时刻页」关掉横幅背景时：
           · 头像/昵称还开着 → 只留一条紧凑的浅色身份栏（shuo.css 的 no-bg 变体，不再占 280px）

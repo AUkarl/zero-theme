@@ -81,8 +81,10 @@
         })
         .catch(function (err) {
           if (err && (err.status === 401 || err.status === 403)) return guest(err.message);
-          showTab(tab);
-          msg(err && err.message ? err.message : T.net, true);
+          /* 接口不可达时 ov 仍是 null：原写法直接 showTab 会去读 ov.counts 抛 TypeError，
+             提示还没显示整页就断了。没有账号数据时不切页签，只把网络错误说出来。 */
+          if (ov && ov.account) showTab(tab);
+          msg(err && err.status && err.message ? err.message : (T.net || '网络出错了，请稍后再试。'), true);
         });
     }
 

@@ -191,7 +191,7 @@
         {{- $img := partial "one-string.html" ($page.Params.image | default $page.Params.img | default $defaultImage) -}}
         {{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
         {{- $hidden := ge $i $initialVisible -}}
-        {{- $info := partial "img-src.html" (dict "src" $img "page" $page "sizes" $acSizes "widths" $acWidths) -}}
+        {{- $info := partial "img-src.html" (dict "src" $img "page" $page "sizes" $acSizes "widths" $acWidths "variant" "cover") -}}
         {{- $bg := "" -}}
         {{- with $info.lqip }}{{ $bg = printf "background-image:url(%s);background-size:cover;background-position:center;" . | safeCSS }}{{ end -}}
       <a class="hb-card hb-acard" href="{{ $page.RelPermalink }}" data-hb-card data-reveal data-hb-date="{{ $page.Date.Format "2006-01-02T15:04:05Z07:00" }}" data-hb-score="{{ $sc.score }}" data-hb-views="{{ $sc.views }}" data-hb-comments="{{ $sc.comments }}" data-hb-likes="{{ $sc.likes }}" data-hb-stars="{{ $sc.stars }}"{{ if $hidden }} hidden{{ end }}>
