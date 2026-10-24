@@ -347,6 +347,16 @@
   margin: 1.5em 0;
 }
 
+/* 单张图放进画廊时不要按格子拉成方块：回到普通图片的宽度并居中 */
+.gallery.gallery-single .figure img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: auto;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .gallery .figure {
   margin: 0;
 }

@@ -12,11 +12,16 @@
 */ -}}
 {{- $columns := int (.Get "columns" | default "3") -}}
 {{- if or (lt $columns 1) (gt $columns 6) -}}{{- $columns = 3 -}}{{- end -}}
+{{- /* 按实际张数收列数：2 张挤在 3 列的左边两格看起来是没居中；
+       4 张在 3 列下会排成 3+1，按 2×2 更整齐（只有显式写了 3 列时才改）。 */ -}}
+{{- $count := len (findRE `(?m)^[ \t]*!\[` .Inner) -}}
+{{- if and (eq $count 4) (eq $columns 3) -}}{{- $columns = 2 -}}{{- end -}}
+{{- if and (gt $count 0) (lt $count $columns) -}}{{- $columns = $count -}}{{- end -}}
 {{- $gap := "" -}}
 {{- with .Get "gap" -}}
   {{- $clean := replaceRE `[^0-9a-zA-Z%]` "" (string .) -}}
   {{- if findRE `^[0-9]+(px|em|rem|%)$` $clean -}}{{- $gap = $clean -}}{{- end -}}
 {{- end -}}
-<div class="gallery" style="--gallery-columns:{{ $columns }};{{ with $gap }}--gallery-gap:{{ . }};{{ end }}">
+<div class="gallery{{ if eq $count 1 }} gallery-single{{ end }}" style="--gallery-columns:{{ $columns }};{{ with $gap }}--gallery-gap:{{ . }};{{ end }}">
   {{ .Inner | markdownify }}
 </div>
