@@ -239,6 +239,10 @@ error-bbhj-fail-zh: "数据加载失败，请访问"
 error-bbhj-official-zh: "宝贝回家官网"
 error-back-home-zh: "返回首页"
 # ===== 分类/标签 =====
+# 这两个键还被 partials/page-title.html 用作 /categories/、/tags/ 一览页的标题：
+# 那是 Hugo 按分类法名自动生成的页，没内容文件时 .Title 会回退成英文 "Categories" / "Tags"。
+category: "分类"
+tag: "标签"
 category-count:
   other: "共 {{ .Count }} 篇文章"
 tag-count:

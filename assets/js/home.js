@@ -141,11 +141,13 @@ function renderGarden() {
       }
     }
     const descHtml = SHOW_SUMMARY ? `<p class="card-desc">${desc}</p>` : '';
+    // 卡片标题用 h2：home.css 的标题规则是 `.garden-card h2`（R43 那批按 h1→h2 不跳级统一过标签），
+    // 这里以前写 h3 —— 规则命中不到 JS 拼出来的卡片，标题字号、两行截断与固定高度一起丢，卡片也就不等高了。
     html += `
       <a class="garden-card" href="${article.permalink || '#'}">
         ${SHOW_IMAGES ? `<div class="card-img"${imgBg}>${imgHtml}</div>` : ''}
         <div class="card-body">
-          <h3 class="card-title">${title}</h3>
+          <h2 class="card-title">${title}</h2>
           ${descHtml}
           <div class="card-meta">
             <span class="card-date">${article.date}</span>

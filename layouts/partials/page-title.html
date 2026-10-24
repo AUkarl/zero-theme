@@ -14,11 +14,20 @@
 {{- $siteCfg := partial "site-config.html" . -}}
 {{- $fallback := $siteCfg.name | default $siteCfg.navName | default "站点" -}}
 {{- $t := .Title -}}
-{{- /* /author/ 是 Hugo 自动生成的分类法一览页，标题会回退成 taxonomy 的英文名（中文站显示
-       「Author」）。这里按 i18n 取语言化的名字，与 taxonomy/author.html 那处同一个口径；
-       单个作者的资料页（kind=term）不受影响。 */ -}}
-{{- if and (eq .Kind "taxonomy") (eq (strings.ToLower (string .Data.Singular)) "author") -}}
-  {{- $t = i18n "author" | default $t -}}
+{{- /* Hugo 自动生成的分类法一览页（/author/、/categories/、/tags/）没有内容文件，.Title 会回退成
+       taxonomy 的英文名（Author / Categories / Tags），中文站就顶着一串英文当 <title>、og:title 与 h1。
+       这里按 i18n 换成语言化名字。三条边界：
+         · 只认 kind=taxonomy（一览页）；单个作者/分类/标签的详情页（kind=term）标题是人写的，不动；
+         · 站点自己在 content/zh/<某分类法>/_index.md 里写过标题的不动 —— 只有「标题正好等于自动回退值」时才换；
+         · i18n 里没这个键就退回原值，不会把标题换成空串。 */ -}}
+{{- $taxoNames := dict "author" "author" "category" "category" "tag" "tag" -}}
+{{- $sing := lower (string .Data.Singular) -}}
+{{- if and (eq .Kind "taxonomy") (isset $taxoNames $sing) -}}
+  {{- $cur := trim (printf "%s" $t) " " -}}
+  {{- $auto := slice $sing (title $sing) (lower (string .Data.Plural)) (title (string .Data.Plural)) -}}
+  {{- if or (not $cur) (in $auto $cur) -}}
+    {{- $t = i18n (index $taxoNames $sing) | default $cur -}}
+  {{- end -}}
 {{- end -}}
 {{- if or (reflect.IsSlice $t) (reflect.IsMap $t) }}{{ $t = "" }}{{ end -}}
 {{- if not $t }}{{ $t = printf "%s" (.Plain | plainify | replaceRE `\s+` " " | strings.TrimSpace | truncate 24 "…") }}{{ end -}}
