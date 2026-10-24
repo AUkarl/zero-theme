@@ -11,8 +11,9 @@
 
   行为：
     · key 为空 → 不加任何标记（纯构建期开关，例如 params 里的板块开关）
-    · zero.enabled 为真（配了 params.apiBaseURL）→ 额外写 hidden，
-      由 js/zero-switches.js 拿到 /api/config 后决定是否露出，关闭态不会闪一下
+    · zero.enabled 为真（配了 params.apiBaseURL）→ 按构建期快照 data/switches.json 决定写不写 hidden：
+      快照说这个功能开着就不写（首屏即终态，不用等 JS），快照说关着才写 hidden；
+      快照里没有这个键才退回「写 hidden，由 js/zero-switches.js 拿到 /api/config 后决定」
     · zero.enabled 为假 → 只有 data-zero-switch 属性、没有 hidden，
       纯静态站点照常显示（脚本也不会加载）
   返回 (dict "attrs" ... "hidden" ...)
@@ -20,7 +21,19 @@
 {{- $key := trim (string (.key | default "")) " " -}}
 {{- $when := .when | default "on" -}}
 {{- $zero := .zero | default dict -}}
+{{- /* 到底要不要写 hidden：先看构建期快照（data/switches.json，后台保存开关时写、同一批构建里
+       也烘进 window.__zeroSwitches）。快照说这个功能是开的，就直接出可见内容 ——
+       以前是「只要配了后端就一律写 hidden，等 JS 揭」，代价有两条：
+       ① 揭开那一刻正文撑开、页脚被推下，线上 /about/ 桌面 CLS 0.069、窄屏 0.338 全是它；
+       ② 更糟的是关掉 JavaScript 的访客（和部分只做 HTML 预取的阅读器/爬虫）永远看不到内容 ——
+          实测线上 /about/ 与 /work/ 在禁 JS 下可见区块 0 个、正文 0 字，而 HTML 里其实什么都有。
+       快照里没有这个键（老站点、还没在后台存过开关）就照旧写 hidden，交给运行期 /api/config 定夺。 */ -}}
+{{- $snap := hugo.Data.switches | default dict -}}
 {{- $hidden := and ($zero.enabled | default false) (ne $key "") -}}
+{{- if and $hidden (ne $key "") (reflect.IsMap $snap) (isset $snap $key) -}}
+  {{- $on := ne (index $snap $key) false -}}
+  {{- $hidden = ne $on (eq $when "on") -}}
+{{- end -}}
 {{- $attrs := "" -}}
 {{- if ne $key "" -}}
   {{- $attrs = printf ` data-zero-switch="%s"` $key -}}

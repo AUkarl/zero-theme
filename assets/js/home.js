@@ -41,7 +41,10 @@ const Columns = {
     const cards = grid.__gardenCards;
     if (cards.length === 0) return;
 
-    const count = Math.max(1, Math.min(Columns.getColumnCount(grid), cards.length));
+    // 列数就取配置的列数，**不要**再被卡片数夹小：最后那一页只剩 2 条时，
+    // 以前只建 2 个 .garden-col，而列是 flex:1 1 0 等分的 → 两张卡片各占半屏宽（实测列宽 578、卡高 622），
+    // 与第一页的 279/398 完全不同。空列照样建、照样占位，卡片尺寸就跟第一页一致了。
+    const count = Math.max(1, Columns.getColumnCount(grid));
     const cols = [];
     grid.textContent = '';                 // 清空旧列，卡片节点仍被 cards 引用着
     for (let i = 0; i < count; i++) {
