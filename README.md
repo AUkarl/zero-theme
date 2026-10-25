@@ -298,6 +298,15 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   进入动画、弹幕标签云、淡入都自动降级成直接呈现。
 - 会话与配置请求全站各只问一次（`window.ZeroStack.me()` / `.config()` 共用同一在途 Promise，
   账号页登录 / 注销派发 `zero:session` 时才作废重问）—— 少一次请求就少一次 Worker 与 D1 读。
+- **`[home] layout = "grid"` 的首屏卡片与分页条是服务端渲的**（`layouts/partials/home-card.html` /
+  `home-pager.html`，靠 `.is-skeleton` 那套 grid 布局在每个断点摆成 `--home-columns` 列）。
+  之前 `#gardenGrid` 在 HTML 里是空的，二十张卡约 20KB 在 `DOMContentLoaded` 一次性插入，页脚被推下去
+  约 6.3k 高 —— 手机档 CLS **0.22**（`<footer>` 一项占满），与哪次改动都无关，是这条路固有的。
+  实测（同一份内容各建一次、交替跑）：手机 **0.2209 → 0**，桌面 **0.0983 → 0**。
+  **改卡片形状时必须同时改 partial 与 `home.js` 里的 `cardHtml()`** —— 两边不一致会让第 1 页和
+  第 2 页长得不一样（R53 那次是模板 h3→h2、JS 漏改，样式一个元素都没命中）。这一条有实测守着：
+  量一次「服务端渲的那张卡」与「JS 重建的同一张卡」的属性逐项对比，本次就是它抓出
+  partial 里 `%s` 打整数输出成 `%!s(int=1080)`、`width`/`height` 失效的问题。
 
 ---
 

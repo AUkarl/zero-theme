@@ -1,0 +1,59 @@
+{{- /* ============================================================
+  home-card.html — 首页 grid 的单张卡片（服务端骨架专用）
+  ------------------------------------------------------------
+  为什么要有这个文件：首页卡片以前**只有** assets/js/home.js 拼字符串这一份实现，
+  `<div id=gardenGrid>` 在 HTML 里是空的，20 张卡在 DOMContentLoaded 那一下一次性插进去
+  —— 页脚被推下去，线上 /home/ 的 CLS 里约 0.1 全是这一条（footer 一项就占满）。
+  现在 Hugo 先把「第 1 页 / 最新」这一屏渲出来，home.js 首屏只接管不重建。
+
+  **这里的标签、类名、属性顺序必须与 home.js 里 renderGarden() 那段模板逐项一致**，
+  否则第 1 页与第 2 页看起来不一样（R53 就是模板改了 h3→h2 而 JS 漏改，样式一个都没命中）。
+  台架有一条逐项比对的用例守住这件事，改一边记得同步另一边。
+
+  入参：dict "item" $article "showImages" bool "showSummary" bool
+  ============================================================ */ -}}
+{{- $a := .item -}}
+{{- $showImages := .showImages -}}
+{{- $showSummary := .showSummary -}}
+{{- $title := $a.title | default "" -}}
+{{- $desc := $a.desc | default "" -}}
+{{- $tags := $a.tags | default slice -}}
+{{- $img := $a.img | default dict -}}
+{{- $imgHtml := "" -}}
+{{- $imgBg := "" -}}
+{{- if $showImages -}}
+  {{- if $img.src -}}
+    {{- with $img.lqip -}}
+      {{- $imgBg = printf ` style="background-image:url(%s);background-size:cover;background-position:center"` . -}}
+    {{- end -}}
+    {{- /* 宽高一定要带：图一到达就顶版面（home.js 里同一条注释解释过键名是 width/height）。
+           这两个是**整数**，用 %s 打会输出成 `%!s(int=1080)` 这种 Go 的格式化错误串，
+           浏览器当无效值丢掉 —— 骨架于是和白带一样，CLS 又回来了。先 int 化再用 %d 打。 */ -}}
+    {{- $w := int $img.width -}}
+    {{- $h := int $img.height -}}
+    {{- $dims := "" -}}
+    {{- if and (gt $w 0) (gt $h 0) -}}
+      {{- $dims = printf ` width="%d" height="%d"` $w $h -}}
+    {{- end -}}
+    {{- $srcset := $img.srcset | default "" -}}
+    {{- $sizes := $img.sizes | default "100vw" -}}
+    {{- $imgHtml = printf `<img data-src="%s" data-srcset="%s" sizes="%s"%s alt="%s" decoding="async" />` $img.src $srcset $sizes $dims $title -}}
+  {{- else if $a.image -}}
+    {{- $imgHtml = printf `<img src="%s" alt="%s" loading="lazy" />` $a.image $title -}}
+  {{- else -}}
+    {{- $imgHtml = `<div class="card-img-placeholder"></div>` -}}
+  {{- end -}}
+{{- end -}}
+{{- $tagText := "" -}}
+{{- range $i, $t := $tags -}}{{- if $i }} {{ end -}}{{- $tagText = printf "%s#%s" $tagText $t -}}{{- end -}}
+<a class="garden-card" href="{{ $a.permalink | default "#" }}">
+  {{- if $showImages }}<div class="card-img"{{ $imgBg | safeHTMLAttr }}>{{ $imgHtml | safeHTML }}</div>{{ end -}}
+  <div class="card-body">
+    <h2 class="card-title">{{ $title }}</h2>
+    {{- if $showSummary }}<p class="card-desc">{{ $desc }}</p>{{ end -}}
+    <div class="card-meta">
+      <span class="card-date">{{ $a.date }}</span>
+      <span class="card-tags">{{ $tagText }}</span>
+    </div>
+  </div>
+</a>

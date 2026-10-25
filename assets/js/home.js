@@ -17,6 +17,10 @@ const HAS_STATS = !!homeCfg.buildStats;
 let currentPage = 1;
 let filteredArticles = [];
 let gardenSort = 'latest';
+/** 服务端骨架（partials/home-card.html / home-pager.html）只服务「第 1 页 + 最新 + 没筛选」这一屏。
+ *  认领过一次之后就走正常重建：切排序、翻页都是用户主动动作，那时重写 innerHTML 没有位移代价。 */
+let skeletonTaken = false;
+let pagerTaken = false;
 
 // ==================== 卡片分列 ====================
 // CSS 的 column-count 是「先竖着填满第一列，再填第二列」，
@@ -55,6 +59,7 @@ const Columns = {
     }
     cards.forEach((card, i) => cols[i % count].appendChild(card));
     grid.classList.add('is-columns');
+    grid.classList.remove('is-skeleton');   // 服务端那套 grid 布局到这里就交还给分列布局
     grid.__gardenCols = count;
   },
    // 内容重新渲染后调用：先丢弃旧缓存再分列
@@ -121,8 +126,29 @@ function renderGarden() {
     return;
   }
 
-  let html = '';
-  pageItems.forEach(article => {
+  /**
+   * 首屏这一屏服务端已经渲好了（layouts/partials/home-card.html）。
+   * 判据是「这一次要渲的正是那一批」：第 1 页、最新排序、没被筛选过，
+   * 且 DOM 里的卡片数与 href 顺序逐个对得上 —— 对不上就照常重建，宁可多写一次 innerHTML，
+   * 也不能让屏幕上留着和当前排序不符的旧卡片。
+   * 认领时只把现成节点分列，不重写 innerHTML：那一下重写才是 CLS 的来源。
+   */
+  function adoptServerCards(gridEl, start, pageItems) {
+    if (skeletonTaken) return false;
+    if (start !== 0 || currentPage !== 1 || gardenSort !== 'latest') return false;
+    const flat = Array.prototype.slice.call(gridEl.children).filter(el => el.classList.contains('garden-card'));
+    if (flat.length !== pageItems.length) return false;
+    for (let i = 0; i < flat.length; i++) {
+      if (flat[i].getAttribute('href') !== (pageItems[i].permalink || '#')) return false;
+    }
+    skeletonTaken = true;
+    Columns.refresh(gridEl);
+    return true;
+  }
+
+  /** 单张卡片的 HTML。改这里必须同时改 partials/home-card.html —— 两边不一致第 1 页和第 2 页就长得不一样
+   *  （台架有一条把这批节点逐个元素比对的用例守着这件事）。 */
+  function cardHtml(article) {
     const title = article.title || '';
     const desc = article.desc || '';
     const tags = article.tags || [];
@@ -146,7 +172,7 @@ function renderGarden() {
     const descHtml = SHOW_SUMMARY ? `<p class="card-desc">${desc}</p>` : '';
     // 卡片标题用 h2：home.css 的标题规则是 `.garden-card h2`（R43 那批按 h1→h2 不跳级统一过标签），
     // 这里以前写 h3 —— 规则命中不到 JS 拼出来的卡片，标题字号、两行截断与固定高度一起丢，卡片也就不等高了。
-    html += `
+    return `
       <a class="garden-card" href="${article.permalink || '#'}">
         ${SHOW_IMAGES ? `<div class="card-img"${imgBg}>${imgHtml}</div>` : ''}
         <div class="card-body">
@@ -159,11 +185,16 @@ function renderGarden() {
         </div>
       </a>
     `;
-  });
-  gridEl.innerHTML = html;
-  // 重新按顺序分列（保证「从左到右、从上到下」）
-  Columns.refresh(gridEl);
-  // 封面进入视口前 200px 再加载高清图
+  }
+
+  if (!adoptServerCards(gridEl, start, pageItems)) {
+    let html = '';
+    pageItems.forEach(article => { html += cardHtml(article); });
+    gridEl.innerHTML = html;
+    // 重新按顺序分列（保证「从左到右、从上到下」）
+    Columns.refresh(gridEl);
+  }
+  // 封面进入视口前 200px 再加载高清图（服务端骨架里的图同样是 data-src，必须走这一遍才会加载）
   if (window.Motion) window.Motion.lazyImages(gridEl);
 
   // 渲染分页：「第 [输入框] 页 / 共 N 页」。输入框里改数字（回车或点走）就跳那一页。
@@ -177,14 +208,25 @@ function renderGarden() {
     const wordUnit = L.pageSuffix || '页';
     const wordTotal = L.pageTotal || '共';
     const ariaJump = L.jump || '输入页码跳转';
-    paginationEl.innerHTML =
-      `<button class="page-btn prev-btn" ${currentPage <= 1 ? 'disabled' : ''} data-page="${currentPage - 1}">‹ ${prev}</button>` +
-      `<span class="page-jump">` +
-        `<span class="page-jump-word">${wordPage}</span>` +
-        `<input class="page-input" type="number" min="1" max="${totalPages}" step="1" value="${currentPage}" inputmode="numeric" aria-label="${ariaJump}">` +
-        `<span class="page-jump-word">${wordUnit} / ${wordTotal} ${totalPages} ${wordUnit}</span>` +
-      `</span>` +
-      `<button class="page-btn next-btn" ${currentPage >= totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">${next} ›</button>`;
+    /* 这一条也是服务端渲的（home-pager.html）。对得上就直接用现成的节点，
+       对不上（翻页后、或第 1 页那一屏已被上面的卡片认领逻辑换过）才重写。 */
+    const serverInput = paginationEl.querySelector('.page-input');
+    const useServerPager = !pagerTaken && serverInput
+      && Number(serverInput.max) === totalPages
+      && Number(serverInput.value) === currentPage
+      && start === 0 && gardenSort === 'latest';
+    if (useServerPager) {
+      pagerTaken = true;
+    } else {
+      paginationEl.innerHTML =
+        `<button class="page-btn prev-btn" ${currentPage <= 1 ? 'disabled' : ''} data-page="${currentPage - 1}">‹ ${prev}</button>` +
+        `<span class="page-jump">` +
+          `<span class="page-jump-word">${wordPage}</span>` +
+          `<input class="page-input" type="number" min="1" max="${totalPages}" step="1" value="${currentPage}" inputmode="numeric" aria-label="${ariaJump}">` +
+          `<span class="page-jump-word">${wordUnit} / ${wordTotal} ${totalPages} ${wordUnit}</span>` +
+        `</span>` +
+        `<button class="page-btn next-btn" ${currentPage >= totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">${next} ›</button>`;
+    }
     paginationEl.querySelectorAll('.page-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         if (this.disabled) return;

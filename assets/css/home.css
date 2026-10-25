@@ -68,6 +68,24 @@
   margin-bottom: 0;          /* 间距交给 gap，避免叠加 */
 }
 
+/* ===== 服务端骨架（JS 之前）=====
+   首页那一屏的卡片现在由 Hugo 直接渲进 HTML（partials/home-card.html），不再是空容器。
+   空容器那版在 DOMContentLoaded 时一次性插入约 20KB 的卡片，正文从 2.5k 高长到 8.8k 高，
+   页脚被整段推下去 —— 线上 /home/ 的 CLS 约 0.1 就是这一条（footer 一项占满）。
+   骨架用 grid 而不是 flex 分列，因为列数可以直接吃 --home-columns：手机上是 2 栏/1 栏，
+   与 home.js 随后分出来的列数一致，接管时只有「错落那 22% 的下移」这点差，不再整段位移。
+   home.js 一分列就摘掉这个类，之后的样式与改动前完全一样。 */
+.garden-grid.is-skeleton {
+  display: grid;
+  grid-template-columns: repeat(var(--home-columns, 4), 1fr);
+  gap: 20px;
+  column-count: auto;        /* 盖掉上面那个多栏兜底，否则 grid 与多栏会打架 */
+}
+
+.garden-grid.is-skeleton > .garden-card {
+  margin-bottom: 0;
+}
+
 /* ===== 文章卡片 ===== */
 .garden-card {
   break-inside: avoid;       /* 多栏兜底布局下避免卡片被拆到两列 */
