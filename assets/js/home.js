@@ -166,16 +166,25 @@ function renderGarden() {
   // 封面进入视口前 200px 再加载高清图
   if (window.Motion) window.Motion.lazyImages(gridEl);
 
-  // 渲染分页
+  // 渲染分页：「第 [输入框] 页 / 共 N 页」。输入框里改数字（回车或点走）就跳那一页。
+  // 以前这里是一排页码按钮（1 2 3 …）：看不出自己在第几页，页数一多还占满一行。
   const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
   if (paginationEl && totalPages >= 1) {
-    let pHtml = '';
-    pHtml += `<button class="page-btn prev-btn" ${currentPage <= 1 ? 'disabled' : ''} data-page="${currentPage - 1}">‹ 上一页</button>`;
-    for (let i = 1; i <= totalPages; i++) {
-      pHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-    }
-    pHtml += `<button class="page-btn next-btn" ${currentPage >= totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">下一页 ›</button>`;
-    paginationEl.innerHTML = pHtml;
+    const L = homeCfg.labels || {};
+    const prev = L.prev || '上一页';
+    const next = L.next || '下一页';
+    const wordPage = L.page || '第';
+    const wordUnit = L.pageSuffix || '页';
+    const wordTotal = L.pageTotal || '共';
+    const ariaJump = L.jump || '输入页码跳转';
+    paginationEl.innerHTML =
+      `<button class="page-btn prev-btn" ${currentPage <= 1 ? 'disabled' : ''} data-page="${currentPage - 1}">‹ ${prev}</button>` +
+      `<span class="page-jump">` +
+        `<span class="page-jump-word">${wordPage}</span>` +
+        `<input class="page-input" type="number" min="1" max="${totalPages}" step="1" value="${currentPage}" inputmode="numeric" aria-label="${ariaJump}">` +
+        `<span class="page-jump-word">${wordUnit} / ${wordTotal} ${totalPages} ${wordUnit}</span>` +
+      `</span>` +
+      `<button class="page-btn next-btn" ${currentPage >= totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">${next} ›</button>`;
     paginationEl.querySelectorAll('.page-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         if (this.disabled) return;
@@ -184,6 +193,19 @@ function renderGarden() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     });
+    // 输入框：越界与非数字直接归位到「现在的页」，不留一个和实际不符的数字在框里
+    const input = paginationEl.querySelector('.page-input');
+    const jump = () => {
+      const n = parseInt(input.value, 10);
+      const target = Number.isFinite(n) ? Math.min(Math.max(n, 1), totalPages) : currentPage;
+      input.value = target;
+      if (target === currentPage) return;
+      currentPage = target;
+      renderGarden();                 // 重绘会把整条分页换掉，所以下面这些监听只活到这次点击为止
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    input.addEventListener('change', jump);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); jump(); } });
   } else if (paginationEl) {
     paginationEl.innerHTML = '';
   }

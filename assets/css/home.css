@@ -240,6 +240,45 @@
   cursor: not-allowed;
 }
 
+/* 当前页输入框：宽度写死，页数从 1 变到 2 或从 9 变到 10 都不推动旁边的「/ 共 N 页」，
+   也就不会因为位数变化自己顶出一次位移。 */
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-jump-word {
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.page-input {
+  width: 3.6rem;
+  padding: 6px 2px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 焦点态必须看得出来 —— 不然没人知道这一格是能输入的 */
+.page-input:focus {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px var(--tag-bg);
+}
+
+@media (max-width: 820px) {
+  .page-input {
+    width: 3.2rem;
+  }
+}
+
 /* ===== 响应式 ===== */
 @media (max-width: 820px) {
   .garden-grid {

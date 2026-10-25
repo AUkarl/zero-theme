@@ -104,7 +104,16 @@
         showSummary: {{ $showSummary }},
         /* 有 data/poststats.json 时「最热」用构建期算好的分数，不再请求评论系统 */
         buildStats: {{ $ps.ready }},
-        labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }}
+        labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }},
+        /* 分页那一行的文案。JS 里只留中文兜底，改语言在 i18n 里改，不用碰脚本 */
+        labels: {
+          prev: {{ i18n "prev" | jsonify | safeJS }},
+          next: {{ i18n "next" | jsonify | safeJS }},
+          page: {{ i18n "page" | jsonify | safeJS }},
+          pageSuffix: {{ i18n "page-suffix" | jsonify | safeJS }},
+          pageTotal: {{ i18n "page-total" | jsonify | safeJS }},
+          jump: {{ i18n "page-jump" | jsonify | safeJS }}
+        }
       };
     </script>
   </section>
