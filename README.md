@@ -195,8 +195,14 @@ categories / tags / image / cover / draft / weight / pinned
 author / toc / math / comments
 ```
 
-要记住的三条：
+要记住的四条：
 
+- **`date` / `lastmod` 只能写成 Hugo 认得的两类样子**：`2026-10-25` 这种纯日期，
+  或 `2026-10-25T12:00:00+08:00` 这种「时分秒 + 时区」写全的时间。
+  **三种写法会让 Hugo 直接报错退出：时间只到分没有秒（`2026-10-25 12:00`）、年月日改用 / 或 . 连起来（`2026/10/25`）、月份或日期越界（`2026-13-01`）**——
+  `hugo --minify` 报 `ERROR the "date" front matter field is not a parsable date` 并以退出码 1 结束 ——
+  后果不是这一篇不生成，而是整站一个页面都不产出 —— 托管在 Pages 上的站点就此停在上一版构建。
+  手工改文件、别处同步过来的稿子最容易撞这条；走 zero-stack 后台保存会被当场拦下并给出可写的格式。
 - **修改时间只认 `lastmod`**：Hugo 的 `.Lastmod` 不看 `updated`，写 `updated` 不会显示「修改于」。
   后台那个「修改时间」框现在写的就是 `lastmod`。
 - **将来的日期配置里开不了**：实测 Hugo 0.165.0 既不认 `[build].future`，也不认老写法 `enableFuture = true`
