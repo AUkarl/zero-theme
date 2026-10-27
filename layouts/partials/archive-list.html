@@ -1,0 +1,49 @@
+{{- /* ============================================================
+  archive-list.html — 归档列表的服务端版本（与 archive.js 的 renderArchive() 同一套结构）
+  ------------------------------------------------------------
+  为什么要服务端渲：列表原来完全由 JS 在 DOMContentLoaded 之后插入，
+  首屏那一块是 0 高，插入时把右栏 widget 与页脚整体往下推 ——
+  移动端实测 CLS 0.457（桌面 0.113）。这里先按同一份分组规则渲出来，
+  JS 首次渲染看到 data-server-rendered="1" 就跳过重写（只补刻度尺与事件），
+  所以外观与交互和以前完全一致，只是首屏就有高度。
+
+  ⚠ 改这里必须同时核对 assets/js/archive.js 里 renderArchive() 的模板字符串：
+     类名、id（m-YYYY-MM）、月份标题格式「YYYY · MM」、条数文案「N 篇」、日期「MM-DD」。
+     两边不一致的表现为「点筛选后列表换了一种排版」。
+
+  只在按年月分组（archive.group_by_year 不为 false）时启用；平铺模式仍由 JS 渲。
+  ============================================================ */ -}}
+{{- $pages := .pages -}}
+{{- /* 分组规则与 archive.js 的 groupByMonth() 一致：按 YYYY-MM 聚成一节，
+       节的先后沿用传进来的顺序（调用方已经按日期倒序排过）。
+       这里不用 dict+merge 攒映射：实测 merge 之后取出来的值类型不稳，
+       append 会报「expected a slice」；两趟 range 用最朴素的 slice 追加，
+       月份数 × 文章数 的量级完全无所谓。 */ -}}
+{{- $keys := slice -}}
+{{- range $pages -}}
+  {{- $k := (.Date.Format "2006-01") -}}
+  {{- if not (in $keys $k) }}{{ $keys = $keys | append $k }}{{ end -}}
+{{- end -}}
+{{- if not $keys -}}
+<div class="archive-empty">没有匹配的文章</div>
+{{- end -}}
+{{- range $key := $keys -}}
+  {{- $items := slice -}}
+  {{- range $p := $pages -}}
+    {{- if eq ($p.Date.Format "2006-01") $key }}{{ $items = $items | append $p }}{{ end -}}
+  {{- end -}}
+{{- $year := substr $key 0 4 -}}
+{{- $mm := substr $key 5 2 -}}
+<section class="archive-month" id="m-{{ $key }}" data-key="{{ $key }}">
+  <div class="archive-month-head">
+    <span class="ym">{{ $year }} · {{ $mm }}</span>
+    <span class="cnt">{{ len $items }} 篇</span>
+  </div>
+  {{- range $items }}
+  <a class="archive-item" href="{{ .RelPermalink }}">
+    <span class="date">{{ .Date.Format "01-02" }}</span>
+    <span class="title">{{ .Title }}</span>
+  </a>
+  {{- end }}
+</section>
+{{- end -}}

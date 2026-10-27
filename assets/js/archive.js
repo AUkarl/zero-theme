@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ==================== 渲染文章列表 + 刻度尺 ====================
   let timelineBound = false;
+  let firstRender = true;
   let spyKey = null;
   let spyLockUntil = 0;
 
@@ -115,22 +116,39 @@ document.addEventListener('DOMContentLoaded', function() {
     /* ---------- 不分组：退回原来的平铺列表 ---------- */
     if (!groupByYear) {
       const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-      listEl.innerHTML = sorted.length
-        ? sorted.map(item => `
+      /* 平铺模式同样有服务端那一版（layouts/partials/archive-flat.html）。
+         内容一致时不必重写一遍 DOM；带筛选条件才由 JS 渲。 */
+      const keepFlat = firstRender && listEl.dataset.serverRendered === '1' &&
+        sorted.length > 0 && !filter && !(searchText && searchText.trim());
+      if (!keepFlat) {
+        listEl.innerHTML = sorted.length
+          ? sorted.map(item => `
             <a class="archive-item" href="${item.permalink || '#'}">
               <span class="date">${item.date}</span>
               <span class="title">${esc(item.title)}</span>
             </a>`).join('')
-        : '<div class="archive-empty">' + esc(TEXT.empty) + '</div>';
+          : '<div class="archive-empty">' + esc(TEXT.empty) + '</div>';
+      }
       if (wrapperEl) wrapperEl.classList.add('is-flat');
+      firstRender = false;
       return;
     }
 
     const groups = groupByMonth(filtered);
 
+    /* 首屏：列表已由主题服务端渲出（layouts/partials/archive-list.html，结构与下面模板逐字对齐）。
+       跳过这次重写，侧栏与页脚就不会在 JS 插入列表时被往下推 —— 移动端实测 CLS 0.457 的来源。
+       两个前提：① 没有筛选/搜索条件；② JS 这边的分组结果非空。
+       ②是护栏：万一 #archiveData 与预渲内容不一致（数据段解析失败、模板改坏），
+       JS 分组为空却留着服务端那份列表，下面的 is-empty 会把刻度尺藏起来 —— 左侧对不上右侧。
+       这时照旧由 JS 重渲（也就是改前的行为），不会更坏。 */
+    const keepServerHtml = firstRender && listEl.dataset.serverRendered === '1' &&
+      groups.length > 0 && !filter && !(searchText && searchText.trim());
+
     /* ---------- 中间：按年月分组的连续列表（年份/月份在分组小标题里，条目只显示月-日） ---------- */
-    listEl.innerHTML = groups.length
-      ? groups.map(g => `
+    if (!keepServerHtml) {
+      listEl.innerHTML = groups.length
+        ? groups.map(g => `
           <section class="archive-month" id="m-${g.key}" data-key="${g.key}">
             <div class="archive-month-head">
               <span class="ym">${g.year} · ${String(g.month).padStart(2, '0')}</span>
@@ -142,7 +160,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="title">${esc(item.title)}</span>
               </a>`).join('')}
           </section>`).join('')
-      : '<div class="archive-empty">' + esc(TEXT.empty) + '</div>';
+        : '<div class="archive-empty">' + esc(TEXT.empty) + '</div>';
+    }
+
+    firstRender = false;
 
     if (wrapperEl) {
       wrapperEl.classList.toggle('is-empty', groups.length === 0);

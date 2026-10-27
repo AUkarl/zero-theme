@@ -11,7 +11,10 @@
     "sync-comment": "node scripts/sync-comment.mjs",
     "build": "npm run link-theme && hugo --minify --source exampleSite",
     "pages": "npm run build",
-    "dev": "npm run link-theme && hugo server --source exampleSite"
+    "dev": "npm run link-theme && hugo server --source exampleSite",
+    "check:build": "node scripts/check-build.mjs",
+    "check:behavior": "node scripts/check-behavior.mjs",
+    "check:behavior:mobile": "node scripts/check-behavior.mjs --mobile"
   },
   "optionalDependencies": {
     "hugo-bin": "^0.149.2"

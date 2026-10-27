@@ -49,6 +49,12 @@ jobs:
       - name: Build exampleSite
         run: npm run build
 
+      # 产物体检：搜索数据必须是字符串、样式必须内联、前端锚点不能被改名。
+      # 这三类错误构建全绿但线上功能坏掉（归档搜索被一个不带引号的 1984 标签打死过），
+      # 所以挡在 CI 里，判据见 scripts/check-build.mjs。
+      - name: Check built site
+        run: npm run check:build
+
       - name: Upload built site
         uses: actions/upload-artifact@v4
         with:

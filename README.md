@@ -375,6 +375,20 @@ npm run dev                        # hugo server --source exampleSite
 node scripts/sync-comment.mjs      # 接收 ../zero-stack 产出的评论组件
 ```
 
+改完主题用这两条判据验收，别只靠眼睛刷页面：
+
+```bash
+npm run build && npm run check:build          # 纯文本查产物：数据形状、样式内联、前端锚点
+npm run check:behavior                        # 真浏览器跑产物：筛选/搜索/图标字形/首屏 CLS
+npm run check:behavior:mobile                 # 同一套判据在 390×844 下再来一遍
+```
+
+`check:build` 无依赖，CI 里必跑（`.github/workflows/demo.yml` 已接上）。
+`check:behavior` 要 playwright-core 与本机 Chrome（`CHROME_PATH` 指过去）；
+缺任何一样它整体跳过并说明原因，不会假装通过，所以没放进 CI。
+在别的工作区里跑它可以指认已装好的内核：
+`ZERO_PLAYWRIGHT=/path/to/node_modules/playwright-core node scripts/check-behavior.mjs <产物目录>`。
+
 改主题文件后在真实站点里验证时，记住三件事（都是踩过的坑）：
 
 1. 同步主题进 `themes/zero` 是整目录替换，**必须重启 hugo**，否则 shortcode 注册表是旧的，

@@ -13,6 +13,10 @@
 {{- $mainSections := .Site.Params.home.mainSections | default (slice "posts") -}}
 {{- $showSearch := cond (isset $archiveCfg "enable_search") (ne $archiveCfg.enable_search false) true -}}
 {{- $showCats := cond (isset $archiveCfg "enable_categories") (ne $archiveCfg.enable_categories false) true -}}
+{{- /* 分组模式与文章范围：列表的服务端版本与注入给 JS 的数据必须用同一份、同一顺序
+       （按日期倒序），否则「首屏那一版」和「点筛选后 JS 渲的那一版」会排得不一样。 */ -}}
+{{- $groupByYear := ne $archiveCfg.group_by_year false -}}
+{{- $pages := sort (where .Site.RegularPages "Section" "in" $mainSections) "Date" "desc" -}}
 <main class="main" id="main">
   <section class="section">
     <h1 class="section-title">{{ i18n "archive-title" | default "归档" }}</h1>
@@ -24,7 +28,7 @@
     <p class="section-desc">{{ i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}</p>
     {{- end }}
     {{- end }}
-    <div class="archive-wrapper">
+    <div class="archive-wrapper{{ if not $groupByYear }} is-flat{{ end }}{{ if and $groupByYear (not $pages) }} is-empty{{ end }}">
       {{- /* 左侧时间刻度尺：本体由 archive-timeline.js 渲染，移动端换成下面的横向月份条 */ -}}
       <div class="archive-timeline" id="archiveTimeline">
         <div class="tl-ruler" id="tlRuler" tabindex="0" role="group"
@@ -40,7 +44,9 @@
         </div>
         <div class="tl-chips" id="tlChips"></div>
       </div>
-      <div class="archive-list" id="archiveList"></div>
+      <div class="archive-list" id="archiveList" data-server-rendered="1">
+        {{- if $groupByYear }}{{ partial "archive-list.html" (dict "pages" $pages) }}{{ else }}{{ partial "archive-flat.html" (dict "pages" $pages) }}{{ end -}}
+      </div>
       <aside class="archive-sidebar">
         {{- if $showSearch }}
         <div class="widget">
@@ -51,7 +57,7 @@
         {{- if $showCats }}
         <div class="widget">
           <div class="widget-title">{{ i18n "archive-categories" | default "分类" }}</div>
-          <div class="tag-cloud-static" id="categoryCloud"></div>
+          <div class="tag-cloud-static" id="categoryCloud">{{ partial "archive-cloud.html" (dict "pages" $pages) }}</div>
         </div>
         {{- end }}
         {{- if ne $archiveCfg.enable_tag_danmaku false }}
@@ -65,9 +71,8 @@
   </section>
 </main>
 
-{{- /* 将文章数据注入 JSON 供 archive.js 使用 */ -}}
+{{- /* 将文章数据注入 JSON 供 archive.js 使用（与上面服务端渲的列表同一份、同一顺序） */ -}}
 <script type="application/json" id="archiveData">
-{{- $pages := where .Site.RegularPages "Section" "in" $mainSections -}}
 {{- $data := slice -}}
 {{- range $page := $pages -}}
   {{- /* 分类/标签一律转成字符串：YAML 里不写引号的 1984 是数字，
