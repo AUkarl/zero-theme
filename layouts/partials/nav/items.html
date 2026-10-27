@@ -107,21 +107,4 @@
   "iconOnly" true
   "zeroAccount" true)) -}}
 {{- $items = $items | append (merge $acct (dict "switchKey" "accountSystemEnabled" "children" slice "isParent" false)) -}}
-{{- /* 站内搜索：站点真的生成了 /search/ 页、且导航里还没有指向它的项时才补一条。
-       导航里自己写了搜索入口（url 为 /search 或 /search/）的，一律以站长的为准。
-       没生成搜索页的站不受影响（GetPage 取不到就不加）。 */ -}}
-{{- $hasSearch := false -}}
-{{- range $items -}}
-  {{- if eq (strings.TrimSuffix "/" (string .url)) "/search" -}}{{- $hasSearch = true -}}{{- end -}}
-{{- end -}}
-{{- if not $hasSearch -}}
-  {{- with site.GetPage "/search" -}}
-    {{- $searchItem := partial "nav/entry-data.html" (dict "item" (dict
-      "name" (i18n "search-title" | default "搜索")
-      "url" "/search/"
-      "weight" 50
-      "icon" "fas fa-magnifying-glass")) -}}
-    {{- $items = $items | append (merge $searchItem (dict "switchKey" "" "children" slice "isParent" false)) -}}
-  {{- end -}}
-{{- end -}}
 {{- return $items -}}

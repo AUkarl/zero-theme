@@ -353,9 +353,9 @@ function filterBySearch(query) {
     filteredArticles = allArticles;
   } else {
     filteredArticles = allArticles.filter(a =>
-      (a.title || '').toLowerCase().includes(query) ||
-      (a.desc || '').toLowerCase().includes(query) ||
-      (a.tags || []).some(t => t.toLowerCase().includes(query))
+      String(a.title || '').toLowerCase().includes(query) ||
+      String(a.desc || '').toLowerCase().includes(query) ||
+      (a.tags || []).some(t => String(t).toLowerCase().includes(query))
     );
   }
   currentPage = 1;

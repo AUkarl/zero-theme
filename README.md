@@ -331,8 +331,8 @@ robots: "noindex, follow"
 ```
 
 `outputs` 必须写：少了 `JSON` 就只有页面、没有索引，搜索框会提示索引没加载出来。
-导航里没有指向 `/search/` 的项时，主题检测到这一页会自动补一个「搜索」入口；
-自己配了搜索入口的以站长的为准。不想让某篇参与搜索：front matter 写 `searchExclude: true`。
+主题不会改你的导航：要用搜索，自己在导航里加一条指向 `/search/` 的项（没建这一页时也不会多出任何入口）。
+不想让某篇参与搜索：front matter 写 `searchExclude: true`。
 索引正文默认截到 3000 字符，可在 `params.search.max_content` 调整。
 
 ---

@@ -19,7 +19,7 @@
       "u" .RelPermalink
       "d" (.Date.Format "2006-01-02")
       "s" .Section
-      "g" (.Params.tags | default slice)
+      "g" (partial "zero/strings.html" (.Params.tags | default slice))
       "x" $summary
       "c" (substr $text 0 $max)
   ) -}}

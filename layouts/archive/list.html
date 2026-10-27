@@ -70,13 +70,17 @@
 {{- $pages := where .Site.RegularPages "Section" "in" $mainSections -}}
 {{- $data := slice -}}
 {{- range $page := $pages -}}
+  {{- /* 分类/标签一律转成字符串：YAML 里不写引号的 1984 是数字，
+         jsonify 出来还是数字，前端 toLowerCase() 会抛 TypeError 把整个搜索打死。 */ -}}
+  {{- $cats := partial "zero/strings.html" ($page.Params.categories | default slice) -}}
   {{- $cat := "" -}}
-  {{- with $page.Params.categories }}{{ $cat = index . 0 }}{{ end -}}
+  {{- with $cats }}{{ $cat = index . 0 }}{{ end -}}
+  {{- $tags := partial "zero/strings.html" ($page.Params.tags | default slice) -}}
   {{- $item := dict
     "title" $page.Title
     "date" ($page.Date.Format "2006-01-02")
     "category" $cat
-    "tags" ($page.Params.tags | default slice)
+    "tags" $tags
     "permalink" $page.RelPermalink
   -}}
   {{- $data = $data | append $item -}}

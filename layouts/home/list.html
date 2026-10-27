@@ -56,8 +56,11 @@
 {{- $data := slice -}}
 {{- range $page := $pages -}}
   {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" $page) -}}
+  {{- /* 分类/标签一律转成字符串：数字标签（如 1984）会让前端 toLowerCase() 抛错 */ -}}
+  {{- $cats := partial "zero/strings.html" ($page.Params.categories | default slice) -}}
   {{- $cat := "" -}}
-  {{- with $page.Params.categories }}{{ $cat = index . 0 }}{{ end -}}
+  {{- with $cats }}{{ $cat = index . 0 }}{{ end -}}
+  {{- $tags := partial "zero/strings.html" ($page.Params.tags | default slice) -}}
   {{- $imgRaw := partial "one-string.html" ($page.Params.image | default $page.Params.img) -}}
   {{- if and $imgRaw (not (or (hasPrefix $imgRaw "http://") (hasPrefix $imgRaw "https://"))) }}{{ $imgRaw = $imgRaw | absURL }}{{ end -}}
   {{- $imgInfo := partial "img-src.html" (dict "src" $imgRaw "page" $page "variant" "cover" "sizes" "(max-width: 768px) 92vw, (max-width: 1024px) 45vw, 28vw" "widths" (slice 400 800)) -}}
@@ -67,7 +70,7 @@
     "desc" $sum
     "date" ($page.Date.Format "2006-01-02")
     "category" $cat
-    "tags" ($page.Params.tags | default slice)
+    "tags" $tags
     "image" $page.Params.image
     "img" $imgInfo
     "permalink" $page.RelPermalink
@@ -82,7 +85,7 @@
     "permalinkZh" "" "permalinkEn" ""
   -}}
   {{- /* 站点仅中文：直接写入中文数据（占位键保留，供前端兼容读取） */ -}}
-  {{- $item = merge $item (dict "titleZh" $page.Title "descZh" $sum "categoryZh" $cat "tagsZh" ($page.Params.tags | default slice) "permalinkZh" $page.RelPermalink) -}}
+  {{- $item = merge $item (dict "titleZh" $page.Title "descZh" $sum "categoryZh" $cat "tagsZh" $tags "permalinkZh" $page.RelPermalink) -}}
   {{- $data = $data | append $item -}}
 {{- end -}}
 {{- $totalPages := cond (gt (len $data) 0) (int (math.Ceil (div (float (len $data)) (float $paginate)))) 0 -}}

@@ -104,10 +104,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     if (searchText && searchText.trim() !== '') {
       const s = searchText.trim().toLowerCase();
+      /* String(...)：标签可能是数字（YAML 里 1984 不写引号），直接 .toLowerCase() 会抛错 */
       filtered = filtered.filter(item =>
-        (item.title || '').toLowerCase().includes(s) ||
-        (item.category || '').toLowerCase().includes(s) ||
-        (item.tags || []).some(tag => tag.toLowerCase().includes(s))
+        String(item.title || '').toLowerCase().includes(s) ||
+        String(item.category || '').toLowerCase().includes(s) ||
+        (item.tags || []).some(tag => String(tag).toLowerCase().includes(s))
       );
     }
 
