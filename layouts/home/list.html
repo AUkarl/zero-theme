@@ -19,8 +19,7 @@
 {{- else -}}
 {{- $home := .Site.Params.home -}}
 {{- $widthRatio := $home.width_ratio | default 100 -}}
-{{- $homeCSS := resources.Get "css/home.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $homeCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/home.css") -}}
 {{- partial "home-grid-vars.html" . }}
 <style>
   /* 从配置注入的 CSS 变量 */

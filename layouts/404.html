@@ -12,8 +12,7 @@
   {{- partial "seo.html" . }}
   {{- /* 图标库：和非阻塞加载、地址口径都跟普通页一致（见 partials/fa-css.html） */ -}}
   {{ partial "fa-css.html" . }}
-  {{- $commonCSS := resources.Get "css/common.css" | minify | fingerprint }}
-  <link rel="stylesheet" href="{{ $commonCSS.RelPermalink }}">
+  {{- partial "zero/inline-css.html" (slice "css/common.css") -}}
   <style>
     .error-page {
       flex: 1;

@@ -3,8 +3,7 @@
   显示某个标签下的所有文章列表
 */ -}}
 {{ define "styles" }}
-  {{- $archiveCSS := resources.Get "css/archive.css" | minify | fingerprint }}
-  <link rel="stylesheet" href="{{ $archiveCSS.RelPermalink }}">
+  {{- partial "zero/inline-css.html" (slice "css/archive.css") -}}
 {{ end }}
 
 {{ define "main" }}

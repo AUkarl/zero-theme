@@ -28,10 +28,9 @@
     })();
   </script>
   {{- partial "head.html" . -}}
-  {{- /* 全站动效样式（很小，需在首屏前生效，避免闪一下）。[motion] enable=false 时整段不引 */ -}}
+  {{- /* 全站动效样式（很小，内联进 head 避免闪一下；见 partials/zero/inline-css.html）。[motion] enable=false 时整段不引 */ -}}
   {{- if ne .Site.Params.motion.enable false -}}
-  {{- $motionCSS := resources.Get "css/motion.css" | minify | fingerprint -}}
-  <link rel="stylesheet" href="{{ $motionCSS.RelPermalink }}">
+  {{- partial "zero/inline-css.html" (slice "css/motion.css") -}}
   {{- end -}}
   {{- /* 页面级样式（由子模板通过 define 注入） */ -}}
   {{- block "styles" . }}{{ end -}}

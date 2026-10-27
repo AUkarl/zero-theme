@@ -1,0 +1,27 @@
+{{- /* ============================================================
+  search/list.json — 站内搜索索引（构建期生成，页面把它当 /search/index.json 取）
+  ------------------------------------------------------------
+  字段刻意用单字母：索引要尽量小，一次拉到浏览器里做纯前端搜索。
+    t 标题   u 地址   d 日期   s 栏目（posts / moments …）
+    g 标签   x 摘要   c 正文纯文本（按 params.search.max_content 截断）
+  时刻常常没有标题：退回正文第一行，保证结果里不是一片空白。
+  ============================================================ */ -}}
+{{- $max := .Site.Params.search.max_content | default 3000 -}}
+{{- $items := slice -}}
+{{- range .Site.RegularPages -}}
+  {{- if or .Params.searchExclude (eq .Section "search") -}}{{- continue -}}{{- end -}}
+  {{- $text := .Plain | replaceRE `\s+` " " -}}
+  {{- $title := .Title | default (substr $text 0 40) -}}
+  {{- $summary := .Summary | plainify | replaceRE `\s+` " " -}}
+  {{- if and (not $summary) $text -}}{{- $summary = substr $text 0 160 -}}{{- end -}}
+  {{- $items = $items | append (dict
+      "t" $title
+      "u" .RelPermalink
+      "d" (.Date.Format "2006-01-02")
+      "s" .Section
+      "g" (.Params.tags | default slice)
+      "x" $summary
+      "c" (substr $text 0 $max)
+  ) -}}
+{{- end -}}
+{{- dict "v" 1 "pages" $items | jsonify -}}

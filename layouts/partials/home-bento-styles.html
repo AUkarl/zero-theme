@@ -32,8 +32,7 @@
 {{- if lt $acols 1 }}{{ $acols = 1 }}{{ end -}}
 {{- if gt $acols 4 }}{{ $acols = 4 }}{{ end -}}
 {{- $acolsSm := cond (ge $acols 2) 2 $acols -}}
-{{- $css := resources.Get "css/home-bento.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $css.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/home-bento.css") -}}
 <style>
   .main {
     {{- if gt $cap 0 }}

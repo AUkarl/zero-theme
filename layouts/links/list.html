@@ -26,12 +26,10 @@
   ============================================================ */ -}}
 
 {{- define "styles" -}}
-{{- $linksCSS := resources.Get "css/links.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $linksCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/links.css") -}}
 {{- $zeroAPI := partial "zero/api.html" . -}}
 {{- if $zeroAPI.enabled }}
-  {{- $applyCSS := resources.Get "css/zero-apply.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $applyCSS.RelPermalink }}">
+  {{- partial "zero/inline-css.html" (slice "css/zero-apply.css") -}}
 {{- end }}
 {{- end -}}
 

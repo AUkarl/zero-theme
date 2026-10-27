@@ -4,12 +4,9 @@
   支持评论和赞赏弹窗
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $articleCSS := resources.Get "css/article.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $articleCSS.RelPermalink }}">
-{{- $shortcodesCSS := resources.Get "css/shortcodes.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $shortcodesCSS.RelPermalink }}">
-{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/article.css") -}}
+{{- partial "zero/inline-css.html" (slice "css/shortcodes.css") -}}
+{{- partial "zero/inline-css.html" (slice "css/zero.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

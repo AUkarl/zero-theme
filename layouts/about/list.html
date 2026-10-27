@@ -6,8 +6,7 @@
   取值与字段对照见 partials/about-content.html。
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $aboutCSS := resources.Get "css/about.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $aboutCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/about.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

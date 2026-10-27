@@ -4,10 +4,8 @@
   正文里的短代码媒体由 shuo.js 从 <template> 里拆出来渲染（与列表页同一套逻辑）
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $momentsCSS := resources.Get "css/shuo.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $momentsCSS.RelPermalink }}">
-{{- $shortcodeCSS := resources.Get "css/shortcodes.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $shortcodeCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/shuo.css") -}}
+{{- partial "zero/inline-css.html" (slice "css/shortcodes.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

@@ -22,6 +22,7 @@
 | 订阅页 | `/subscribe/` | 邮箱订阅 + 双重确认，文章页内嵌订阅框 |
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
 | 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份把 `author` / `category` / `tag` 三行都声明了，新站开箱就有这三个聚合页；不想要哪一个，把站点 `hugo.toml` 里那行注释掉即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
+| 站内搜索 | `/search/` | 构建期生成索引（标题 / 标签 / 摘要 / 正文），纯前端搜索、零依赖、不经过后端；支持 `?q=` 直达与高亮。缺省没建这一页的站不会有任何变化（见下） |
 | RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置 |
 
 其它能力：暗色模式（跟随系统 + 手动切换 + 全站偏好持久化）、完整响应式（360 → 1920 无横向溢出）、
@@ -289,7 +290,10 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
 
 ## 动效与性能
 
-- 所有 CSS / JS 都 `resources.Get | minify | fingerprint`，改了才换 URL，可以放心长期强缓存。
+- 页面样式（common / 各页专属 / motion）在构建期压缩后**内联进 `<head>`**（`partials/zero/inline-css.html`），
+  省掉每份样式一次往返 —— 移动端实测首屏提前约 0.3s（本地 Lighthouse，真实网络收益更大），
+  样式内容与顺序完全不变。**新增样式请别用相对 `url()`**：内联后基准路径是页面地址。
+- JS 一律 `resources.Get | minify | fingerprint`，改了才换 URL，可以放心长期强缓存。
 - 脚本一律 `defer`，不阻塞解析；每页只加载自己需要的模块（列表页不加载文章脚本，反之亦然）。
 - 外部样式表（Font Awesome）用 `media="print" + onload` 非阻塞加载，`<noscript>` 里放一份同步的兜底；
   并且预先 `preconnect`。**曾经还引过 animate.css，但全项目没有任何 `animate__` 类在用，已经删掉** ——
@@ -307,6 +311,28 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   第 2 页长得不一样（R53 那次是模板 h3→h2、JS 漏改，样式一个元素都没命中）。这一条有实测守着：
   量一次「服务端渲的那张卡」与「JS 重建的同一张卡」的属性逐项对比，本次就是它抓出
   partial 里 `%s` 打整数输出成 `%!s(int=1080)`、`width`/`height` 失效的问题。
+
+---
+
+## 站内搜索（`/search/`）
+
+搜索完全在浏览器里做：Hugo 构建时把文章与时刻的标题、标签、摘要、正文生成到
+`/search/index.json`，页面只取这一份索引。不依赖后端、不需要额外服务，接口挂了也照样能搜。
+
+启用只要一个内容页（`pnpm create:site` 生成的新站已经自带）：
+
+```
+content/zh/search/_index.md
+---
+title: "搜索"
+outputs: ["HTML", "JSON"]
+---
+```
+
+`outputs` 必须写：少了 `JSON` 就只有页面、没有索引，搜索框会提示索引没加载出来。
+导航里没有指向 `/search/` 的项时，主题检测到这一页会自动补一个「搜索」入口；
+自己配了搜索入口的以站长的为准。不想让某篇参与搜索：front matter 写 `searchExclude: true`。
+索引正文默认截到 3000 字符，可在 `params.search.max_content` 调整。
 
 ---
 

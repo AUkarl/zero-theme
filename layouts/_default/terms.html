@@ -3,8 +3,7 @@
   展示所有分类或标签及其文章数量
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $archiveCSS := resources.Get "css/archive.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $archiveCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/archive.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

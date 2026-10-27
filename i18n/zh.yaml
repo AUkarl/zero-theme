@@ -398,3 +398,11 @@ zero-author-verified: "已认证"
 zero-author-back: "全部作者"
 zero-author-page-count:
   other: "共 {{ .Count }} 篇文章"
+
+# ===== 站内搜索（/search/） =====
+search-title: "搜索"
+search-desc: "搜索标题、标签、摘要与正文。中文按词组匹配，多个关键词用空格分开。"
+search-label: "搜索关键词"
+search-placeholder: "输入关键词，回车搜索"
+search-submit: "搜索"
+search-noscript: "搜索需要启用 JavaScript。"

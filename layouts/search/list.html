@@ -1,0 +1,36 @@
+{{- /* ============================================================
+  search/list.html — 站内搜索页（/search/）
+  ------------------------------------------------------------
+  搜索本身在浏览器里做：索引是构建期生成的 /search/index.json（layouts/search/list.json），
+  页面只负责输入框与结果列表。关掉后端、断网后仍可搜已构建的内容。
+  ============================================================ */ -}}
+
+{{- define "styles" -}}
+{{- partial "zero/inline-css.html" (slice "css/search.css") -}}
+{{- end -}}
+
+{{- define "main" -}}
+<main class="main" id="main">
+  <section class="section search-page">
+    <h1 class="section-title">{{ i18n "search-title" | default "搜索" }}</h1>
+    <p class="section-desc">{{ i18n "search-desc" | default "搜索标题、标签、摘要与正文。中文按词组匹配，多个关键词用空格分开。" }}</p>
+    <form class="search-form" id="searchForm" role="search" action="{{ "" | relURL }}search/" method="get">
+      <label class="zero-sr-only" for="searchInput">{{ i18n "search-label" | default "搜索关键词" }}</label>
+      <div class="search-box">
+        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="searchInput" name="q" type="search" autocomplete="off" enterkeyhint="search"
+               placeholder="{{ i18n "search-placeholder" | default "输入关键词，回车搜索" }}">
+        <button class="search-submit" type="submit">{{ i18n "search-submit" | default "搜索" }}</button>
+      </div>
+    </form>
+    <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+    <ol class="search-results" id="searchResults"></ol>
+    <noscript><p class="search-status">{{ i18n "search-noscript" | default "搜索需要启用 JavaScript。" }}</p></noscript>
+  </section>
+</main>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $searchJS := resources.Get "js/search.js" | minify | fingerprint -}}
+<script defer src="{{ $searchJS.RelPermalink }}"></script>
+{{- end -}}

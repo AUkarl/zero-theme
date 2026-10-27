@@ -11,8 +11,7 @@
       「工坊页已关闭」；内容仓库带了 functions/_middleware.ts 的站，边缘还会把 /work/ 直接返回 404
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $workCSS := resources.Get "css/work.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $workCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/work.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

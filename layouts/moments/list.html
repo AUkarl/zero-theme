@@ -11,14 +11,11 @@
     · 后台关掉 momentsEnabled 时整页只留一句「时刻功能已关闭」（js/zero-switches.js）
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $momentsCSS := resources.Get "css/shuo.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $momentsCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/shuo.css") -}}
 {{- /* 卡片正文支持和文章一样的短代码，所以短代码样式也要加载 */ -}}
-{{- $shortcodeCSS := resources.Get "css/shortcodes.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $shortcodeCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/shortcodes.css") -}}
 {{- /* 卡片底栏那颗赞要吃和文章操作条同一组 --zero-*- 变量（激活色、深浅色两套） */ -}}
-{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/zero.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

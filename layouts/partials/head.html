@@ -2,10 +2,11 @@
   head.html — <head> 部分
   包含 meta 标签、标题、SEO、CSS 引入
 
-  性能约定（不要改成同步加载）：
+  性能约定：
   - Google Fonts / Font Awesome / animate.css 一律用
     media="print" + onload 的经典非阻塞写法，避免阻塞首屏渲染。
-  - 本站自己的 common.css 属于关键样式，保持同步加载。
+  - 本站自己的样式体积都很小，直接内联进 head（partials/zero/inline-css.html），
+    省掉每个文件一次往返；不再输出 <link rel=stylesheet>。
   ============================================================ */ -}}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -113,9 +114,8 @@
   {{- with $mc.bannerImage }}{{ if $mc.showBackground }}<link rel="preload" as="image" href="{{ . | relURL }}" fetchpriority="high">{{ end }}{{ end -}}
 {{- end -}}
 
-{{- /* 公共样式（关键样式，保持同步加载） */ -}}
-{{- $commonCSS := resources.Get "css/common.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $commonCSS.RelPermalink }}">
+{{- /* 公共样式：内联进 head —— 少一次阻塞渲染的往返，样式内容不变（见 partials/zero/inline-css.html） */ -}}
+{{- partial "zero/inline-css.html" (slice "css/common.css") -}}
 
 {{- /* 自定义 extra_css */ -}}
 {{- range .Site.Params.custom.extra_css -}}

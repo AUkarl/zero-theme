@@ -25,11 +25,9 @@
 
 {{- define "styles" -}}
 {{- /* 先通用面板样式（account.css），再本页专属样式（zero-account.css）：
-       同优先级下后加载的生效，zero-account.css 的深色模式覆盖才压得住。 */ -}}
-{{- $accountCSS := resources.Get "css/account.css" | minify | fingerprint -}}
-{{- $zeroAccountCSS := resources.Get "css/zero-account.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $accountCSS.RelPermalink }}">
-<link rel="stylesheet" href="{{ $zeroAccountCSS.RelPermalink }}">
+       同优先级下后加载的生效，zero-account.css 的深色模式覆盖才压得住。
+       顺序就是 slice 里的顺序，别调换。 */ -}}
+{{- partial "zero/inline-css.html" (slice "css/account.css" "css/zero-account.css") -}}
 {{- end -}}
 
 {{- define "main" -}}

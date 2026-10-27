@@ -13,10 +13,8 @@
   文案直接写中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
   ============================================================ */ -}}
 {{- define "styles" -}}
-{{- $archiveCSS := resources.Get "css/archive.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $archiveCSS.RelPermalink }}">
-{{- $zeroCSS := resources.Get "css/zero.css" | minify | fingerprint -}}
-<link rel="stylesheet" href="{{ $zeroCSS.RelPermalink }}">
+{{- partial "zero/inline-css.html" (slice "css/archive.css") -}}
+{{- partial "zero/inline-css.html" (slice "css/zero.css") -}}
 {{- end -}}
 
 {{- define "main" -}}
