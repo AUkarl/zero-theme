@@ -23,7 +23,7 @@
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
 | 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份把 `author` / `category` / `tag` 三行都声明了，新站开箱就有这三个聚合页；不想要哪一个，把站点 `hugo.toml` 里那行注释掉即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
 | 站内搜索 | `/search/` | 构建期生成索引（标题 / 标签 / 摘要 / 正文），纯前端搜索、零依赖、不经过后端；支持 `?q=` 直达与高亮。缺省没建这一页的站不会有任何变化（见下） |
-| RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置。`/index.xml` 是全站汇总；`/home/index.xml` 只含主栏目文章；`/moments/index.xml` 只含时刻；标签/分类页也各出自己那一份，不再所有地址都返回同一份全站 feed |
+| RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 只保留三份 feed：`/index.xml` 为文章与时刻各前 20 条，`/posts/index.xml` 为全部文章，`/moments/index.xml` 为全部时刻；sitemap 自动排除 noindex 页面 |
 
 其它能力：暗色模式（跟随系统 + 手动切换 + 全站偏好持久化）、完整响应式（360 → 1920 无横向溢出）、
 页面切换加载层、回到顶部 / 评论锚点按钮、键盘可达的导航与 tab、`prefers-reduced-motion` 降级、
@@ -176,7 +176,7 @@ npm run build        # hugo --minify 构建示例站
 | 16 | 关于页 | 头像、简历块、联系项 |
 | 17 | 友链页 | 各 tab 开关、`friendsEnabled`、`friendApplyEnabled`、失联文案、`optimize_images`（封面缩略图） |
 | 18 | 工具 / 工坊页 | 卡片列表来源与排序 |
-| 19 | RSS | `rss.full_content`（默认输出完整正文，含封面与正文图）、`rss.limit` 条数、`rss.cover_image` 兜底封面 |
+| 19 | RSS | `rss.full_content`（默认输出完整正文，含封面与正文图）、`rss.cover_image` 兜底封面；只生成三份 feed，条数固定 |
 | 20 | SEO 与结构化数据 | 默认描述、OG 图（1200×630 JPEG）、`title_separator`、verification、`robots` 各项 |
 | 21 | 自定义注入 | `head_custom` / `body_custom`（统计代码、站长验证只在这里插一次） |
 | 22 | 第三方资源地址 | `cdn.font_awesome_css` 留空=用主题自带的子集 FA（清单外图标自动回退完整版，不请求外部域名）；`cdn.katex_css` / `katex_js` 留空=jsdelivr |
@@ -362,6 +362,49 @@ robots: "noindex, follow"
 主题不会改你的导航：要用搜索，自己在导航里加一条指向 `/search/` 的项（没建这一页时也不会多出任何入口）。
 不想让某篇参与搜索：front matter 写 `searchExclude: true`。
 索引正文默认截到 3000 字符，可在 `params.search.max_content` 调整。
+
+---
+
+## RSS 与 sitemap（只保留三份 feed）
+
+主题只输出这三份 RSS，其他 section / taxonomy 总览 / term 一律不生成 feed：
+
+| 地址 | 内容 | 条数 |
+|---|---|---|
+| `/index.xml` | 文章 + 时刻合并 | 文章、时刻各最新 20 条 |
+| `/posts/index.xml` | 全部文章 | 不限 |
+| `/moments/index.xml` | 全部时刻 | 不限 |
+
+内容仓的 `hugo.toml` 要这样声明（否则 Hugo 的默认输出会给每个 section、taxonomy 总览和 term 都生成 RSS）：
+
+```toml
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML"]
+  taxonomy = ["HTML"]
+  term = ["HTML"]
+  page = ["HTML"]
+```
+
+然后只在需要 feed 的栏目上单独打开：
+
+```yaml
+# content/zh/posts/_index.md
+build:
+  render: always          # 只输出 /posts/index.xml，不生成 /posts/ 这个 HTML 列表页
+outputs: ["RSS"]
+sitemap:
+  disable: true           # 没有 HTML 页，不登记进 sitemap
+
+# content/zh/moments/_index.md
+outputs: ["HTML", "RSS"]
+```
+
+`/home/` 不再生成 `/home/index.xml`，它的 `<link rel=alternate>` 在 `head.html` 里指到 `/posts/index.xml`。
+`/index.xml` 里的时刻条目没有详情页，链接写成 `/moments/#moment-<文件名>`。
+`sitemap.xml` 用 `partials/seo-robots.html` 的同一份 robots 判据，`noindex` 的页面（1–2 篇文章的 term、`/search/` 等）不会提交。
+
+**本地构建请加 `--cleanDestinationDir`**：Hugo 不会自动删掉上一次生成的 `links/index.xml` 等空 feed。
 
 ---
 

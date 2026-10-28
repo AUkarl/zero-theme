@@ -1,0 +1,23 @@
+{{- /* ============================================================
+  seo-robots.html — 页面 robots 的唯一判据
+  ------------------------------------------------------------
+  返回 robots 字符串（空串 = 不输出 meta，按可收录处理）。
+
+  顺序：
+    1. 总开关 enable_robots=false → 空
+    2. 默认值 [seo].robots_default（缺省 index, follow）
+    3. 404 页 noindex
+    4. 页面 front matter 的 robots 覆盖
+    5. term 只有 1–2 篇文章时 noindex（保留给用户浏览，不给搜索收录）
+
+  seo.html 和 sitemap.xml 都调用这里，避免 meta 说 noindex、sitemap 又提交的两套口径。
+  ============================================================ */ -}}
+{{- $seo := partial "seo-config.html" . -}}
+{{- $robots := "" -}}
+{{- if ne $seo.enable_robots false -}}
+  {{- $robots = $seo.robots_default | default "index, follow" -}}
+  {{- if eq .Kind "404" }}{{ $robots = "noindex, follow" }}{{ end -}}
+  {{- with .Params.robots }}{{ $robots = . }}{{ end -}}
+  {{- if and (eq .Kind "term") (le .Pages.Len 2) }}{{ $robots = "noindex, follow" }}{{ end -}}
+{{- end -}}
+{{- return $robots -}}

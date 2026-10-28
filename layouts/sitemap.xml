@@ -1,0 +1,33 @@
+{{- /* ============================================================
+  sitemap.xml — 只提交可收录的页面
+  ------------------------------------------------------------
+  Hugo 默认 sitemap 会把 noindex 的 term 页（1–2 篇文章的标签/分类）
+  和 /search/ 一起提交，Search Console 就会报「已提交但被 noindex 排除」。
+  这里复用 partials/seo-robots.html 的同一份判据：robots 含 noindex 的页面不进 sitemap。
+
+  保留：
+    · /tags/、/categories/、/author/ 总览
+    · 有 3 篇以上内容的标签/分类 term
+    · 所有正常页面与文章（front matter 自己写 noindex 的除外）
+  不保留：
+    · term 只有 1–2 篇文章的页面（页面还在，只是不让搜索收录）
+    · /search/、/account/ 等 front matter 设了 noindex 的页面
+  ============================================================ */ -}}
+{{ printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  {{- range .Data.Pages -}}
+    {{- $robots := partial "seo-robots.html" . -}}
+    {{- /* 没有 HTML 输出的页面不能进 sitemap：时刻详情页（build render never）
+           的 .Permalink 会落回站点根，/posts/ 的 .Permalink 则是 index.xml。 */ -}}
+    {{- if and (.OutputFormats.Get "HTML") (not (strings.Contains (lower $robots) "noindex")) -}}
+  <url>
+    <loc>{{ .Permalink }}</loc>{{ if not .Lastmod.IsZero }}
+    <lastmod>{{ safeHTML (.Lastmod.Format "2006-01-02T15:04:05-07:00") }}</lastmod>{{ end }}{{ with .Sitemap.ChangeFreq }}
+    <changefreq>{{ . }}</changefreq>{{ end }}{{ if ge .Sitemap.Priority 0.0 }}
+    <priority>{{ .Sitemap.Priority }}</priority>{{ end }}{{ if .IsTranslated }}{{ range .Translations }}
+    <xhtml:link rel="alternate" hreflang="{{ .Language.LanguageCode }}" href="{{ .Permalink }}" />{{ end }}
+    <xhtml:link rel="alternate" hreflang="{{ .Language.LanguageCode }}" href="{{ .Permalink }}" />{{ end }}
+  </url>
+    {{- end -}}
+  {{- end }}
+</urlset>

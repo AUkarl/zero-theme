@@ -17,7 +17,6 @@
 {{- $rss := .Site.Params.rss | default dict -}}
 {{- if (ne $rss.enable false) -}}
 {{- $full := (ne $rss.full_content false) -}}
-{{- $limit := $rss.limit | default 50 -}}
 {{- /* 媒体类短代码的外层容器：video-player/audio-player 是本地上传的播放器，
        shortcode-embed / *-music / *-video 是第三方嵌入，全部整块剔除 */ -}}
 {{- $embedRe := `(?s)<div[^>]*class="[^"]*(?:video-embed|audio-player|video-player|shortcode-embed|music163-embed|bilibili-embed|netease-music|kugou-music|qq-music|bilibili-video|tencent-video|youku-video|youtube-video|youtube-embed)[^"]*"[^>]*>.*?</div>` -}}
@@ -28,10 +27,31 @@
 {{- with index $authorsData $ownerId -}}{{- $ownerName = string .name -}}{{- end -}}
 {{- if not $ownerName -}}{{- $ownerName = trim (string ($siteCfg.author | default "")) " " -}}{{- end -}}
 {{- printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
+{{- $postTypes := slice "post" "posts" "article" "blog" "shuo" -}}
+{{- $momentTypes := slice "moment" "moments" -}}
+{{- $rssPages := slice -}}
+{{- if .IsHome -}}
+  {{- /* 全站合并 feed：文章、时刻各取最新的 20 条，再按日期倒序混排 */ -}}
+  {{- $posts := where site.RegularPages "Type" "in" $postTypes -}}
+  {{- $moments := where site.RegularPages "Type" "in" $momentTypes -}}
+  {{- $posts = $posts.ByDate.Reverse | first 20 -}}
+  {{- $moments = $moments.ByDate.Reverse | first 20 -}}
+  {{- $rssPages = sort (union $posts $moments) "Date" "desc" -}}
+{{- else if eq .Section "posts" -}}
+  {{- /* /posts/index.xml：全部文章，不限条数 */ -}}
+  {{- $rssPages = (where .RegularPages "Type" "in" $postTypes).ByDate.Reverse -}}
+{{- else if eq .Section "moments" -}}
+  {{- /* /moments/index.xml：全部时刻，不限条数 */ -}}
+  {{- $rssPages = (where .RegularPages "Type" "in" $momentTypes).ByDate.Reverse -}}
+{{- else -}}
+  {{- $rssPages = .RegularPages.ByDate.Reverse -}}
+{{- end -}}
+{{- $channelLink := .Permalink -}}
+{{- if eq .Section "posts" }}{{ $channelLink = "home/" | absURL }}{{ end -}}
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>{{ if or .IsHome (eq .Title $siteName) }}{{ $siteName }}{{ else }}{{ with .Title }}{{.}} on {{ end }}{{ $siteName }}{{ end }}</title>
-    <link>{{ .Permalink }}</link>
+    <link>{{ $channelLink }}</link>
     <description>{{ $siteCfg.description | default (printf "Recent content on %s" $siteName) }}</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>{{ site.Language.Locale }}</language>{{ with .Site.Copyright }}
@@ -40,21 +60,8 @@
     {{- with .OutputFormats.Get "RSS" -}}
     {{ printf "<atom:link href=%q rel=\"self\" type=%q />" .Permalink .MediaType | safeHTML }}
     {{- end -}}
-    {{- /* 分页/分区 feed 必须只取当前页面的 RegularPages；
-           以前固定用 site.RegularPages，于是 /home/index.xml、/tags/edge/index.xml
-           全都输出同一份全站 feed，页面里的 alternate 声明与实际内容对不上。
-           首页仍取全站，其它上下文取当前 section/taxonomy。 */ -}}
-    {{- /* /home/ 是站点首页（文章仍在 /posts/），它的 .RegularPages 是空的；
-           站点根 / 与 /home/ 都取全站文章；其它 section/taxonomy 取当前页面的 RegularPages。
-           moments 的类型是 moment，别漏掉；否则 /moments/index.xml 会是一份空 feed。 */ -}}
-    {{- $rssPages := .RegularPages -}}
-    {{- if .IsHome }}{{ $rssPages = site.RegularPages }}
-    {{- else if eq .Section "home" }}{{ $rssPages = where site.RegularPages "Section" "in" (site.Params.mainSections | default (slice "posts")) }}{{ end -}}
-    {{- $rssTypes := slice "post" "posts" "article" "blog" "shuo" "moment" "moments" -}}
-    {{- if or (eq .Section "moments") (eq .Type "moments") }}{{ $rssTypes = slice "moment" "moments" }}
-    {{- else if eq .Section "home" }}{{ $rssTypes = slice "post" "posts" "article" "blog" "shuo" }}{{ end -}}
-    {{- $rssPages = where $rssPages "Type" "in" $rssTypes -}}
-    {{- range $rssPages.ByDate.Reverse | first $limit }}
+    {{- /* 条目已在上面按 feed 类型选好：根 / 合并 20+20，/posts 和 /moments 全量。 */ -}}
+    {{- range $rssPages }}
     {{- $html := .Summary -}}
     {{- if $full }}{{ $html = .Content }}{{ end -}}
     {{- /* ---------- 封面：给阅读器一个"原图直链" ----------
@@ -108,11 +115,24 @@
     {{- $html = replaceRE `(?s)<!--.*?-->` "" $html -}}
     {{- /* XMLEscape 后由阅读器还原成 HTML：这是 RSS 的规范做法，避免 feed 结构非法 */ -}}
     {{- $html = $html | transform.XMLEscape -}}
+    {{- /* 时刻没有详情页（build render never），.Permalink 是空的；链到时间线的锚点，
+           评论/点赞/站内其它地方也是这个地址（/moments/#moment-<文件名>）。 */ -}}
+    {{- $itemLink := .Permalink -}}
+    {{- if and (not $itemLink) (or (eq .Section "moments") (eq .Type "moments") (eq .Type "moment")) -}}
+      {{- $base := "" -}}
+      {{- with .File }}{{ $base = .ContentBaseName }}{{ end -}}
+      {{- $itemLink = cond (ne $base "") (printf "%s#moment-%s" ("moments/" | absURL) $base) ("moments/" | absURL) -}}
+    {{- end -}}
+    {{- $itemTitle := .Title -}}
+    {{- if not $itemTitle -}}
+      {{- $itemTitle = .Date.Format "2006-01-02" -}}
+      {{- if or (eq .Section "moments") (eq .Type "moments") (eq .Type "moment") }}{{ $itemTitle = printf "%s 时刻" $itemTitle }}{{ end -}}
+    {{- end -}}
     <item>
-      <title>{{ .Title }}</title>
-      <link>{{ .Permalink }}</link>
+      <title>{{ $itemTitle }}</title>
+      <link>{{ $itemLink }}</link>
       <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</pubDate>
-      <guid>{{ .Permalink }}</guid>
+      <guid>{{ $itemLink }}</guid>
       {{- /* 署名：文章 front matter 的 author（一个或一串标识）> 默认作者标识。
              标识 → 显示名的顺序和文章页、seo.html 一致：authors.yaml 的 name → 站长名字 → 标识本身。
              以前直接把标识写进 dc:creator，阅读器里就顶着个 "default"。 */ -}}

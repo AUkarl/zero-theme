@@ -83,6 +83,10 @@
 {{- range .AlternativeOutputFormats -}}
 {{ printf "<link rel=%q type=%q href=%q title=%q>" .Rel .MediaType.Type .Permalink $siteName | safeHTML }}
 {{- end -}}
+{{- /* /home/ 只输出 HTML，不再生成 /home/index.xml；文章列表指到全量文章 feed。 */ -}}
+{{- if eq .Section "home" -}}
+{{ printf "<link rel=\"alternate\" type=\"application/rss+xml\" href=%q title=%q>" ("posts/index.xml" | absURL) $siteName | safeHTML }}
+{{- end -}}
 
 {{- /* Favicon：data/site.json（后台基本信息）> params.favicon > 主题自带那张 */ -}}
 {{- $favicon := (partial "site-config.html" .).favicon -}}

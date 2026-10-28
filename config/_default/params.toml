@@ -533,7 +533,6 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
 [rss]
   enable = true                   # 生成 RSS
   full_content = true             # true=输出完整正文（封面图和正文图都在里面）；false=只输出摘要且不含图片
-  limit = 30                      # 最近多少条
   cover_image = ""                # 条目没有封面时的兜底图
 
 

@@ -9,7 +9,6 @@
   新增标签全部可用 [seo] 下的开关关闭，默认行为与旧版兼容。
   ============================================================ */ -}}
 {{- $seo := partial "seo-config.html" . -}}
-{{- $is404 := eq .Kind "404" -}}
 
 {{- /* ---------- description：页面 description → .Description → 摘要 → SEO 默认描述 → 站点描述 ----------
   「SEO 默认描述」排在「站点描述」前面是有意的：后台两个面板都写了一句话给 meta，
@@ -119,16 +118,9 @@
 <link rel="canonical" href="{{ .Permalink }}">
 {{- end }}
 
-{{- /* ---------- robots（默认 index,follow；404 页 noindex；可用页面 front matter 的 robots 覆盖） ---------- */ -}}
-{{- if (ne $seo.enable_robots false) -}}
-  {{- $robots := $seo.robots_default | default "index, follow" -}}
-  {{- if $is404 }}{{ $robots = "noindex, follow" }}{{ end -}}
-  {{- with .Params.robots }}{{ $robots = . }}{{ end -}}
-  {{- /* 只有 1–2 篇文章的标签/分类页对搜索没有独立价值，保留给用户浏览但不收录。 */ -}}
-  {{- if and (eq .Kind "term") (le .Pages.Len 2) }}{{ $robots = "noindex, follow" }}{{ end -}}
-  {{- with $robots }}
+{{- /* ---------- robots（判据在 partials/seo-robots.html，sitemap 也用同一份） ---------- */ -}}
+{{- with partial "seo-robots.html" . }}
 <meta name="robots" content="{{ . }}">
-  {{- end }}
 {{- end }}
 
 {{- /* ---------- 基础 meta ---------- */ -}}
