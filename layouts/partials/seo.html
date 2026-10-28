@@ -26,6 +26,11 @@
 {{- with .Params.description }}{{ $desc = partial "one-string.html" . }}{{ end -}}
 {{- if not $desc }}{{ with .Description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
 {{- if not $desc }}{{ with .Summary }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- /* 列表页/关于页/工坊页等没有 front matter description 时，用本页正文做唯一描述；
+       以前 79 个非文章页共用一条站点默认描述，搜索结果里全是同一句。首页仍用 SEO 默认描述。 */ -}}
+{{- if and (not $desc) (not .IsPage) (not .IsHome) }}{{ with .Content }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- /* 标签/分类页多数没有 _index.md，正文是空的；用名称 + 篇数生成唯一描述。 */ -}}
+{{- if and (not $desc) (eq .Kind "term") }}{{ $desc = printf "%s · 共 %d 篇内容。" .Title .Pages.Len }}{{ end -}}
 {{- if not $desc }}{{ with $seo.default_description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
 {{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
 {{- if or (reflect.IsSlice $desc) (reflect.IsMap $desc) }}{{ $desc = "" }}{{ end -}}
@@ -81,7 +86,7 @@
 {{- /* 标题口径只有一份：见 partials/page-title.html（没写 title 的内容会退正文摘要→日期→站名，
        以前这里 `.Title | default $siteName` 会让分享卡片顶着站点名） */ -}}
 {{- $pageTitle := partial "page-title.html" . -}}
-{{- if .IsHome }}{{ $pageTitle = $siteName }}{{ end -}}
+{{- if or .IsHome (eq .Section "home") }}{{ $pageTitle = $siteName }}{{ end -}}
 
 {{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
 {{- if (ne $seo.enable_canonical false) }}
@@ -93,6 +98,8 @@
   {{- $robots := $seo.robots_default | default "index, follow" -}}
   {{- if $is404 }}{{ $robots = "noindex, follow" }}{{ end -}}
   {{- with .Params.robots }}{{ $robots = . }}{{ end -}}
+  {{- /* 只有 1–2 篇文章的标签/分类页对搜索没有独立价值，保留给用户浏览但不收录。 */ -}}
+  {{- if and (eq .Kind "term") (le .Pages.Len 2) }}{{ $robots = "noindex, follow" }}{{ end -}}
   {{- with $robots }}
 <meta name="robots" content="{{ . }}">
   {{- end }}
@@ -173,7 +180,7 @@
   {{- if .IsPage -}}
     {{- $article := dict
       "@context" "https://schema.org"
-      "@type" "Article"
+      "@type" "BlogPosting"
       "headline" $pageTitle
       "description" $desc
       "inLanguage" (.Language.Lang | default "zh")
@@ -205,6 +212,14 @@
     {{- if (ne $seo.enable_breadcrumb false) -}}
       {{- $pos := 1 -}}
       {{- $items := slice (dict "@type" "ListItem" "position" $pos "name" $siteName "item" .Site.Home.Permalink) -}}
+      {{- with .Params.categories -}}
+        {{- $cat := . -}}
+        {{- if reflect.IsSlice . }}{{ $cat = index . 0 }}{{ end -}}
+        {{- with $.Site.GetPage (printf "/categories/%s" (urlize (string $cat))) -}}
+          {{- $pos = add $pos 1 -}}
+          {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) -}}
+        {{- end -}}
+      {{- end -}}
       {{- if and .CurrentSection (not .CurrentSection.IsHome) .CurrentSection.Permalink -}}
         {{- $pos = add $pos 1 -}}
         {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) -}}
@@ -213,6 +228,26 @@
       {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" $pageTitle "item" .Permalink) -}}
 <script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BreadcrumbList" "itemListElement" $items | jsonify | safeJS }}</script>
     {{- end -}}
+  {{- else if eq .Kind "term" -}}
+    {{- $isAuthor := eq (lower (string .Data.Singular)) "author" -}}
+    {{- $node := dict
+      "@context" "https://schema.org"
+      "@type" (cond $isAuthor "ProfilePage" "CollectionPage")
+      "name" $pageTitle
+      "description" $desc
+      "url" .Permalink
+      "inLanguage" (.Language.Lang | default "zh")
+    -}}
+    {{- if $isAuthor -}}
+      {{- $node = merge $node (dict "mainEntity" (dict "@type" "Person" "name" .Title)) -}}
+    {{- else -}}
+      {{- $items := slice -}}
+      {{- range $i, $p := first 20 .Pages.ByDate.Reverse -}}
+        {{- $items = $items | append (dict "@type" "ListItem" "position" (add $i 1) "name" $p.Title "item" $p.Permalink) -}}
+      {{- end -}}
+      {{- $node = merge $node (dict "mainEntity" (dict "@type" "ItemList" "itemListElement" $items)) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $node | jsonify | safeJS }}</script>
   {{- else -}}
     {{- $site := dict
       "@context" "https://schema.org"

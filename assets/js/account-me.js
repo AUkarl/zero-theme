@@ -1034,11 +1034,11 @@
           (totpOn ? totpOnForm(atLogin) : totpSetupForm()) +
           '<div id="zsMeTotpBox" class="zsme-sec"></div></div>' +
 
-          '<div class="zsme-card zsme-sec"><h3>' + esc(T.secPassword || '修改密码') + '</h3>' + pwForm(totpOn) + '</div>';
+          '<div class="zsme-card zsme-sec"><h3>' + esc(T.secPassword || '修改密码') + '</h3>' + pwForm(sec.secondFactors) + '</div>';
 
         bindMailSec(verified, email);
         bindTotpSec(totpOn, atLogin);
-        bindPwSec(totpOn);
+        bindPwSec(sec.secondFactors);
       });
     }
 
@@ -1196,47 +1196,94 @@
       };
     }
 
-    /* ③ 修改密码：当前密码 + 身份验证器动态码，两项都要 */
+    /* ③ 修改密码：当前密码 + 第二凭据（验证器 / 邮箱验证码 / GitHub 任一）
+       以前这里写死只给验证器，没绑验证器的读者会看到一张禁用表单；
+       后端 /api/security 已经返回 secondFactors，按它渲染才对。 */
 
-    function pwForm(on) {
-      if (on) {
+    function pwForm(choices) {
+      var list = (choices || []).filter(function (x) { return x && x.available; });
+      if (!list.length) {
         return (
-          '<p class="zsme-hint">' + esc(T.secPwNeed || '修改密码必须同时交两样凭据：当前密码 + 身份验证器的 6 位动态码。') + '</p>' +
-          '<form id="zsMePw"><div class="zsme-fields">' +
-          field('current', T.secCur || '当前密码', 'password', 'maxlength="200" required autocomplete="current-password"', '') +
-          field('next', T.secNew || '新密码', 'password', 'required minlength="8" maxlength="200" placeholder="至少 8 位" autocomplete="new-password"', '') +
-          field('totp', T.secTotpCode || '验证器上的 6 位动态码', 'text', 'required inputmode="numeric" maxlength="6" autocomplete="one-time-code"', '') +
-          '</div><p class="zsme-acts"><button type="submit" class="zsme-btn primary">' +
-          esc(T.secChange || '修改密码') + '</button></p></form>'
+          '<p class="zsme-warn">' + esc(T.secPwNoSecond || '当前没有可用的第二凭据：请先验证邮箱、绑定身份验证器或 GitHub。') + '</p>' +
+          '<div class="zsme-fields">' +
+          field('current', T.secCur || '当前密码', 'password', 'maxlength="200" disabled', '') +
+          field('next', T.secNew || '新密码', 'password', 'maxlength="200" disabled', '') +
+          '</div><p class="zsme-acts"><button type="button" class="zsme-btn primary" disabled>' +
+          esc(T.secChange || '修改密码') + '</button></p>'
         );
       }
+      var prefer = list.filter(function (x) { return x.kind === 'totp'; })[0] || list[0];
+      var select = list.length > 1
+        ? '<label class="zsme-field"><span>' + esc(T.secSecond || '第二凭据') + '</span><select id="zsMePwSecond">' +
+          list.map(function (x) {
+            return '<option value="' + esc(x.kind) + '"' + (x.kind === prefer.kind ? ' selected' : '') + '>' + esc(x.label || x.kind) + '</option>';
+          }).join('') + '</select></label>'
+        : '';
       return (
-        '<p class="zsme-warn">' + esc(T.secPwNoTotp || '本账号还没启用身份验证器，请先在上面完成绑定。') + '</p>' +
-        '<p class="zsme-hint">' + esc(T.secPwNeed || '修改密码必须同时交两样凭据：当前密码 + 身份验证器的 6 位动态码。') + '</p>' +
-        '<div class="zsme-fields">' +
-        field('current', T.secCur || '当前密码', 'password', 'maxlength="200" disabled', '') +
-        field('next', T.secNew || '新密码', 'password', 'maxlength="200" disabled', '') +
-        field('totp', T.secTotpCode || '验证器上的 6 位动态码', 'text', 'maxlength="6" disabled', '') +
-        '</div><p class="zsme-acts"><button type="button" class="zsme-btn primary" disabled>' +
-        esc(T.secChange || '修改密码') + '</button></p>'
+        '<p class="zsme-hint">' + esc(T.secPwNeed2 || '修改密码需要当前密码 + 一个可用的第二凭据。') + '</p>' +
+        '<form id="zsMePw"><div class="zsme-fields">' +
+        field('current', T.secCur || '当前密码', 'password', 'maxlength="200" required autocomplete="current-password"', '') +
+        field('next', T.secNew || '新密码', 'password', 'required minlength="8" maxlength="200" placeholder="至少 8 位" autocomplete="new-password"', '') +
+        select +
+        '<div id="zsMePwSecondBox" class="zsme-field full"></div>' +
+        '</div><p class="zsme-acts"><button type="submit" class="zsme-btn primary">' +
+        esc(T.secChange || '修改密码') + '</button></p></form>'
       );
     }
 
-    function bindPwSec(on) {
+    function bindPwSec(choices) {
       var form = els.pane.querySelector('#zsMePw');
       if (!form) return;
+      var list = (choices || []).filter(function (x) { return x && x.available; });
+      if (!list.length) return;
+      var sel = form.querySelector('#zsMePwSecond');
+      var box = form.querySelector('#zsMePwSecondBox');
+      if (!box) return;
+      var email = String(((ov.account || {}).email) || '');
+      var currentSecond = sel ? sel.value : (list[0] && list[0].kind);
+
+      function renderSecond() {
+        currentSecond = sel ? sel.value : (list[0] && list[0].kind);
+        if (currentSecond === 'github') {
+          box.innerHTML = '<p class="zsme-hint">' + esc(T.secPwGithub || '将使用已绑定的 GitHub 授权作为第二凭据，不需要额外填写验证码。') + '</p>';
+          return;
+        }
+        if (currentSecond === 'email') {
+          box.innerHTML = '<label class="zsme-field"><span>' + esc(T.secMailCode || '邮箱验证码') + '</span><span class="zsme-inline">' +
+            '<input name="pwcode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 位验证码" required>' +
+            '<button type="button" class="zsme-btn sm" id="zsMePwSend">' + esc(T.secSendCode || '发送验证码') + '</button></span></label>' +
+            '<p class="zsme-hint">' + esc(fill(T.secMailTo || '验证码会发到 {email}，10 分钟内有效。', { email: email })) + '</p>';
+          var send = box.querySelector('#zsMePwSend');
+          if (send) {
+            send.onclick = function () {
+              var self = this;
+              self.disabled = true;
+              api('/api/auth/send-code', { method: 'POST', body: { email: email, scene: 'login' } }).then(
+                function () { msg(T.secMailSent || '验证码已发送，请查收邮箱。', false); },
+                function (err) { msg(err.message, true); }
+              ).then(function () { self.disabled = false; });
+            };
+          }
+          return;
+        }
+        box.innerHTML = '<label class="zsme-field"><span>' + esc(T.secTotpCode || '验证器上的 6 位动态码') + '</span>' +
+          '<input name="pwcode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="6 位动态码" required></label>';
+      }
+
+      if (sel) sel.onchange = renderSecond;
+      renderSecond();
+
       form.onsubmit = function (e) {
         e.preventDefault();
-        var body = {
-          current: val(form, 'current'),
-          next: val(form, 'next'),
-          /* 第二凭据固定走验证器：邮箱码与 GitHub 这两条入口这里不再提供 */
-          second: 'totp',
-          code: val(form, 'totp').replace(/\s/g, ''),
-        };
+        var second = sel ? sel.value : (list[0] && list[0].kind);
+        var code = (val(form, 'pwcode') || '').replace(/\s/g, '');
+        var body = { current: val(form, 'current'), next: val(form, 'next'), second: second };
+        if (second === 'email' || second === 'totp') {
+          if (!/^\d{6}$/.test(code)) return msg(second === 'email' ? (T.secMailCode || '邮箱验证码') : (T.secTotpCode || '验证器上的 6 位动态码'), true);
+          body.code = code;
+        }
         if (!body.current) return msg(T.fill, true);
         if (!body.next || body.next.length < 8) return msg(T.pwShort || '新密码至少 8 位', true);
-        if (!/^\d{6}$/.test(body.code)) return msg(T.secTotpCode || '验证器上的 6 位动态码', true);
         var btn = form.querySelector('button[type="submit"]');
         if (btn) btn.disabled = true;
         guard(api('/api/account/password', { method: 'POST', body: body }), T.secOk || '密码已更新，其它设备需要重新登录。', function () {

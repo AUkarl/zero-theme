@@ -783,11 +783,6 @@ function __shuoBoot__() {
     }
   }
 
-  /* 卡片要不要在渲染时就把评论组件挂上：只有 zero 那一家（本地组件，没有 CDN 负担） */
-  function mountAtRender() {
-    return commentEnabled && isZero() && momentsOpen;
-  }
-
   function appendBatch() {
     var list = document.getElementById('shuoList');
     if (!list || renderedCount >= shuoData.length) return;
@@ -813,9 +808,9 @@ function __shuoBoot__() {
     pending.forEach(function (p) { runScripts(p.el.querySelector('.shuo-media') || p.el, p.scripts); });
     bindItemEvents(list);
     if (window.Motion) window.Motion.lazyImages(list);
-    /* 组件标签已经在卡片 HTML 里了，这里确保脚本到位 + 起评论观察者，
-       所以不点「评论」也能看到已有评论 */
-    if (mountAtRender()) fresh.forEach(function (el) { ensureComment(el, false); });
+    /* 评论组件不在渲染时加载：卡片的评论区默认收起，等人点「评论」再由 ensureComment 按需加载。
+       以前这里每个可见卡片都 initZero 一次，时刻页首屏就拉 154KB 的 zero-comment；
+       评论数仍由 observeCard 的轻量 count 请求给出，交互不变。 */
     renderedCount = end;
 
     removeSentinel();

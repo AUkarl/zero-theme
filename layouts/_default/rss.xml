@@ -40,7 +40,21 @@
     {{- with .OutputFormats.Get "RSS" -}}
     {{ printf "<atom:link href=%q rel=\"self\" type=%q />" .Permalink .MediaType | safeHTML }}
     {{- end -}}
-    {{- range (where site.RegularPages "Type" "in" (slice "post" "posts" "article" "blog" "shuo")) | first $limit }}
+    {{- /* 分页/分区 feed 必须只取当前页面的 RegularPages；
+           以前固定用 site.RegularPages，于是 /home/index.xml、/tags/edge/index.xml
+           全都输出同一份全站 feed，页面里的 alternate 声明与实际内容对不上。
+           首页仍取全站，其它上下文取当前 section/taxonomy。 */ -}}
+    {{- /* /home/ 是站点首页（文章仍在 /posts/），它的 .RegularPages 是空的；
+           站点根 / 与 /home/ 都取全站文章；其它 section/taxonomy 取当前页面的 RegularPages。
+           moments 的类型是 moment，别漏掉；否则 /moments/index.xml 会是一份空 feed。 */ -}}
+    {{- $rssPages := .RegularPages -}}
+    {{- if .IsHome }}{{ $rssPages = site.RegularPages }}
+    {{- else if eq .Section "home" }}{{ $rssPages = where site.RegularPages "Section" "in" (site.Params.mainSections | default (slice "posts")) }}{{ end -}}
+    {{- $rssTypes := slice "post" "posts" "article" "blog" "shuo" "moment" "moments" -}}
+    {{- if or (eq .Section "moments") (eq .Type "moments") }}{{ $rssTypes = slice "moment" "moments" }}
+    {{- else if eq .Section "home" }}{{ $rssTypes = slice "post" "posts" "article" "blog" "shuo" }}{{ end -}}
+    {{- $rssPages = where $rssPages "Type" "in" $rssTypes -}}
+    {{- range $rssPages.ByDate.Reverse | first $limit }}
     {{- $html := .Summary -}}
     {{- if $full }}{{ $html = .Content }}{{ end -}}
     {{- /* ---------- 封面：给阅读器一个"原图直链" ----------

@@ -721,3 +721,7 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* 密码表单里的「输入框 + 发送验证码」一行，不改变原有字段样式 */
+.zsme-inline { display: flex; align-items: center; gap: 8px; }
+.zsme-inline input { flex: 1 1 auto; min-width: 0; }

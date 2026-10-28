@@ -22,6 +22,8 @@
     <p class="page-loader-text">{{ $text }}</p>
   </div>
 </div>
+{{- /* 没有 JS 时 loader 永远不会执行 is-done，会一直盖住正文；用 noscript 直接撤掉。 */ -}}
+<noscript><style>#pageLoader{display:none!important}</style></noscript>
 {{- /* 关键样式内联：遮罩必须第一帧就是正确的颜色，不能等 CSS 文件 */ -}}
 <style>
   .page-loader{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;

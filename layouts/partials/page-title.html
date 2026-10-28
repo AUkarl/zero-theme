@@ -29,6 +29,10 @@
     {{- $t = i18n (index $taxoNames $sing) | default $cur -}}
   {{- end -}}
 {{- end -}}
+{{- /* 分类页与标签页同名时（例如「历史」既是分类也是标签），标题追加类型，避免搜索结果里两条完全一样。 */ -}}
+{{- if eq .Kind "term" -}}
+  {{- if eq $sing "tag" }}{{ $t = printf "%s · 标签" $t }}{{ else if eq $sing "category" }}{{ $t = printf "%s · 分类" $t }}{{ end -}}
+{{- end -}}
 {{- if or (reflect.IsSlice $t) (reflect.IsMap $t) }}{{ $t = "" }}{{ end -}}
 {{- if not $t }}{{ $t = printf "%s" (.Plain | plainify | replaceRE `\s+` " " | strings.TrimSpace | truncate 24 "…") }}{{ end -}}
 {{- if not $t }}{{ $t = .Date.Format "2006-01-02" }}{{ end -}}

@@ -44,6 +44,9 @@
 
   /** 没 upgrade 的元素宽高都是 0，只能用 rect.top 判断它离视野多远 */
   function near(el) {
+    /* 收起的评论框在 [hidden] 里，rect 是 0×0 且贴左上角；不排除它的话，
+       时刻页首屏每一张卡都会命中一次，整包 154KB 又在没人点评论时先下了。 */
+    if (el.offsetParent === null) return false;
     var r = el.getBoundingClientRect();
     var vh = window.innerHeight || document.documentElement.clientHeight || 800;
     return r.top <= vh + EDGE && r.bottom >= -EDGE;

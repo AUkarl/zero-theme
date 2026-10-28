@@ -138,7 +138,7 @@
               <span class="feed-site">{{ .site }}</span>
               {{- with .date }}<time class="feed-date" datetime="{{ . }}">{{ time.Format "2006-01-02" . }}</time>{{ end }}
             </div>
-            <h3 class="feed-title">{{ partial "cms/safe-link.html" (dict "url" .url "label" .title) }}</h3>
+            <h2 class="feed-title">{{ partial "cms/safe-link.html" (dict "url" .url "label" .title) }}</h2>
             {{- with .summary }}<p class="feed-desc">{{ . }}</p>{{ end }}
           </div>
         </article>

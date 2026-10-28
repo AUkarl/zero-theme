@@ -73,6 +73,21 @@
              按契约 show-entry 只给「没有评论区」的页面用 */}}
       {{- end }}
       <div id="shuoList"></div>
+      {{- /* 无 JS / 爬虫兜底：至少把最近 6 条时刻的正文与图片直接放进 HTML。
+             JS 正常时浏览器不渲染 noscript，外观与交互不变。 */ -}}
+      <noscript>
+        <div class="shuo-noscript">
+          {{- range first 6 (where .Site.RegularPages "Section" "moments").ByDate.Reverse }}
+          <article class="shuo-item">
+            <div class="shuo-body">
+              <div class="shuo-name">{{ (partial "site-config.html" .).name }}</div>
+              <div class="shuo-content">{{ .Content }}</div>
+              <div class="shuo-bar"><time class="shuo-time" datetime="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Date.Format "2006-01-02 15:04" }}</time></div>
+            </div>
+          </article>
+          {{- end }}
+        </div>
+      </noscript>
     </div>
   </section>
   {{- partial "zero/closed.html" (dict "zero" $zero "key" "momentsEnabled" "text" "时刻功能已关闭。") -}}

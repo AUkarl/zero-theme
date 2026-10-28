@@ -34,8 +34,13 @@
 {{- $first := index $valid 0 -}}
 {{- $rest := slice -}}
 {{- range $i, $u := $valid -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $u -}}{{- end -}}{{- end -}}
+{{- /* 固定尺寸只用于给浏览器预留宽高（CLS），真实尺寸仍由 CSS 决定。 */ -}}
+{{- $w := 0 }}{{ $h := 0 }}
+{{- if eq $box "feed-cover" }}{{ $w = 132 }}{{ $h = 99 }}
+{{- else if eq $box "neighbor-icon" }}{{ $w = 72 }}{{ $h = 72 }}
+{{- else if eq $box "alliance-icon" }}{{ $w = 26 }}{{ $h = 26 }}{{ end }}
 <span class="{{ $box }}">
-  <img src="{{ $first }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"
+  <img src="{{ $first }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"{{ if $w }} width="{{ $w }}" height="{{ $h }}"{{ end }}
        data-chain="{{ delimit $rest " " }}"
        onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{this.remove()}">
 </span>

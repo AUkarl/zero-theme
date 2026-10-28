@@ -15,7 +15,7 @@
 | 落地页 | `/` | 可完全配置的 Bento 首屏：标语、进入按钮、统计条、封面卡；不想要就直接跳文章列表 |
 | 文章列表 | `/home/` | 精选置顶 + 热度排序、分类 / 标签筛选、分页、封面 WebP |
 | 文章页 | `/posts/<slug>/` | 右侧目录（可关）、修改时间、代码高亮、KaTeX / MathJax、图片灯箱、点赞收藏条、作者框与赞赏、评论区、上一篇 / 下一篇、相关文章 |
-| 时刻页 | `/moments/` | 卡片时间线，Git 里的 Markdown 与数据库动态混排，图片九宫格、音乐、地点、按需展开的评论 |
+| 时刻页 | `/moments/` | 卡片时间线，内容全部来自 Git 里的 Markdown；图片九宫格、音乐、地点、按需展开的评论。<br>JS 正常时评论框收起/不可见的卡片不会触发组件下载（展开评论框或点「评论」时按需加载）；`<noscript>` 里预渲染最近 6 条时刻的正文，爬虫与无 JS 读者也能看到内容 |
 | 归档页 | `/archive/` | 按年时间线 + 弹幕标签云（可关）+ 分类筛选 + 站内搜索 |
 | 友链页 | `/links/` | 四个 tab：朋友动态 / 左邻右舍 / 站点联盟 / 在线申请；失联自动进「迷失的小船」 |
 | 关于 / 工坊 | `/about/` `/work/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
@@ -23,7 +23,7 @@
 | 账号页 | `/account/` `/account/me/?u=@标识` | 登录 / 注册 / 找回密码；用户中心七个面板（资料、评论、收藏、友链、投稿、认证、注销）与两步验证开关 |
 | 分类 / 标签 / 作者 | `/categories/` `/tags/` `/author/` | Hugo taxonomy 聚合页。**这些页面只给站点自己声明过的分类法生成**：主题的 `layouts/taxonomy/` 备好了 `author.html` / `category.html` / `tag.html` 三份模板，而 Hugo 不读主题里的 `[taxonomies]` —— 要在站点的 `hugo.toml` 写 `[taxonomies] author = "author"`（`pnpm create:site` 生成的那份把 `author` / `category` / `tag` 三行都声明了，新站开箱就有这三个聚合页；不想要哪一个，把站点 `hugo.toml` 里那行注释掉即可）。作者页带资料卡与文章列表，地址是 **`/author/<标识>/`**，不是 `/authors/` |
 | 站内搜索 | `/search/` | 构建期生成索引（标题 / 标签 / 摘要 / 正文），纯前端搜索、零依赖、不经过后端；支持 `?q=` 直达与高亮。缺省没建这一页的站不会有任何变化（见下） |
-| RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置 |
+| RSS / sitemap / robots | `/index.xml` `/sitemap.xml` `/robots.txt` | 全部读同一份 SEO 配置。`/index.xml` 是全站汇总；`/home/index.xml` 只含主栏目文章；`/moments/index.xml` 只含时刻；标签/分类页也各出自己那一份，不再所有地址都返回同一份全站 feed |
 
 其它能力：暗色模式（跟随系统 + 手动切换 + 全站偏好持久化）、完整响应式（360 → 1920 无横向溢出）、
 页面切换加载层、回到顶部 / 评论锚点按钮、键盘可达的导航与 tab、`prefers-reduced-motion` 降级、
@@ -36,7 +36,7 @@
 | 静态构建 | Hugo **extended**（主题用到图片处理，非 extended 会构建失败） | `min_version = 0.128.0`，本项目已验证 0.165.0 |
 | 样式 | 原生 CSS + `:root` 变量令牌，构建时 minify + 指纹，无预处理器 | — |
 | 脚本 | 手写 JS（`assets/js/*.js`），同样 minify + fingerprint，全部 `defer` | 支持到无模块化旧浏览器 |
-| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，122KB / gzip 44KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚组件进到视野附近才下载，落地页 / 关于 / 归档 / 404 一枚都没有，那 44KB 干脆不下 | — |
+| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，122KB / gzip 44KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚**可见**组件进到视野附近才下载；最多 `[hidden]` 里收起的时刻评论框不再触发下载（点「评论」时由 `shuo.js` 按需加载），落地页 / 关于 / 归档 / 404 一枚都没有，那 44KB 干脆不下 | — |
 | 图标 | Font Awesome 6.4.2 打进仓库（`static/fa/`，css + 四个 woff2，共 389KB），不请求任何外部域名；`cdn.font_awesome_css` 填了才改用你的镜像 | — |
 | 数学 | 页面 front matter `math: true` 才加载 MathJax（或 KaTeX 短代码） | — |
 | 字体 | **只用系统字体栈**（`--font`）。曾经引过 Google Fonts，国内不可达且字体晚到导致正文重排（文章页 CLS 0.13），已彻底去掉 | — |
@@ -302,6 +302,11 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   进入动画、弹幕标签云、淡入都自动降级成直接呈现。
 - 会话与配置请求全站各只问一次（`window.ZeroStack.me()` / `.config()` 共用同一在途 Promise，
   账号页登录 / 注销派发 `zero:session` 时才作废重问）—— 少一次请求就少一次 Worker 与 D1 读。
+- **时刻页**：6 条时刻的正文与图片有一份 `<noscript>` 静态输出，禁用 JS / 爬虫也能读；
+  评论组件只随可见的评论框/「评论」按钮按需加载，收起的卡片不再首屏拉 154KB。JS 正常时外观与交互不变。
+- **页面加载层**：`<noscript>` 直接隐藏 `#pageLoader`，无 JS 时不会永久遮住正文。
+- **友链**：朋友动态封面与邻站图标带 `width`/`height`（132×99 / 72×72 / 26×26），
+  保留原有 `loading="lazy"`；标题层级从 h3 改为 h2（样式类不变，修复 heading-order）。
 - **`[home] layout = "grid"` 的首屏卡片与分页条是服务端渲的**（`layouts/partials/home-card.html` /
   `home-pager.html`，靠 `.is-skeleton` 那套 grid 布局在每个断点摆成 `--home-columns` 列）。
   之前 `#gardenGrid` 在 HTML 里是空的，二十张卡约 20KB 在 `DOMContentLoaded` 一次性插入，页脚被推下去
@@ -311,6 +316,18 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   第 2 页长得不一样（R53 那次是模板 h3→h2、JS 漏改，样式一个元素都没命中）。这一条有实测守着：
   量一次「服务端渲的那张卡」与「JS 重建的同一张卡」的属性逐项对比，本次就是它抓出
   partial 里 `%s` 打整数输出成 `%!s(int=1080)`、`width`/`height` 失效的问题。
+
+---
+
+## 账号安全 / SEO 细节
+
+- **修改密码**不再只认身份验证器：用户中心会按 `/api/security` 返回的 `secondFactors` 渲染
+  邮箱验证码 / 验证器 / GitHub 任一可用项；没有第二凭据时给出可操作提示，而不是一张禁用表单。
+- **分类 / 标签**：只有 1–2 篇文章的聚合页自动 `noindex, follow`，保留用户浏览但不让搜索引擎收录；
+  详情页 `<title>` 追加「· 分类 / · 标签」，不再与同名标签页完全重复；描述按页面内容/名称+篇数生成。
+- **结构化数据**：文章改用 `BlogPosting`，面包屑补分类层级；分类/标签页输出 `CollectionPage + ItemList`，
+  作者页输出 `ProfilePage + Person`；`/home/` 的 `og:title` 用站点名而不是「主页」。
+- **apple-touch-icon** 跟随 favicon 一起输出。
 
 ---
 
