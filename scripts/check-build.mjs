@@ -78,6 +78,19 @@ for (const [page, id, required] of [['archive/', 'archiveData', true], ['home/',
     }
   }
   ok(`${page} 的搜索数据全是字符串（数字会让前端搜索抛错）`, bad.length === 0, bad.slice(0, 3).join(' '));
+
+  /* 没有 date 的文章：Hugo 不报错，但 .Date 是零值 —— 归档页会多出一个「0001 · 01」月份节，
+     而且因为「最新」排序按日期倒序，它排在最前面，访客看到的是站里最老的一条顶在最上。
+     这条只提示不拦（缺日期多半是有意为之的占位稿，构建也没坏），但要点名到 permalink，
+     不然人只会在归档里看到一个怪月份、不知道是哪篇文章。 */
+  if (page === 'archive/') {
+    const noDate = list.filter((x) => !String(x.date ?? '').slice(0, 4).match(/\d{4}/) || String(x.date).startsWith('0001'));
+    if (noDate.length) {
+      console.log(`  ⚠ ${noDate.length} 篇文章没有可解析的 date，归档里会进「0001 · 01」并排在最前：`);
+      for (const x of noDate.slice(0, 10)) console.log(`      ${x.permalink || '(无链接)'} —— ${x.title || '(无标题)'}`);
+      console.log('      （不是构建错误；要修就在正文里补 date: 2026-10-28，或在归档里把这篇排除）');
+    }
+  }
 }
 
 /* ---------- 2. 样式必须内联、不得回退成阻塞外链 ---------- */

@@ -138,7 +138,7 @@
               <span class="feed-site">{{ .site }}</span>
               {{- with .date }}<time class="feed-date" datetime="{{ . }}">{{ time.Format "2006-01-02" . }}</time>{{ end }}
             </div>
-            <h3 class="feed-title"><a href="{{ .url }}" target="_blank" rel="noopener">{{ .title }}</a></h3>
+            <h3 class="feed-title">{{ partial "cms/safe-link.html" (dict "url" .url "label" .title) }}</h3>
             {{- with .summary }}<p class="feed-desc">{{ . }}</p>{{ end }}
           </div>
         </article>
@@ -194,7 +194,7 @@
             {{- end -}}
             <li class="alliance-item">
               {{- partial "links-icon.html" (dict "chain" $chain "box" "alliance-icon") }}
-              <a href="{{ .url }}" target="_blank" rel="noopener">{{ .name }}</a>{{ with .desc }}<span class="alliance-desc">{{ . }}</span>{{ end }}
+              {{ partial "cms/safe-link.html" (dict "url" .url "label" .name) }}{{ with .desc }}<span class="alliance-desc">{{ . }}</span>{{ end }}
             </li>
             {{- end }}
           </ul>
@@ -294,9 +294,13 @@
         'data-chain="' + esc(chain.slice(1).join(' ')) + '" ' +
         'onerror="var l=(this.dataset.chain||\'\').split(\' \');if(l[0]){this.dataset.chain=l.slice(1).join(\' \');this.src=l[0]}else{this.remove()}">'
       : '';
+    /* 接口回来的数据也要过同一道协议闸：老库里可能还留着非 http(s) 的那几条 */
+    var safeUrl = /^https?:\/\//i.test(url);
     return '<li class="alliance-item" data-kind-from-api>' +
       '<span class="alliance-icon">' + pic + '</span>' +
-      '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(name) + '</a>' +
+      (safeUrl
+        ? '<a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(name) + '</a>'
+        : esc(name)) +
       (desc ? '<span class="alliance-desc">' + esc(desc) + '</span>' : '') +
       '</li>';
   }

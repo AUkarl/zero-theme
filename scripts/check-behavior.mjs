@@ -40,6 +40,8 @@ const ok = (name, pass, detail = '') => {
   if (!pass) failed++;
   console.log(`${pass ? '  ✓' : '  ✗'} ${name}${detail ? ` — ${detail}` : ''}`);
 };
+/** 数据太少、这条判据在此站上无法成立时用这个：明说「跳过 + 为什么」，绝不记成通过 */
+const skip = (name, reason) => console.log(`  – ${name} — 跳过：${reason}`);
 
 if (!existsSync(OUT)) {
   console.error(`找不到构建产物目录：${OUT}\n先跑 npm run build`);
@@ -149,15 +151,39 @@ if (archiveRel) {
     lanes: document.querySelectorAll('#tagDanmaku .danmaku-lane').length,
     cloudFirst: (document.querySelector('#categoryCloud .cloud-item')?.textContent || '').trim(),
   }));
-  ok('首屏就渲出月份节与条目（预渲生效，不是等 JS 填）', init.months > 0 && init.items > 0, JSON.stringify(init));
-  ok('刻度尺月份条在（移动端点月份能跳）', init.chips > 0, `chips=${init.chips}`);
-  ok('分类云渲出「全部 + 各分类」', init.cloud >= 2 && init.cloudFirst.startsWith('全部'), `cloud=${init.cloud} first=${init.cloudFirst}`);
-  ok('标签弹幕有轨道', init.lanes > 0, `lanes=${init.lanes}`);
+  /* 先量一下这个站有多少内容 —— 下面每条判据都按它来决定「断言 / 跳过」，
+     否则新站（或把示例文章删空、还没打分类的站）会被自己的闸门挡下：
+     「分类云 ≥2 枚」「点分类后条目变少」这类要求，隐含的前提是内容够多。 */
+  const scale = await page.evaluate(() => {
+    try {
+      const d = JSON.parse(document.getElementById('archiveData').textContent);
+      const cats = {};
+      const tags = {};
+      for (const x of d) {
+        if (x.category) cats[x.category] = (cats[x.category] || 0) + 1;
+        for (const t of x.tags || []) tags[t] = (tags[t] || 0) + 1;
+      }
+      return { posts: d.length, cats, tags };
+    } catch { return { posts: 0, cats: {}, tags: {}, bad: true }; }
+  });
+  const catNames = Object.keys(scale.cats || {});
+  console.log(`  · 内容规模：文章 ${scale.posts} 篇 / 分类 ${catNames.length} 个${catNames.length ? `（${catNames.map((k) => `${k}:${scale.cats[k]}`).join(' ')}）` : ''} / 标签 ${Object.keys(scale.tags || {}).length} 个`);
+
+  if (scale.bad) ok('归档注入了可解析的文章数据', false, 'archiveData 读不出来或不是 JSON');
+  else if (!scale.posts) skip('预渲列表非空 / 月份条 / 分类云条目', '这个站一篇可列的文章都没有（新站或示例已删空）');
+  else {
+    ok('首屏就渲出月份节与条目（预渲生效，不是等 JS 填）', init.months > 0 && init.items > 0, JSON.stringify(init));
+    ok('刻度尺月份条在（移动端点月份能跳）', init.chips > 0, `chips=${init.chips}`);
+    ok('分类云渲出「全部 + 各分类」（条目数按真分类数判）',
+      init.cloudFirst.startsWith('全部') && init.cloud === catNames.length + 1, `cloud=${init.cloud} 分类=${catNames.length}（期望 ${catNames.length + 1}）`);
+    if (Object.keys(scale.tags || {}).length) ok('标签弹幕有轨道', init.lanes > 0, `lanes=${init.lanes}`);
+    else skip('标签弹幕有轨道', '文章都没打标签');
+  }
 
   /* 先把「服务端渲的那一版」结构记下来 —— 必须在任何筛选动作之前，
      否则记到的是被筛过的列表，跟后面 JS 全量重渲那一版永远对不上（第一版就栽在这）。 */
   const structure = await page.evaluate(() => {
-    const norm = (el) => el.querySelectorAll(':scope > .archive-month').length +
+    const norm = (el) => !el ? 'NO-LIST' : el.querySelectorAll(':scope > .archive-month').length +
       ':' + [...el.querySelectorAll('.archive-month-head')].map((h) => (h.querySelector('.ym')?.textContent || '').replace(/\s+/g, ' ').trim() +
         '/' + (h.querySelector('.cnt')?.textContent || '').trim()).join(',');
     return norm(document.getElementById('archiveList'));
@@ -187,14 +213,16 @@ if (archiveRel) {
     ok('搜不到时给「没有匹配的文章」', noneText.includes('没有匹配'), noneText.slice(0, 30));
     await page.locator('#archiveSearch').fill('');
     await page.waitForTimeout(600);
+  } else if (scale.bad) {
+    ok('归档注入数据里有可搜的标题', false, 'archiveData 解析失败');
   } else {
-    ok('归档注入数据里有可搜的标题', false, 'archiveData 为空或解析失败');
+    skip('搜索框能筛出结果', '这站一篇可列的文章都没有，取不到搜索词');
   }
 
   // 点分类云筛选（这条同时验证「预渲那份被 JS 接管后事件仍然挂着」）
   const catChip = page.locator('#categoryCloud .cloud-item').nth(1);
   if (await catChip.count()) {
-    const label = (await catChip.textContent()).trim().split(' ')[0];
+    const value = (await catChip.getAttribute('data-value')) || '';
     await catChip.click();
     await page.waitForTimeout(700);
     const after = await page.evaluate(() => ({
@@ -202,8 +230,20 @@ if (archiveRel) {
       active: document.querySelectorAll('#categoryCloud .cloud-item.active-filter').length,
       months: document.querySelectorAll('#archiveList .archive-month').length,
     }));
-    ok(`点分类「${label}」能筛出该分类`, after.items > 0 && after.items < init.items, JSON.stringify(after));
+    /* 期望值来自注入数据本身，不靠「一定比全量少」这种假设：
+       只有一个分类、或整站文章同属一个分类时，筛完条数本来就不该变 —— 那种站要求变少是假红。 */
+    const expect = scale.cats?.[value] ?? 0;
+    if (!expect) ok(`点分类「${value}」后列表非空`, after.items > 0, JSON.stringify(after));
+    else if (expect < init.items) {
+      ok(`点分类「${value}」筛出该分类的 ${expect} 篇（比全量 ${init.items} 少）`, after.items === expect, JSON.stringify({ ...after, expect }));
+    } else {
+      ok(`点分类「${value}」条目数不变（${expect} 篇 = 全量，这站只有这一个分类）`, after.items === expect, JSON.stringify({ ...after, expect }));
+    }
     ok('筛选后仍带 active 高亮（看不出列表被重渲）', after.active >= 1 && after.months >= 1, JSON.stringify(after));
+  } else if (catNames.length) {
+    ok('分类云有可点的分类', false, `数据里有 ${catNames.length} 个分类，页面上却只有一枚 chip`);
+  } else {
+    skip('点分类能筛出该分类', '这站的文章都没打分类');
   }
 
   // 点标签弹幕筛选。标签一直在滚，Playwright 的「等元素静止」会一直超时 ——
@@ -218,7 +258,11 @@ if (archiveRel) {
   await page.waitForTimeout(700);
   {
     const n = await page.evaluate(() => document.querySelectorAll('#archiveList .archive-item').length);
-    ok('点标签能筛出结果', tagOk !== 'no-tag' && n > 0 && n <= init.items, `标签=${tagOk} items=${n}`);
+    if (tagOk === 'no-tag') skip('点标签能筛出结果', '弹幕里没有标签（文章未打标签）');
+    else {
+      const expect = scale.tags?.[tagOk] ?? 0;
+      ok(`点标签「${tagOk}」筛出结果`, expect ? n === expect : n > 0 && n <= init.items, `标签=${tagOk} items=${n} 数据里=${expect}`);
+    }
   }
 
   const reRendered = await page.evaluate(async () => {
@@ -230,6 +274,7 @@ if (archiveRel) {
     input.dispatchEvent(new Event('input'));
     await new Promise((r) => setTimeout(r, 500));
     const el = document.getElementById('archiveList');
+    if (!el) return 'NO-LIST';
     return el.querySelectorAll(':scope > .archive-month').length +
       ':' + [...el.querySelectorAll('.archive-month-head')].map((h) => (h.querySelector('.ym')?.textContent || '').replace(/\s+/g, ' ').trim() +
         '/' + (h.querySelector('.cnt')?.textContent || '').trim()).join(',');
@@ -343,9 +388,17 @@ if (homeRel !== null) {
 
 /* ---------- 6. 移动端菜单 ---------- */
 if (MOBILE) {
-  const { ctx, page } = await open(`${BASE}/`);
-  const toggle = page.locator('#nav-toggle, .nav-toggle').first();
-  if (await toggle.count()) {
+  /* 落地页 `/` 按设计就没有站点导航（只有一个「进入」按钮），所以要在**有导航的页面**上测；
+     以前这里只开 `/`，找不到按钮就整段什么都不打印 —— 等于这条判据在移动端档从未跑过。 */
+  const candidates = ['/', '/archive/', '/home/'].filter((p) => {
+    const rel = p.replace(/^\//, '').replace(/\/$/, '');
+    return !rel || existsSync(join(OUT, rel, 'index.html'));
+  });
+  let tried = null;
+  for (const path of candidates) {
+    const { ctx, page } = await open(`${BASE}${path}`);
+    const toggle = page.locator('#nav-toggle, .nav-toggle').first();
+    if (!(await toggle.count())) { await ctx.close(); continue; }
     const closed = await page.evaluate(() => document.querySelector('.nav-links')?.className || '');
     await toggle.click();
     await page.waitForTimeout(500);
@@ -353,13 +406,19 @@ if (MOBILE) {
       cls: document.querySelector('.nav-links')?.className || '',
       visible: !!document.querySelector('.nav-links')?.offsetParent,
     }));
-    ok('移动端汉堡按钮能展开菜单', opened.cls !== closed && opened.visible, `${closed} → ${JSON.stringify(opened)}`);
-    await toggle.click();
+    ok(`移动端汉堡按钮能展开菜单（在 ${path} 上测）`, opened.cls !== closed && opened.visible, `${closed} → ${JSON.stringify(opened)}`);
+    /* 展开后菜单盖住了汉堡键（Playwright 会因中心点命不中而超时），真实用户点的是面板上那颗关闭钮 */
+    const closer = page.locator('.nav-close').first();
+    if (await closer.count()) await closer.click();
+    else await toggle.click({ force: true });
     await page.waitForTimeout(500);
     const again = await page.evaluate(() => document.querySelector('.nav-links')?.className || '');
-    ok('再点一次能收回', again === closed, `${opened.cls} → ${again}`);
+    ok('展开后能收回（点面板上的关闭钮）', again === closed, `${opened.cls} → ${again}`);
+    tried = path;
+    await ctx.close();
+    break;
   }
-  await ctx.close();
+  if (!tried) skip('移动端汉堡按钮能展开菜单', `这几个页面里都没有 .nav-toggle（${candidates.join(' ')}）`);
 }
 
 console.log(failed ? `\n✗ ${failed} 项不通过\n` : '\n✓ 全部通过\n');
