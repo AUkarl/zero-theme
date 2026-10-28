@@ -30,6 +30,68 @@
        关掉时由 zero-switches.js 显示下面的「功能已关闭」提示，页面不会闪。 */ -}}
 {{- $zero := partial "zero/api.html" . -}}
 {{- $swM := partial "zero/switch.html" (dict "zero" $zero "key" "momentsEnabled") -}}
+{{- /* 各评论服务的连接参数：[moment.waline] / [moment.twikoo] / [moment.artalk] 优先，
+       没写就退回旧的扁平写法（moment.waline_server_url 等），再退回文章页那一家 */ -}}
+{{- $mWal := $mCfg.waline | default dict -}}
+{{- $mTwi := $mCfg.twikoo | default dict -}}
+{{- $mAr := $mCfg.artalk | default dict -}}
+{{- $aCfg := .Site.Params.comment.article | default dict -}}
+{{- $walURL := $mWal.server_url | default ($mCfg.waline_server_url | default ($aCfg.waline_server_url | default "")) -}}
+{{- /* 底栏两个按钮的构建期开关，必须和下面 momentConfig 里的条件一致 */ -}}
+{{- $commentOn := and .Site.Params.comment.enable (ne $effective "") -}}
+{{- $commentUI := and $commentOn $mc.showComment -}}
+{{- $likeOn := and $mc.showLike .Site.Params.comment.enable (or (eq $effective "zero") (and (eq $effective "waline") (ne $walURL ""))) -}}
+{{- /* ====== 卡片数据：首屏 SSR 与 shuoData JSON 共用同一份 ====== */ -}}
+{{- $items := slice -}}
+{{- $moments := where .Site.RegularPages "Section" "moments" -}}
+{{- $moments = $moments.ByDate.Reverse -}}
+{{- range $p := $moments -}}
+  {{- /* 配图走构建时处理：LQIP + WebP（拿不到就留原链）。
+         尺寸按这一条有几张图来定：单图给大图（否则会被取成 30vw 的糊图），
+         2/4 张给半宽，其余按九宫格小图。 */ -}}
+  {{- $n := len ($p.Params.images | default slice) -}}
+  {{- $sizes := "(max-width: 768px) 30vw, 180px" -}}
+  {{- if eq $n 1 -}}{{- $sizes = "(max-width: 768px) 62vw, 420px" -}}
+  {{- else if or (eq $n 2) (eq $n 4) -}}{{- $sizes = "(max-width: 768px) 31vw, 200px" -}}
+  {{- end -}}
+  {{- $imgs := slice -}}
+  {{- range $img := ($p.Params.images | default slice) -}}
+    {{- $imgs = $imgs | append (partial "img-src.html" (dict "src" $img "page" $p "sizes" $sizes "widths" (slice 400 800) "variant" "moment")) -}}
+  {{- end -}}
+  {{- /* 链接卡片：支持 link 写成 map（url/title/desc/image），也兼容直接写一个地址字符串 */ -}}
+  {{- $lk := $p.Params.link -}}
+  {{- $linkURL := "" -}}{{- $linkTitle := "" -}}{{- $linkDesc := "" -}}{{- $linkImg := "" -}}
+  {{- if reflect.IsMap $lk -}}
+    {{- $linkURL = $lk.url | default "" -}}
+    {{- $linkTitle = $lk.title | default "" -}}
+    {{- $linkDesc = $lk.desc | default "" -}}
+    {{- $linkImg = $lk.image | default "" -}}
+  {{- else -}}
+    {{- $linkURL = $lk | default "" -}}
+  {{- end -}}
+  {{- $items = $items | append (dict
+    "id" ($p.File.UniqueID | default "0")
+    "slug" (printf "/moments/%s/" ($p.File.ContentBaseName | default ($p.File.UniqueID | default "0")))
+    "text" ($p.Content | plainify)
+    "contentHtml" $p.Content
+    "images" $imgs
+    "music" ($p.Params.music | default "")
+    "musicTitle" ($p.Params.music_title | default "")
+    "musicCover" ($p.Params.music_cover | default "")
+    "video" ($p.Params.video | default "")
+    "videoPoster" ($p.Params.video_poster | default "")
+    "link" (dict "url" $linkURL "title" $linkTitle "desc" $linkDesc "image" $linkImg)
+    "time" ($p.Date | time.Format "2006-01-02 15:04")
+    "iso" ($p.Date.Format "2006-01-02T15:04:05Z07:00")
+    "location" (cond $mc.showLocation ((string ($p.Params.location | default "")) | default $mc.defaultLocation) "")
+    "nickname" (cond (ne $mc.nickname "") $mc.nickname ($p.Site.Params.aboutName | default (partial "site-config.html" $p).name))
+    "avatarUrl" (($mc.avatar | default ($p.Site.Params.aboutAvatar | default "img/avatar.png")) | relURL)
+  ) -}}
+{{- end -}}
+{{- /* 首屏直接渲染一页（paginate 条）卡片；0 当作没填，与 shuo.js 的 batchSize 兜底一致 */ -}}
+{{- $ssrCount := $mc.paginate -}}
+{{- if lt $ssrCount 1 -}}{{- $ssrCount = 10 -}}{{- end -}}
+{{- if gt $ssrCount (len $items) -}}{{- $ssrCount = len $items -}}{{- end -}}
 
 <main class="main" id="main">
   <h1 class="zero-sr-only">{{ .Title | default (i18n "nav-moments" | default "时刻") }}</h1>
@@ -72,10 +134,20 @@
              而每张卡片都挂着 <zero-comment>，评论区自带登录入口（auth 由组件自己 init），
              按契约 show-entry 只给「没有评论区」的页面用 */}}
       {{- end }}
-      <div id="shuoList"></div>
-      {{- /* 无 JS / 爬虫兜底：至少把最近 6 条时刻的正文与图片直接放进 HTML。
+      <div id="shuoList">
+        {{- range first $ssrCount $items }}
+        {{- partial "moments/card.html" (dict
+          "item" .
+          "mc" $mc
+          "commentUI" $commentUI
+          "likeOn" $likeOn) }}
+        {{- end }}
+      </div>
+      {{- /* 无 JS / 爬虫兜底：首屏卡片已经在 HTML 里（#shuoList），
+             这里再给一份带完整正文的简版；脚本关闭时两者只显示下面这份，避免重复。
              JS 正常时浏览器不渲染 noscript，外观与交互不变。 */ -}}
       <noscript>
+        <style>#shuoList{display:none}</style>
         <div class="shuo-noscript">
           {{- range first 6 (where .Site.RegularPages "Section" "moments").ByDate.Reverse }}
           <article class="shuo-item">
@@ -93,66 +165,13 @@
   {{- partial "zero/closed.html" (dict "zero" $zero "key" "momentsEnabled" "text" "时刻功能已关闭。") -}}
 </main>
 
-{{- /* ====== 注入内容文件里的说说数据 ====== */ -}}
-{{- $moments := where .Site.RegularPages "Section" "moments" -}}
-{{- $moments = $moments.ByDate.Reverse -}}
-{{- $.Scratch.Set "shuoItems" (slice) -}}
-{{- range $p := $moments -}}
-  {{- /* 配图走构建时处理：LQIP + WebP（拿不到就留原链）。
-         尺寸按这一条有几张图来定：单图给大图（否则会被取成 30vw 的糊图），
-         2/4 张给半宽，其余按九宫格小图。 */ -}}
-  {{- $n := len ($p.Params.images | default slice) -}}
-  {{- $sizes := "(max-width: 768px) 30vw, 180px" -}}
-  {{- if eq $n 1 -}}{{- $sizes = "(max-width: 768px) 62vw, 420px" -}}
-  {{- else if or (eq $n 2) (eq $n 4) -}}{{- $sizes = "(max-width: 768px) 31vw, 200px" -}}
-  {{- end -}}
-  {{- $imgs := slice -}}
-  {{- range $img := ($p.Params.images | default slice) -}}
-    {{- $imgs = $imgs | append (partial "img-src.html" (dict "src" $img "page" $p "sizes" $sizes "widths" (slice 400 800) "variant" "moment")) -}}
-  {{- end -}}
-  {{- /* 链接卡片：支持 link 写成 map（url/title/desc/image），也兼容直接写一个地址字符串 */ -}}
-  {{- $lk := $p.Params.link -}}
-  {{- $linkURL := "" -}}{{- $linkTitle := "" -}}{{- $linkDesc := "" -}}{{- $linkImg := "" -}}
-  {{- if reflect.IsMap $lk -}}
-    {{- $linkURL = $lk.url | default "" -}}
-    {{- $linkTitle = $lk.title | default "" -}}
-    {{- $linkDesc = $lk.desc | default "" -}}
-    {{- $linkImg = $lk.image | default "" -}}
-  {{- else -}}
-    {{- $linkURL = $lk | default "" -}}
-  {{- end -}}
-  {{- $.Scratch.Add "shuoItems" (dict
-    "id" ($p.File.UniqueID | default "0")
-    "slug" (printf "/moments/%s/" ($p.File.ContentBaseName | default ($p.File.UniqueID | default "0")))
-    "text" ($p.Content | plainify)
-    "contentHtml" $p.Content
-    "images" $imgs
-    "music" ($p.Params.music | default "")
-    "musicTitle" ($p.Params.music_title | default "")
-    "musicCover" ($p.Params.music_cover | default "")
-    "video" ($p.Params.video | default "")
-    "videoPoster" ($p.Params.video_poster | default "")
-    "link" (dict "url" $linkURL "title" $linkTitle "desc" $linkDesc "image" $linkImg)
-    "time" ($p.Date | time.Format "2006-01-02 15:04")
-    "iso" ($p.Date.Format "2006-01-02T15:04:05Z07:00")
-    "location" (cond $mc.showLocation ((string ($p.Params.location | default "")) | default $mc.defaultLocation) "")
-    "nickname" (cond (ne $mc.nickname "") $mc.nickname ($p.Site.Params.aboutName | default (partial "site-config.html" $p).name))
-    "avatarUrl" (($mc.avatar | default ($p.Site.Params.aboutAvatar | default "img/avatar.png")) | relURL)
-  ) -}}
-{{- end -}}
+{{- /* ====== 注入内容文件里的说说数据（与首屏卡片同一份 $items） ====== */ -}}
 <script type="application/json" id="shuoData">
-{{- $.Scratch.Get "shuoItems" | jsonify | safeJS -}}
+{{- $items | jsonify | safeJS -}}
 </script>
 
-{{- /* ====== 配置注入 ====== */ -}}
+{{- /* ====== 配置注入（评论连接参数已在文件开头取好） ====== */ -}}
 {{- $z := partial "zero/api.html" . -}}
-{{- /* 各评论服务的连接参数：[moment.waline] / [moment.twikoo] / [moment.artalk] 优先，
-       没写就退回旧的扁平写法（moment.waline_server_url 等），再退回文章页那一家 */ -}}
-{{- $mWal := $mCfg.waline | default dict -}}
-{{- $mTwi := $mCfg.twikoo | default dict -}}
-{{- $mAr := $mCfg.artalk | default dict -}}
-{{- $aCfg := .Site.Params.comment.article | default dict -}}
-{{- $walURL := $mWal.server_url | default ($mCfg.waline_server_url | default ($aCfg.waline_server_url | default "")) -}}
 <script>
   window.momentConfig = {
     paginate: {{ $mc.paginate }},

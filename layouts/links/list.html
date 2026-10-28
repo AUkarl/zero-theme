@@ -132,7 +132,7 @@
           {{- $chain = $chain | append . -}}
         {{- end -}}
         <article class="feed-card" data-feed-item>
-          {{- partial "links-icon.html" (dict "chain" $chain "box" "feed-cover") }}
+          {{- partial "links-icon.html" (dict "chain" $chain "box" "feed-cover" "optimize" true "page" $) }}
           <div class="feed-body">
             <div class="feed-head">
               <span class="feed-site">{{ .site }}</span>

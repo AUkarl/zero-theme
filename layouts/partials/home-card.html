@@ -39,7 +39,7 @@
     {{- $sizes := $img.sizes | default "100vw" -}}
     {{- $imgHtml = printf `<img data-src="%s" data-srcset="%s" sizes="%s"%s alt="%s" decoding="async" />` $img.src $srcset $sizes $dims $title -}}
   {{- else if $a.image -}}
-    {{- $imgHtml = printf `<img src="%s" alt="%s" loading="lazy" />` $a.image $title -}}
+    {{- $imgHtml = printf `<img src="%s" alt="%s" loading="lazy" decoding="async" style="width:100%%;height:100%%;object-fit:cover" />` $a.image $title -}}
   {{- else -}}
     {{- $imgHtml = `<div class="card-img-placeholder"></div>` -}}
   {{- end -}}

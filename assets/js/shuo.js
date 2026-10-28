@@ -9,8 +9,11 @@
 //     —— waline / twikoo / artalk：评论用各自的老接口，点赞沿用 waline 的计数器
 //   · 每条时刻的 slug 是 /moments/<文件名去扩展名>/（构建期由 list.html 给出），
 //     点赞、评论、组件 post-slug 全部共用它，不再有按 id 拼的旧形式
-//   · 卡片渲染时就挂好 <zero-comment collapsed>：评论列表不等按钮，
-//     「评论」按钮只开合编辑框（remove/setAttribute('collapsed')）
+//   · 首屏卡片由 moments/list.html 直接 SSR 出来（data-ssr），本文件只做接管：
+//     补齐正文与短代码媒体、把时间换成相对时间、绑事件，再从下一批开始用 JS 追加；
+//     换评论供应商时 reload(true) 才整列表重绘
+//   · 评论组件（<zero-comment>）不随卡片渲染：首屏只批量取评论数，
+//     点「评论」时才挂载组件并加载脚本；没有人点开评论的页面不会拉 154KB
 //   · 收藏 ★ 由 zero-star.js 负责，它只认 partials/zero/star.html 的输出，时刻卡片暂无该按钮
 //   · 内容可以是文本/图片/音乐/视频/链接的任意一个或任意组合
 // ============================================================
@@ -275,16 +278,9 @@ function __shuoBoot__() {
       '</button>';
   }
 
-  /* zero 那一家：卡片一渲染就把 <zero-comment> 写进 HTML，评论列表不等按钮。
-     collapsed 现在只收起编辑框（组件里列表是始终渲染的），「评论」按钮负责开合它。 */
-  function zeroCommentHtml(item) {
-    if (!commentEnabled || !isZero() || !momentsOpen) return '';
-    return '<zero-comment api-base="' + esc(apiBase) + '"' +
-      ' post-slug="' + esc(momentSlug(item)) + '"' +
-      ' short-base="' + esc(shortBase) + '"' +
-      ' lang="' + esc(lang) + '" collapsed></zero-comment>';
-  }
-
+  /* zero 那一家：卡片只留一个空容器，<zero-comment> 等点了「评论」再挂。
+     这样首屏不会因为有评论数就把 154KB 的组件脚本拉下来，也不会让所有卡片的
+     组件一起 upgrade、一次发 N 个评论列表请求。 */
   function buildShuoItemHtml(item) {
     var id = esc(item.id);
     var slug = esc(momentSlug(item));
@@ -292,7 +288,7 @@ function __shuoBoot__() {
     var commentBtn = commentEnabled ? actButton('comment', item.id, 'far fa-comment-dots', t.comment || '评论') : '';
     var commentsHtml = commentEnabled
       ? '<div class="shuo-comments is-collapsed" id="shuo-comments-' + id + '" hidden>' +
-          '<div class="comment-container" id="comment-' + id + '">' + zeroCommentHtml(item) + '</div>' +
+          '<div class="comment-container" id="comment-' + id + '"></div>' +
         '</div>'
       : '';
 
@@ -388,8 +384,8 @@ function __shuoBoot__() {
     var revealed = box.dataset.revealed === '1';
     var hasComments;
     if (isZero()) {
-      // 只看计数：组件挂上后就一直留在 DOM 里，用它判可见等于永远收不起来
-      hasComments = (el.__commentCount || 0) > 0;
+      // 组件只在点「评论」后才挂载；没挂载时就算有计数也没有列表可显示，别留一块空灰底
+      hasComments = !!box.querySelector('zero-comment') && (el.__commentCount || 0) > 0;
     } else {
       // 有没有评论：以计数接口为准，DOM 里出现评论条目也算（兼容 Waline 各版本的类名）
       hasComments = (el.__commentCount || 0) > 0 || !!box.querySelector('.wl-cards .wl-card-item, .wl-cards .wl-card');
@@ -503,8 +499,8 @@ function __shuoBoot__() {
   }
 
   // ==================== 评论 ====================
-  /* zero 那家的 <zero-comment> 已经在卡片渲染时挂好（列表始终显示），ensureComment 只做两件事：
-     确认组件脚本到位 + 打开编辑框。外部那几家仍然按需初始化。 */
+  /* zero 那家的 <zero-comment> 在点「评论」时才由 initZero 创建，ensureComment 负责
+     创建组件 + 加载脚本 + 打开编辑框。外部那几家仍然按需初始化。 */
   function ensureComment(el, reveal) {
     var id = el.dataset.id;
     if (!commentEnabled) return;
@@ -736,12 +732,113 @@ function __shuoBoot__() {
   }
 
   function activateCard(el) {
-    if (likeEnabled) fetchLike(el);
-    if (commentEnabled) fetchCommentCount(el);
+    if (likeEnabled) queueLike(el);
+    if (commentEnabled) queueComment(el);
   }
 
-  // ==================== 列表渲染（无限滚动） ====================
-  function renderShuo() {
+  /* 计数合批：一屏里同时进入视口的卡片一起问一次，别再一张卡两条请求。
+     zero 的 /api/reactions 与 /api/comments/count 都支持 slugs 批量；其它评论系统没有批量口，
+     仍按原来的每卡一次请求走。 */
+  var pendingLikes = [];
+  var pendingComments = [];
+  var batchTimer = null;
+
+  function scheduleBatch() {
+    if (batchTimer) return;
+    batchTimer = setTimeout(flushCardCounts, 60);
+  }
+
+  function queueLike(el) {
+    if (!likeEnabled) return;
+    if (!isZero()) { fetchLike(el); return; }
+    pendingLikes.push(el);
+    scheduleBatch();
+  }
+
+  function queueComment(el) {
+    if (!commentEnabled) return;
+    if (!isZero()) { fetchCommentCount(el); return; }
+    pendingComments.push(el);
+    scheduleBatch();
+  }
+
+  function dedupeSlugs(els) {
+    var out = [];
+    els.forEach(function (el) {
+      var s = slugOf(el);
+      if (s && out.indexOf(s) < 0) out.push(s);
+    });
+    return out;
+  }
+
+  function flushCardCounts() {
+    batchTimer = null;
+    var likes = pendingLikes.filter(function (el) { return el.isConnected; });
+    var comments = pendingComments.filter(function (el) { return el.isConnected; });
+    pendingLikes = [];
+    pendingComments = [];
+    if (likes.length) fetchLikeBatch(likes);
+    if (comments.length) fetchCommentBatch(comments);
+  }
+
+  function fetchLikeBatch(els) {
+    var paths = dedupeSlugs(els);
+    if (!paths.length) return;
+    zeroGet('/api/reactions?slugs=' + encodeURIComponent(paths.join(',')) + '&kind=like')
+      .then(function (res) {
+        var d = (res && res.data) || {};
+        els.forEach(function (el) {
+          var row = d[slugOf(el)];
+          el.__likeCount = row ? Number(row.count || 0) : 0;
+          if (row) setLiked(slugOf(el), !!row.active);
+          renderLike(el);
+        });
+      })
+      .catch(function () { /* 拿不到就只显示按钮 */ });
+  }
+
+  function fetchCommentBatch(els) {
+    var paths = dedupeSlugs(els);
+    if (!paths.length) return;
+    zeroGet('/api/comments/count?slugs=' + encodeURIComponent(paths.join(',')))
+      .then(function (res) {
+        var d = (res && res.data) || {};
+        els.forEach(function (el) {
+          el.__commentCount = Number(d[slugOf(el)] || 0);
+          renderComment(el);
+        });
+      })
+      .catch(function () { /* 忽略 */ });
+  }
+
+  // ==================== 列表渲染（首屏 SSR + 无限滚动） ====================
+  /* 首屏卡片由 Hugo 直接写进 #shuoList（带 data-ssr），这里不再清空重建：
+     只把正文/短代码媒体补齐、把时间换成相对时间、绑事件，然后从下一批继续追加。
+     换评论供应商时 reload 会传 force，那时才整列表重绘。 */
+  function hydrateSsr(list) {
+    var cards = Array.prototype.filter.call(list.children || [], function (el) {
+      return el.classList && el.classList.contains('shuo-item') && el.hasAttribute('data-ssr');
+    });
+    if (!cards.length) return 0;
+    var byId = {};
+    shuoData.forEach(function (it) { if (it && it.id != null) byId[String(it.id)] = it; });
+    var n = Math.min(cards.length, shuoData.length);
+    cards.forEach(function (el, i) {
+      el.removeAttribute('data-ssr');
+      if (i >= n) { el.remove(); return; }
+      var item = byId[String(el.dataset.id)] || shuoData[i];
+      var timeEl = el.querySelector('.shuo-time');
+      if (timeEl) timeEl.textContent = relTime(item);
+      var scripts = fillContent(el, item);
+      if (scripts && scripts.length) runScripts(el.querySelector('.shuo-media') || el, scripts);
+      observeCard(el);
+    });
+    bindItemEvents(list);
+    if (window.Motion) window.Motion.lazyImages(list);
+    return n;
+  }
+
+  function renderShuo(force) {
     var list = document.getElementById('shuoList');
     if (!list) return;
     /* 后台把 momentsEnabled 关掉：时间线整个不绘制，页面只剩 zero-switches.js 那句「功能已关闭」。
@@ -756,11 +853,22 @@ function __shuoBoot__() {
       list.innerHTML = '<div class="shuo-empty">' + esc(t.noMoments || '还没有发布时刻') + '</div>';
       return;
     }
+    if (!force) {
+      var n = hydrateSsr(list);
+      if (n > 0) {
+        renderedCount = n;
+        removeSentinel();
+        if (renderedCount < shuoData.length) addSentinel(list);
+        preloadAhead();
+        /* 从用户中心/后台评论/提醒邮件带着 #moment-xxx 进来：目标卡片可能还没被懒加载出来，
+           先把它补渲染出来再滚过去，否则浏览器找不到锚点就停在页首。 */
+        setTimeout(function () { scrollToAnchor(0); }, 80);
+        return;
+      }
+    }
     list.innerHTML = '';
     renderedCount = 0;
     appendBatch();
-    /* 从用户中心/后台评论/提醒邮件带着 #moment-xxx 进来：目标卡片可能还没被懒加载出来，
-       先把它补渲染出来再滚过去，否则浏览器找不到锚点就停在页首。 */
     setTimeout(function () { scrollToAnchor(0); }, 80);
   }
 
@@ -871,8 +979,7 @@ function __shuoBoot__() {
     }
   }
 
-  /* zero：<zero-comment> 多数已经由卡片 HTML 带上了，这里只保证「组件脚本到位」；
-     拿不到脚本就报错，别让编辑框永远点不开 */
+  /* zero：组件在第一次点「评论」时创建并加载脚本；拿不到脚本就报错，别让编辑框永远点不开 */
   function initZero(el) {
     var host = el.querySelector('.comment-container');
     if (!host) return;
@@ -964,9 +1071,9 @@ function __shuoBoot__() {
 
   // ==================== 列表渲染入口 ====================
   /* 时刻只有一个来源（Hugo 构建的 Markdown），所以这里没有 apiItems / 二次合并 */
-  function renderTimeline() {
+  function renderTimeline(force) {
     setSource();
-    renderShuo();
+    renderShuo(force);
   }
 
   /* 接管脚本换了 provider 之后重绘：配置、已挂的组件、IntersectionObserver 都要归零重来 */
@@ -975,9 +1082,12 @@ function __shuoBoot__() {
       readConfig();
       commentInited = {};
       activeEditorEl = null;
+      pendingLikes = [];
+      pendingComments = [];
+      if (batchTimer) { clearTimeout(batchTimer); batchTimer = null; }
       if (cardObserver) cardObserver.disconnect();
       if (scrollObserver) scrollObserver.disconnect();
-      renderTimeline();
+      renderTimeline(true);
     }
   };
 

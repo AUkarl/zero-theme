@@ -40,8 +40,34 @@
 {{- $image := partial "one-string.html" (.Params.image | default .Params.img) -}}
 {{- if not $image }}{{ $image = partial "one-string.html" $seo.og_image_default }}{{ end -}}
 {{- if not $image }}{{ $image = partial "one-string.html" ((partial "site-config.html" .).favicon | default "img/logo-nav.png") }}{{ end -}}
-{{- /* 抓得到就换成构建时处理过的 1200w WebP（外链也能处理），拿不到就退回原地址 */ -}}
-{{- $ogInfo := partial "img-src.html" (dict "src" $image "page" . "widths" (slice 1200) "lqip" false) -}}
+{{- /* OG 图必须是 1200×630 的 JPEG：很多平台（微信、部分消息客户端）不显示 WebP。
+       单次调用允许抓远程源图，哪怕全局 [image].remote_fetch=false；抓不到再退回原地址。
+       本站上传的图若是 AVIF，原图 Hugo 解不了：先查上传期变体清单，拿现成的 h720 WebP
+       再转 1200×630 JPEG，别去抓 AVIF。 */ -}}
+{{- $ogInfo := partial "img-src.html" (dict "src" $image "page" . "variant" "cover" "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+{{- if and $ogInfo.ok $ogInfo.variant -}}
+  {{- $ogInfo = partial "img-src.html" (dict "src" $ogInfo.src "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+{{- end -}}
+{{- if not $ogInfo.ok -}}
+  {{- /* 页面自己的图处理不了（AVIF/抓取失败）时再试一次配置默认图 */ -}}
+  {{- $fallback := partial "one-string.html" $seo.og_image_default -}}
+  {{- if and $fallback (ne $fallback $image) -}}
+    {{- $try := partial "img-src.html" (dict "src" $fallback "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+    {{- if $try.ok -}}{{- $ogInfo = $try -}}{{- $image = $fallback -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $ogInfo.ok -}}
+  {{- /* 最后的兜底：favicon → 主题自带 bj.png。宁可分享卡片显示一张能打开的图，
+         也不要把一个 404 的默认图地址丢给平台（线上曾配过不存在的 /img/bj.webp）。 */ -}}
+  {{- $fav := partial "one-string.html" ((partial "site-config.html" .).favicon | default "img/logo-nav.png") -}}
+  {{- if $fav -}}
+    {{- $try := partial "img-src.html" (dict "src" $fav "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+    {{- if $try.ok -}}{{- $ogInfo = $try -}}{{- end -}}
+    {{- $image = $fav -}}
+  {{- else -}}
+    {{- $image = "/img/bj.png" -}}
+  {{- end -}}
+{{- end -}}
 {{- if $ogInfo.ok -}}
   {{- $image = $ogInfo.src | absURL -}}
 {{- else if not (or (hasPrefix $image "http://") (hasPrefix $image "https://")) -}}
@@ -143,6 +169,10 @@
 {{- with $image }}
 <meta property="og:image" content="{{ . }}">
 <meta property="og:image:alt" content="{{ $pageTitle }}">
+{{- if $ogInfo.ok }}
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{{- end }}
 {{- end }}
 {{- if .IsPage }}
 <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">

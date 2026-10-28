@@ -54,6 +54,11 @@
 {{- with .Params.img }}{{ $imgCands = $imgCands | append . }}{{ end -}}
 {{- with .Params.images }}{{ range . }}{{ $imgCands = $imgCands | append . }}{{ end }}{{ end -}}
 {{- with .Params.music_cover }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- /* 站点 Logo / favicon / 站长头像也常是媒体域，首屏要用；一起参与 preconnect。 */ -}}
+{{- $scHead := partial "site-config.html" . -}}
+{{- with $scHead.logo }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- with $scHead.favicon }}{{ $imgCands = $imgCands | append . }}{{ end -}}
+{{- with .Site.Params.aboutAvatar }}{{ $imgCands = $imgCands | append . }}{{ end -}}
 {{- $siteHost := (urls.Parse site.BaseURL).Host -}}
 {{- $hosts := slice -}}
 {{- range $imgCands -}}

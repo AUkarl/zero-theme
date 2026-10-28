@@ -39,8 +39,18 @@
 {{- if eq $box "feed-cover" }}{{ $w = 132 }}{{ $h = 99 }}
 {{- else if eq $box "neighbor-icon" }}{{ $w = 72 }}{{ $h = 72 }}
 {{- else if eq $box "alliance-icon" }}{{ $w = 26 }}{{ $h = 26 }}{{ end }}
+{{- $opt := .optimize | default false -}}
+{{- $optOn := and $opt (ne .Site.Params.links.optimize_images false) -}}
+{{- $info := dict "ok" false -}}
+{{- if $optOn -}}
+  {{- /* 上传期清单里有 cover 变体就直接用现成的 WebP（h360/h720），不要再抓原图：
+         原图可能是 AVIF，Hugo 解不了会退回几 MB 的原链；非本站图清单里没有，仍走远程缩略。 */ -}}
+  {{- $info = partial "img-src.html" (dict "src" $first "page" .page "variant" "cover" "widths" (slice 264) "height" 198 "fit" "fill" "format" "webp" "quality" 74 "lqip" false "remote" true "timeout" "6s") -}}
+{{- end -}}
+{{- $src := $first -}}{{- $iw := 132 }}{{- $ih := 99 -}}
+{{- if $info.ok -}}{{- $src = $info.src -}}{{- $iw = 264 -}}{{- $ih = 198 -}}{{- end -}}
 <span class="{{ $box }}">
-  <img src="{{ $first }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"{{ if $w }} width="{{ $w }}" height="{{ $h }}"{{ end }}
+  <img src="{{ $src }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="{{ $iw }}" height="{{ $ih }}"
        data-chain="{{ delimit $rest " " }}"
        onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{this.remove()}">
 </span>

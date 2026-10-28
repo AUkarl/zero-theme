@@ -2,7 +2,8 @@
   page-loader.html — 页面加载过渡动画
   ------------------------------------------------------------
   进入页面时先盖一层与页面同色的遮罩，中间是加载动画，下方一句话。
-  加载完成后淡出（最少展示约 0.3s，最长 2.6s 兜底，绝不卡住页面）。
+  加载完成后淡出（最少展示约 0.3s，最长 800ms 兜底，绝不卡住页面）；
+  同一会话只在第一次进站时显示，之后直接移除。
 
   可配置（config/_default/params.toml）：
     [page_loader]
@@ -15,7 +16,7 @@
 {{- if ne $pl.enable false -}}
 {{- $text := $pl.text | default (i18n "loader-text" | default "我们的相逢，恰如其实") -}}
 {{- $minMs := $pl.min_ms | default 120 -}}
-{{- $maxMs := $pl.max_ms | default 2600 -}}
+{{- $maxMs := $pl.max_ms | default 800 -}}
 <div class="page-loader" id="pageLoader" aria-hidden="true">
   <div class="page-loader-inner">
     <span class="page-loader-dots"><i></i><i></i><i></i></span>
@@ -45,6 +46,12 @@
   (function () {
     var el = document.getElementById('pageLoader');
     if (!el) return;
+    /* 同一会话只在第一次进站时显示过渡；之后直接移除，避免每次翻页都等 0.3~0.8s。
+       无 JS 时这条脚本不执行，noscript 里的样式仍会隐藏遮罩。 */
+    try {
+      if (sessionStorage.getItem('zero_loader_seen') === '1') { el.remove(); return; }
+      sessionStorage.setItem('zero_loader_seen', '1');
+    } catch (e) { /* 隐私模式禁用 sessionStorage 时按首次显示 */ }
     var shownAt = Date.now(), MIN_SHOW = {{ $minMs }}, done = false;
     function hide() {
       if (done) return;

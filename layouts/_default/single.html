@@ -127,6 +127,9 @@
         {{- /* 点赞 / 收藏 / 订阅（zero-stack 自建后端；顺序与显隐见 article.actions_order） */ -}}
         {{- partial "zero/actions.html" . -}}
 
+        {{- /* 分享：不依赖第三方 SDK */ -}}
+        {{- partial "share.html" . -}}
+
         {{- /* 评论区 */ -}}
         {{- if ne .Params.comments false -}}
           {{- partial "comments/loader.html" . -}}

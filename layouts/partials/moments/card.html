@@ -1,0 +1,112 @@
+{{- /* ============================================================
+  moments/card.html — 时刻卡片（服务端首屏渲染）
+  ------------------------------------------------------------
+  输出与 assets/js/shuo.js 的 buildShuoItemHtml 完全同构：
+    · 同一套 shuo-* 类名、data-id / data-slug / id="moment-xxx"
+    · 图片、音乐、视频、链接卡片按同样的结构拼好
+    · 正文先写成纯文本（JS 接管后会用 splitContent 重新拆一次，
+      把短代码媒体挪到 .shuo-media，最终结构与 JS 现场渲染的一致）
+    · data-ssr="1" 是给 shuo.js 的标记：这张卡已经在 HTML 里，不要再建一遍
+
+  入参：
+    item        由 moments/list.html 统一构建的卡片数据（与 shuoData 同形）
+    mc          时刻页配置（显示位置 / 昵称 / 头像）
+    commentUI   是否显示「评论」按钮与评论区
+    likeOn      是否显示「赞」按钮
+  ============================================================ */ -}}
+{{- $it := .item -}}
+{{- $slug := $it.slug -}}
+{{- $anchor := replaceRE `^/?moments/([^/?#]+).*$` "moment-$1" $slug -}}
+
+{{- $commentUI := .commentUI -}}
+{{- $likeOn := .likeOn -}}
+
+{{- $text := strings.TrimSpace $it.text -}}
+
+{{- $imgs := $it.images | default slice -}}
+{{- $count := len $imgs -}}
+{{- if gt $count 9 -}}{{- $count = 9 -}}{{- end -}}
+
+{{- $musicTitle := $it.musicTitle -}}
+{{- if not $musicTitle -}}
+  {{- with urls.Parse $it.music -}}
+    {{- $base := path.Base .Path -}}
+    {{- if findRE `\.[a-z0-9]{2,5}$` $base -}}{{- $musicTitle = $base -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- $musicTitle = $musicTitle | default "音乐" -}}
+
+<article class="shuo-item"{{ if $anchor }} id="{{ $anchor }}"{{ end }} data-id="{{ $it.id }}" data-slug="{{ $slug }}" data-ssr="1">
+  <div class="shuo-avatar"><img src="{{ $it.avatarUrl | default "/img/avatar.png" }}" alt="" loading="lazy"></div>
+  <div class="shuo-body">
+    <div class="shuo-name">{{ $it.nickname | default "博主" }}</div>
+    <div class="shuo-content"{{ if not $text }} hidden{{ end }}>{{ $text }}</div>
+    {{- if $count }}
+    <div class="shuo-images count-{{ $count }}">
+      {{- range first $count $imgs }}
+        {{- $src := .src -}}
+        {{- $orig := .orig | default $src -}}
+        {{- $ratio := "" -}}
+        {{- if and .width .height -}}{{- $ratio = printf "%d / %d" .width .height -}}{{- end -}}
+        {{- $linkStyle := "" -}}
+        {{- if and (eq $count 1) $ratio -}}{{- $linkStyle = printf "aspect-ratio:%s" $ratio -}}{{- end -}}
+        {{- $imgStyle := "" -}}
+        {{- with .lqip -}}{{- $imgStyle = printf "background-image:url(%s);background-size:cover;background-position:center" . -}}{{- end }}
+        <button type="button" class="shuo-img-link{{ if and (eq $count 1) (not $ratio) }} no-ratio{{ end }}" aria-label="查看大图"{{ with $linkStyle }} style="{{ . | safeCSS }}"{{ end }}>
+        {{- if $src }}
+          <img class="shuo-img" data-src="{{ $src }}" data-srcset="{{ .srcset }}" sizes="{{ .sizes }}"{{ with .dataOrig }} data-orig="{{ . }}"{{ end }}{{ if and .width .height }} width="{{ .width }}" height="{{ .height }}"{{ end }}{{ with $imgStyle }} style="{{ . | safeCSS }}"{{ end }} alt="" decoding="async">
+        {{- else if $orig }}
+          <img class="shuo-img" src="{{ $orig }}" alt="" loading="lazy">
+        {{- end }}
+        </button>
+      {{- end }}
+    </div>
+    {{- end }}
+    <div class="shuo-media" hidden></div>
+    {{- with $it.music }}
+    <div class="shuo-music">
+      <span class="shuo-music-cover">
+        {{- with $it.musicCover }}<img src="{{ . }}" alt="" loading="lazy">{{ else }}<i class="fas fa-music" aria-hidden="true"></i>{{ end -}}
+      </span>
+      <span class="shuo-music-info"><span class="shuo-music-title">{{ $musicTitle }}</span></span>
+      <button type="button" class="shuo-music-play" aria-label="播放"><i class="fas fa-play" aria-hidden="true"></i></button>
+      <audio preload="none" src="{{ . }}"></audio>
+    </div>
+    {{- end }}
+    {{- with $it.video }}
+    <div class="shuo-video-wrap"><video class="shuo-video" controls preload="metadata"{{ with $it.videoPoster }} poster="{{ . }}"{{ end }} src="{{ . }}"></video></div>
+    {{- end }}
+    {{- with $it.link }}
+    {{- with .url }}
+    {{- $host := "" -}}
+    {{- with urls.Parse . -}}{{- $host = .Host -}}{{- end -}}
+    {{- $host = replaceRE `^www\.` "" $host -}}
+    <a class="shuo-link" href="{{ . }}" target="_blank" rel="noopener">
+      <span class="shuo-link-main">
+        <span class="shuo-link-title">{{ $it.link.title | default . }}</span>
+        {{- with $it.link.desc }}<span class="shuo-link-desc">{{ . }}</span>{{ end }}
+        {{- with $host }}<span class="shuo-link-host">{{ . }}</span>{{ end }}
+      </span>
+      {{- with $it.link.image }}<span class="shuo-link-thumb"><img src="{{ . }}" alt="" loading="lazy"></span>{{ end }}
+    </a>
+    {{- end }}
+    {{- end }}
+    <div class="shuo-bar">
+      <time class="shuo-time"{{ with $it.iso }} datetime="{{ . }}"{{ end }}>{{ $it.time }}</time>
+      {{- with $it.location }}<span class="shuo-loc"><i class="fas fa-location-dot" aria-hidden="true"></i> {{ . }}</span>{{ end }}
+      <span class="shuo-bar-actions">
+        {{- if $likeOn }}
+        <button type="button" class="shuo-act shuo-like" data-id="{{ $it.id }}"><i class="far fa-thumbs-up" aria-hidden="true"></i><span class="shuo-act-label">赞</span><span class="shuo-act-count" hidden>0</span></button>
+        {{- end }}
+        {{- if $commentUI }}
+        <button type="button" class="shuo-act shuo-comment" data-id="{{ $it.id }}"><i class="far fa-comment-dots" aria-hidden="true"></i><span class="shuo-act-label">评论</span><span class="shuo-act-count" hidden>0</span></button>
+        {{- end }}
+      </span>
+    </div>
+    {{- if $commentUI }}
+    <div class="shuo-comments is-collapsed" id="shuo-comments-{{ $it.id }}" hidden>
+      <div class="comment-container" id="comment-{{ $it.id }}"></div>
+    </div>
+    {{- end }}
+  </div>
+</article>

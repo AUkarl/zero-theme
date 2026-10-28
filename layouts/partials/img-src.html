@@ -39,6 +39,9 @@
 {{- end -}}
 {{- $sizes := .sizes | default "100vw" -}}
 {{- $widths := .widths | default (slice 400 800 1200) -}}
+{{- $fmt := lower (.format | default "webp") -}}
+{{- $outH := int (.height | default 0) -}}
+{{- $fit := lower (.fit | default "resize") -}}
 {{- /* 全局图片管线参数在 params.toml 的 [image]：调用方传了 quality / lqip 就以调用方为准 */ -}}
 {{- /* 这个 partial 用 dict 当入参，取 params 要走全局 site */ -}}
 {{- $img := site.Params.image | default dict -}}
@@ -54,8 +57,10 @@
        照样认，[image] 里的值优先），图片退回原始外链：页面照常显示，只是不做本地 WebP 优化。 */ -}}
 {{- $allowRemote := true -}}
 {{- if isset $img "remote_fetch" }}{{ $allowRemote = ne $img.remote_fetch false }}{{ else if eq site.Params.remote_image_fetch false }}{{ $allowRemote = false }}{{ end -}}
+{{- /* 单次调用可覆盖：OG 图必须抓到源图转 JPEG，哪怕全局 remote_fetch=false。 */ -}}
+{{- if eq .remote false }}{{ $allowRemote = false }}{{ else if eq .remote true }}{{ $allowRemote = true }}{{ end -}}
 {{- /* 超时按「抓取失败」处理（回退原始外链）。默认 20 秒，写在 [image].remote_timeout。 */ -}}
-{{- $reqTimeout := $img.remote_timeout | default (site.Params.remote_image_timeout | default "20s") -}}
+{{- $reqTimeout := .timeout | default ($img.remote_timeout | default (site.Params.remote_image_timeout | default "20s")) -}}
 
 {{- $out := dict "ok" false "src" $src "orig" $src "srcset" "" "sizes" $sizes "lqip" "" "width" 0 "height" 0 -}}
 {{- if $variantHit }}{{ $out = $variantHit }}{{- else -}}
@@ -127,16 +132,24 @@
     {{- $slug := printf "%s-%s" $source $hash -}}
 
     {{- $candidates := slice -}}
-    {{- range $w := $widths -}}
-      {{- if le $w $res.Width -}}{{- $candidates = $candidates | append $w -}}{{- end -}}
+    {{- if gt $outH 0 -}}
+      {{- $candidates = $widths -}}
+    {{- else -}}
+      {{- range $w := $widths -}}
+        {{- if le $w $res.Width -}}{{- $candidates = $candidates | append $w -}}{{- end -}}
+      {{- end -}}
+      {{- if not $candidates -}}{{- $candidates = slice $res.Width -}}{{- end -}}
     {{- end -}}
-    {{- if not $candidates -}}{{- $candidates = slice $res.Width -}}{{- end -}}
 
     {{- $srcset := slice -}}
     {{- $main := "" -}}
+    {{- $ext := cond (eq $fmt "jpeg") "jpg" $fmt -}}
     {{- range $w := $candidates -}}
-      {{- $v := $res.Resize (printf "%dx webp q%d" $w $quality) -}}
-      {{- $v = resources.Copy (printf "img/x/%s-%dw.webp" $slug $w) $v -}}
+      {{- $spec := printf "%dx %s q%d" $w $fmt $quality -}}
+      {{- if gt $outH 0 -}}{{- $spec = printf "%dx%d %s q%d" $w $outH $fmt $quality -}}{{- end -}}
+      {{- $v := $res.Resize $spec -}}
+      {{- if and (gt $outH 0) (eq $fit "fill") -}}{{- $v = $res.Fill $spec -}}{{- end -}}
+      {{- $v = resources.Copy (printf "img/x/%s-%dw.%s" $slug $w $ext) $v -}}
       {{- $srcset = $srcset | append (printf "%s %dw" $v.RelPermalink $w) -}}
       {{- $main = $v.RelPermalink -}}
     {{- end -}}
@@ -153,8 +166,8 @@
       "srcset" (delimit $srcset ", ")
       "sizes" $sizes
       "lqip" $lqip
-      "width" $res.Width
-      "height" $res.Height
+      "width" (cond (and (gt $outH 0) (eq $fit "fill")) (index $candidates 0) $res.Width)
+      "height" (cond (and (gt $outH 0) (eq $fit "fill")) $outH $res.Height)
       "orig" $src
     -}}
   {{- else if $isRemote -}}

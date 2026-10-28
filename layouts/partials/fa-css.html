@@ -1,18 +1,23 @@
 {{- /* ============================================================
-  fa-css.html — Font Awesome 的加载入口（head.html / index.html / 404.html 共用这一份）
+  fa-css.html — Font Awesome 的加载入口（head.html / index.html / 404.html 共用）
   ------------------------------------------------------------
-  默认用主题自带的 static/fa/（all.min.css + 四个 woff2，共 389KB）：
-    · 以前引的是 cdnjs —— 那个地址在国内经常连不上，图标整片空白，还要多一次 DNS + TLS 建连
-    · 同域静态文件由 Cloudflare 边缘缓存，翻完一页不再重新下载
-  [cdn].font_awesome_css 填了就改用那个地址（自建 CDN / 国内镜像），此时才补 preconnect。
-  非阻塞加载照旧：media=print 先挂上，onload 后切回 all，图标不挡首屏文字。
-  只放 woff2 不放 ttf：现代浏览器全都支持 woff2，ttf 那条后备永远不会被请求；
-  真要支持老浏览器，把 ttf 也放进 static/fa/webfonts/ 即可。
+  默认优先用 static/fa/css/fa-subset.css（字体只含图标清单里的字形）；
+  当前页面、导航、页脚、正文里出现清单外图标时，回退 full all.min.css。
+  这样后台仍可任选 FA 类名；常用图标走小字体，冷门图标不会空白。
+  [cdn].font_awesome_css 填了就仍用那个完整 CDN（自建/CDN 场景）。
   ============================================================ */ -}}
 {{- $cdn := .Site.Params.cdn | default dict -}}
 {{- $custom := trim (string ($cdn.font_awesome_css | default "")) " " -}}
-{{- $faURL := cond (gt (len $custom) 0) $custom ("fa/css/all.min.css" | relURL) -}}
-{{- $remote := or (hasPrefix $faURL "http://") (hasPrefix $faURL "https://") (hasPrefix $faURL "//") -}}
+{{- $remote := or (hasPrefix $custom "http://") (hasPrefix $custom "https://") (hasPrefix $custom "//") -}}
+{{- $needsFull := partial "fa-needed-full.html" . -}}
+{{- $faURL := "" -}}
+{{- if $custom -}}
+  {{- $faURL = $custom -}}
+{{- else if not $needsFull -}}
+  {{- $faURL = "fa/css/fa-subset.css" | relURL -}}
+{{- else -}}
+  {{- $faURL = "fa/css/all.min.css" | relURL -}}
+{{- end -}}
 {{- if $remote -}}
   {{- $host := replaceRE `^(?:https?:)?//([^/]+).*$` "$1" $faURL -}}
 <link rel="preconnect" href="https://{{ $host }}" crossorigin>

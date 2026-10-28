@@ -17,5 +17,14 @@
   ============================================================ */ -}}
 {{- $p := .Site.Params.seo | default dict -}}
 {{- $d := hugo.Data.seo | default dict -}}
-{{- /* 两个都是整键覆盖：data 有哪个键就用哪个，没有的仍从 params 走 */ -}}
-{{- return (merge (dict) $p $d) -}}
+{{- /* data 里空着的键不要盖掉 params：后台表单没填的项留空落盘，
+       直接 merge 会把 params 里的默认分享图/描述清成空。
+       注意旧模板的驼峰键会派生出值为空的下划线键（ogImageDefault → og_image_default: ""），
+       这里把空值剔掉，正好让 params 那份继续生效。 */ -}}
+{{- $clean := dict -}}
+{{- range $k, $v := $d -}}
+  {{- $empty := or (eq $v nil) (eq (printf "%v" $v) "") (and (reflect.IsSlice $v) (eq (len $v) 0)) -}}
+  {{- if not $empty -}}{{- $clean = merge $clean (dict $k $v) -}}{{- end -}}
+{{- end -}}
+{{- /* 两个都是整键覆盖：data 有哪个键（且不是空值）就用哪个，没有的仍从 params 走 */ -}}
+{{- return (merge (dict) $p $clean) -}}

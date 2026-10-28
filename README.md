@@ -15,7 +15,7 @@
 | 落地页 | `/` | 可完全配置的 Bento 首屏：标语、进入按钮、统计条、封面卡；不想要就直接跳文章列表 |
 | 文章列表 | `/home/` | 精选置顶 + 热度排序、分类 / 标签筛选、分页、封面 WebP |
 | 文章页 | `/posts/<slug>/` | 右侧目录（可关）、修改时间、代码高亮、KaTeX / MathJax、图片灯箱、点赞收藏条、作者框与赞赏、评论区、上一篇 / 下一篇、相关文章 |
-| 时刻页 | `/moments/` | 卡片时间线，内容全部来自 Git 里的 Markdown；图片九宫格、音乐、地点、按需展开的评论。<br>JS 正常时评论框收起/不可见的卡片不会触发组件下载（展开评论框或点「评论」时按需加载）；`<noscript>` 里预渲染最近 6 条时刻的正文，爬虫与无 JS 读者也能看到内容 |
+| 时刻页 | `/moments/` | 卡片时间线，内容全部来自 Git 里的 Markdown；图片九宫格、音乐、地点、按需展开的评论。<br>**首屏一页卡片由 Hugo 直接 SSR 进 HTML**（`data-ssr`），`shuo.js` 只负责补齐正文里的短代码媒体、换相对时间、绑事件，再按滚动加载下一批；关闭 JS 时 `<noscript>` 里还有最近 6 条时刻的正文。评论框收起/不可见的卡片不触发组件下载（展开评论框或点「评论」时按需加载） |
 | 归档页 | `/archive/` | 按年时间线 + 弹幕标签云（可关）+ 分类筛选 + 站内搜索 |
 | 友链页 | `/links/` | 四个 tab：朋友动态 / 左邻右舍 / 站点联盟 / 在线申请；失联自动进「迷失的小船」 |
 | 关于 / 工坊 | `/about/` `/work/` | 全部由 `data/*.json` 驱动，后台可视化编辑 |
@@ -37,7 +37,7 @@
 | 样式 | 原生 CSS + `:root` 变量令牌，构建时 minify + 指纹，无预处理器 | — |
 | 脚本 | 手写 JS（`assets/js/*.js`），同样 minify + fingerprint，全部 `defer` | 支持到无模块化旧浏览器 |
 | 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，122KB / gzip 44KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚**可见**组件进到视野附近才下载；最多 `[hidden]` 里收起的时刻评论框不再触发下载（点「评论」时由 `shuo.js` 按需加载），落地页 / 关于 / 归档 / 404 一枚都没有，那 44KB 干脆不下 | — |
-| 图标 | Font Awesome 6.4.2 打进仓库（`static/fa/`，css + 四个 woff2，共 389KB），不请求任何外部域名；`cdn.font_awesome_css` 填了才改用你的镜像 | — |
+| 图标 | Font Awesome 6.4.2 打进仓库（`static/fa/`）。默认加载**子集版**：`fa/css/fa-subset.css`（约 23KB）+ solid/brands 子集字体（约 10KB / 4KB），regular 因字体工具限制仍用完整字重（约 24KB）；页面用到清单外的自定义图标时自动回退完整 FA。后台「前端管理 → 导航 / 页脚」的图标输入带 173 个可选类名。`cdn.font_awesome_css` 填了才改用你的镜像 | — |
 | 数学 | 页面 front matter `math: true` 才加载 MathJax（或 KaTeX 短代码） | — |
 | 字体 | **只用系统字体栈**（`--font`）。曾经引过 Google Fonts，国内不可达且字体晚到导致正文重排（文章页 CLS 0.13），已彻底去掉 | — |
 | 示例站部署 | Cloudflare Pages + GitHub Actions（`.github/workflows/demo.yml`） | — |
@@ -68,7 +68,7 @@ theme.toml  LICENSE
 ```
 
 主题仓库的 `static/` **不是空的**，里面有两类东西：
-`static/fa/`（Font Awesome 6.4.2 的 css 与四个 woff2，打进仓库、不请求外部域名，共 389KB），
+`static/fa/`（Font Awesome 6.4.2 的 css 与 woff2，打进仓库、不请求外部域名；默认用 `fa-subset.css` 与子集字体，清单外的图标回退完整 FA），
 以及 `static/img/` 那五张**兜底图** —— `logo-nav.png`、`logo-favicon.png`、`bj.png`、`bj2.png`、`avatar.png`，
 模板在站点没配图时就按这些相对地址取（`img/logo-nav.png` 做站点 Logo 与 favicon、`img/bj.png` 做时刻页横幅兜底）。
 你自己的图片放在**你自己站点仓库**的 `static/img/` 里同名覆盖即可，或在后台「前端管理 → 基本信息」填地址；
@@ -164,7 +164,7 @@ npm run build        # hugo --minify 构建示例站
 | 4 | 导航栏 | `controls` 里的主题切换 / 搜索 / 登录图标（`zero_account = true` 那项） |
 | 5 | 外观与设计令牌 | `--accent`、圆角、间距、暗色配色，全部 CSS 变量 |
 | 6 | 动效与滚动按钮 | 进入动画时长、回到顶部按钮 |
-| 7 | 页面切换加载层 | 顶部进度条样式 |
+| 7 | 页面切换加载层 | 顶部进度条样式、`max_ms`（默认 800ms，同一会话只显示一次） |
 | 8 | 首页落地页 | 标语数组、封面、CTA、统计条；不想用落地页就把 `/` 让给列表 |
 | 9 | 首页列表 | 每页条数、排序（精选置顶 + 热度）、封面比例 |
 | 10 | 文章页 | `show_toc`（目录总开关）、`show_updated`（修改时间）、`date_format`、赞赏、相关推荐 |
@@ -174,12 +174,12 @@ npm run build        # hugo --minify 构建示例站
 | 14 | 访问统计 | 开关、排除路径（后台不想统计自己） |
 | 15 | 页脚 | 版权行、备案、社交链接、`designed by` 署名 |
 | 16 | 关于页 | 头像、简历块、联系项 |
-| 17 | 友链页 | 各 tab 开关、`friendsEnabled`、`friendApplyEnabled`、失联文案 |
+| 17 | 友链页 | 各 tab 开关、`friendsEnabled`、`friendApplyEnabled`、失联文案、`optimize_images`（封面缩略图） |
 | 18 | 工具 / 工坊页 | 卡片列表来源与排序 |
 | 19 | RSS | `rss.full_content`（默认输出完整正文，含封面与正文图）、`rss.limit` 条数、`rss.cover_image` 兜底封面 |
-| 20 | SEO 与结构化数据 | 默认描述、OG 图、`title_separator`、verification、`robots` 各项 |
+| 20 | SEO 与结构化数据 | 默认描述、OG 图（1200×630 JPEG）、`title_separator`、verification、`robots` 各项 |
 | 21 | 自定义注入 | `head_custom` / `body_custom`（统计代码、站长验证只在这里插一次） |
-| 22 | 第三方资源地址 | `cdn.font_awesome_css` 留空=用主题自带的 static/fa/（不请求外部域名）；`cdn.katex_css` / `katex_js` 留空=jsdelivr |
+| 22 | 第三方资源地址 | `cdn.font_awesome_css` 留空=用主题自带的子集 FA（清单外图标自动回退完整版，不请求外部域名）；`cdn.katex_css` / `katex_js` 留空=jsdelivr |
 | 23 | 作者资料 | 默认作者（站长）兜底：署名、简介、赞赏图、联系方式 |
 | 24 | 全局社交链接 | 作者资料没填时的兜底 |
 
@@ -302,11 +302,21 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   进入动画、弹幕标签云、淡入都自动降级成直接呈现。
 - 会话与配置请求全站各只问一次（`window.ZeroStack.me()` / `.config()` 共用同一在途 Promise，
   账号页登录 / 注销派发 `zero:session` 时才作废重问）—— 少一次请求就少一次 Worker 与 D1 读。
-- **时刻页**：6 条时刻的正文与图片有一份 `<noscript>` 静态输出，禁用 JS / 爬虫也能读；
-  评论组件只随可见的评论框/「评论」按钮按需加载，收起的卡片不再首屏拉 154KB。JS 正常时外观与交互不变。
-- **页面加载层**：`<noscript>` 直接隐藏 `#pageLoader`，无 JS 时不会永久遮住正文。
+- **时刻页**：首屏一页卡片由 Hugo SSR 进 HTML（`[moment].paginate` 条），`shuo.js` 接管时只补短代码媒体、
+  绑事件并换相对时间，不再等 JS 白手起家；关闭 JS 时 `<noscript>` 里另有最近 6 条的正文兜底。
+  评论组件只在点「评论」时挂载并加载脚本，收起的卡片不再首屏拉 154KB；评论数用一次批量接口取回。
+- **页面加载层**：`max_ms` 默认 800ms，同一会话只显示一次（`sessionStorage` 记住）；
+  `<noscript>` 直接隐藏 `#pageLoader`，无 JS 时不会永久遮住正文。
 - **友链**：朋友动态封面与邻站图标带 `width`/`height`（132×99 / 72×72 / 26×26），
   保留原有 `loading="lazy"`；标题层级从 h3 改为 h2（样式类不变，修复 heading-order）。
+  封面默认走构建期缩略图（`[links].optimize_images = true`，264×198 WebP、6 秒抓取超时），
+  抓不到就回退原图，不再把 300KB–5MB 的原图塞进 132×99 的槽位。
+- **分享图与分享按钮**：文章/页面输出 1200×630 JPEG 的 `og:image`（`img-src` 的 `format=jpg` + `fit=fill`），
+  微信等只认 JPEG 的平台也能出图；AVIF 封面走上传期 WebP 变体再转 JPEG；页面图和默认图都处理不了时
+  依次回退 favicon → 主题自带 `bj.png`，不会把 404 地址丢给平台。文章页底部有微博 / X / Telegram / 邮件 /
+  复制链接 / 系统分享。
+- **首页图片**：服务端渲染的卡片补了 `decoding="async"`、尺寸占位与 `object-fit: cover`；
+  `head` 的 `preconnect` 会跟着 `site-config` 里的 logo / favicon / 头像域名走。
 - **`[home] layout = "grid"` 的首屏卡片与分页条是服务端渲的**（`layouts/partials/home-card.html` /
   `home-pager.html`，靠 `.is-skeleton` 那套 grid 布局在每个断点摆成 `--home-columns` 列）。
   之前 `#gardenGrid` 在 HTML 里是空的，二十张卡约 20KB 在 `DOMContentLoaded` 一次性插入，页脚被推下去
@@ -413,6 +423,24 @@ npm run check:behavior:mobile                 # 同一套判据在 390×844 下�
 2. 起服务用 `hugo server --disableFastRender`，否则新加的页面 / 模板改动不会重建；
 3. 站点目录下 `.hugo_build.lock` 会串行化所有构建，进程被强杀后留下的锁会让之后每次构建
    一动不动地等 —— 确认没有 hugo 进程在跑再删掉它。
+
+### 重新生成 Font Awesome 子集
+
+改了模板里的图标、或你的站点 front matter / data 里用了新图标时，重新生成一次清单与字体：
+
+```bash
+# 需要 pip 安装 fonttools；--extra 指到内容站（data/config/content/layouts 会被扫）
+python scripts/build-fa-subset.py \
+  --extra ../mywebsite \
+  --extra exampleSite \
+  --cms ../zero-stack/packages/cms/src/lib/fa-icons.ts
+```
+
+它会写 `data/fa-icons.json`、`assets/fa-icons.json`、`static/fa/css/fa-subset.css`、
+`static/fa/webfonts/*-subset.woff2`，并把同一份清单同步给后台图标选择器。
+清单只影响「用子集还是回退完整 FA」：模板/内容里出现清单外的 `fa-*` 类时，
+`fa-needed-full.html` 会让那一页改用完整 `all.min.css`，不会出现空白图标。
+regular 字重目前因 fontTools 对 woff2 的 glyf 变换报错而保留完整字体，其余两档正常子集化。
 
 ## 常见问题
 
