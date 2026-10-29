@@ -9,7 +9,9 @@
   <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
   <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
   <a class="share-btn" href="mailto:?subject={{ $title | urlquery }}&body={{ $text | urlquery }}" title="通过邮件分享" aria-label="通过邮件分享"><i class="fas fa-envelope" aria-hidden="true"></i><span>邮件</span></a>
-  <button type="button" class="share-btn" data-share-copy title="复制文章链接" aria-label="复制文章链接"><i class="fas fa-link" aria-hidden="true"></i><span>复制链接</span></button>
+  {{- /* aria-label 必须包含按钮上看得见的字（WCAG 2.5.3 Label in Name）：
+         以前写的是「复制文章链接」而屏上显示「复制链接」，读屏听到的名字和眼睛看到的不是一回事。 */ -}}
+  <button type="button" class="share-btn" data-share-copy title="复制链接" aria-label="复制链接"><i class="fas fa-link" aria-hidden="true"></i><span>复制链接</span></button>
   <button type="button" class="share-btn" data-share-native title="使用系统分享" aria-label="使用系统分享" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
 <script>

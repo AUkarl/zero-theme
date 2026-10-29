@@ -14,7 +14,10 @@
   <section class="section search-page">
     <h1 class="section-title">{{ i18n "search-title" | default "搜索" }}</h1>
     <p class="section-desc">{{ i18n "search-desc" | default "搜索标题、标签、摘要与正文。中文按词组匹配，多个关键词用空格分开。" }}</p>
-    <form class="search-form" id="searchForm" role="search" action="{{ "" | relURL }}search/" method="get">
+    {{- /* 索引地址带构建版本号：这份 JSON 只在重建时变，配上 _headers 的长缓存后
+           访客可以把 123KB 存一年；版本号一变就是新地址，绝不会让新文章搜不到。
+           now 在同一次构建里是定值（实测两次取值一致、下一次构建才变）。 */ -}}
+    <form class="search-form" id="searchForm" role="search" action="{{ "" | relURL }}search/" method="get" data-index-url="{{ "search/index.json" | relURL }}?v={{ now | time.Format "20060102150405" }}">
       <label class="zero-sr-only" for="searchInput">{{ i18n "search-label" | default "搜索关键词" }}</label>
       <div class="search-box">
         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>

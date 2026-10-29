@@ -14,4 +14,28 @@
 {{- $cls := "footer-service-img" -}}
 {{- if $it.invert }}{{ $cls = printf "%s footer-service-img-invert" $cls }}{{ end -}}
 {{- if $it.no_invert }}{{ $cls = printf "%s footer-service-img-noinvert" $cls }}{{ end -}}
-{{- with $it.img }}<img class="{{ $cls }}" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ else }}<i class="{{ $it.icon }}" aria-hidden="true"></i>{{ end -}}
+{{- /* 第三方 logo 走构建期代理：这些图挂在每一页的页脚，实测单张最大的 293KB
+       （虫洞那张），全页图片重量里第三方直连占 311KB。抓下来等比收成 2 倍高的 WebP
+       后是 3~8KB，访客不再向对方站点发请求（顺带少一种「对方挂了就破图」）。
+       抓不到就照旧用原地址，SVG/GIF 这类 Hugo 处理不了的也照旧。
+       关掉这一档：params.toml 的 [footer] optimize_images = false（与友链封面同一套思路）。 */ -}}
+{{- $imgSrc := "" -}}
+{{- $h := int (.height | default 60) -}}
+{{- with $it.img -}}
+  {{- $raw := string . -}}
+  {{- $remote := or (hasPrefix $raw "http://") (hasPrefix $raw "https://") (hasPrefix $raw "//") -}}
+  {{- $info := dict "ok" false -}}
+  {{- if and $remote (ne site.Params.footer.optimize_images false) -}}
+    {{- $info = partial "img-src.html" (dict "src" $raw "page" $.page "mode" "height" "height" $h "format" "webp" "quality" 80 "lqip" false "remote" true "timeout" "6s") -}}
+  {{- end -}}
+  {{- if $info.ok -}}
+    {{- $imgSrc = $info.src -}}
+  {{- else if $remote -}}
+    {{- $imgSrc = $raw -}}
+  {{- else -}}
+    {{- $imgSrc = $raw | relURL -}}
+  {{- end -}}
+<img class="{{ $cls }}" src="{{ $imgSrc | safeURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
+{{- else -}}
+<i class="{{ $it.icon }}" aria-hidden="true"></i>
+{{- end -}}

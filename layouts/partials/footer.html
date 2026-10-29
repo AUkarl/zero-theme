@@ -104,7 +104,7 @@
       {{- $sn := $svcShow -}}
       {{- $snField := partial "cms/value.html" (dict "data" $svc "keys" (slice "showName" "show_name")) -}}
       {{- if $snField.set }}{{ $sn = $snField.on }}{{ end -}}
-      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" $svc) }}{{ if $sn }} {{ $svc.name }}{{ end }}</a>
+      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" $svc "page" $ "height" 60) }}{{ if $sn }} {{ $svc.name }}{{ end }}</a>
       {{- end }}
     </nav>
     {{- end }}
@@ -129,7 +129,7 @@
       {{- range . }}
       {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" .link "page" $) -}}
       {{- if $fl.skip }}{{ continue }}{{ end -}}
-      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" .) }}</a>
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" . "page" $ "height" 44) }}</a>
       {{- end }}
     </div>
     {{- end }}
@@ -138,7 +138,7 @@
       {{- range . }}
       {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" .link "page" $) -}}
       {{- if $fl.skip }}{{ continue }}{{ end -}}
-      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" .) }}</a>
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" . "page" $ "height" 44) }}</a>
       {{- end }}
     </div>
     {{- end }}

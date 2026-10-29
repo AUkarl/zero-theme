@@ -172,7 +172,7 @@ npm run build        # hugo --minify 构建示例站
 | 12 | 时刻页 | 每页条数、卡片显示项、评论区用哪套系统 |
 | 13 | 文章评论区 | `provider`（zero / waline / twikoo / giscus / artalk）、嵌套层数、是否匿名 |
 | 14 | 访问统计 | 开关、排除路径（后台不想统计自己） |
-| 15 | 页脚 | 版权行、备案、社交链接、`designed by` 署名 |
+| 15 | 页脚 | 版权行、备案、社交链接、`designed by` 署名、`optimize_images`（第三方 logo 构建期代理） |
 | 16 | 关于页 | 头像、简历块、联系项 |
 | 17 | 友链页 | 各 tab 开关、`friendsEnabled`、`friendApplyEnabled`、失联文案、`optimize_images`（封面缩略图） |
 | 18 | 工具 / 工坊页 | 卡片列表来源与排序 |
@@ -311,6 +311,11 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   保留原有 `loading="lazy"`；标题层级从 h3 改为 h2（样式类不变，修复 heading-order）。
   封面默认走构建期缩略图（`[links].optimize_images = true`，264×198 WebP、6 秒抓取超时），
   抓不到就回退原图，不再把 300KB–5MB 的原图塞进 132×99 的槽位。
+- **页脚第三方 logo**：`data/footer.json` 里填 http(s) 图片的条目同样走构建期代理
+  （`[footer].optimize_images = true`，按高度等比收成 2 倍高的 WebP，`x{h}` 不裁切、不改可见尺寸）。
+  页脚挂在每一页，同源化之后吃本站 `/img/*` 的一个月缓存，也不再依赖对方站点的在线与否与缓存策略；
+  抓不到、或 SVG 这类 Hugo 处理不了的格式，照旧用原地址。动图（如虫洞那张 73 帧的 WebP）会保留动画、
+  体积基本不变 —— 要把它压小只能去掉动画，那是设计取舍，不由模板替你决定。
 - **分享图与分享按钮**：文章/页面输出 1200×630 JPEG 的 `og:image`（`img-src` 的 `format=jpg` + `fit=fill`），
   微信等只认 JPEG 的平台也能出图；AVIF 封面走上传期 WebP 变体再转 JPEG；页面图和默认图都处理不了时
   依次回退 favicon → 主题自带 `bj.png`，不会把 404 地址丢给平台。文章页底部有微博 / X / Telegram / 邮件 /
@@ -405,6 +410,13 @@ outputs: ["HTML", "RSS"]
 `sitemap.xml` 用 `partials/seo-robots.html` 的同一份 robots 判据，`noindex` 的页面（1–2 篇文章的 term、`/search/` 等）不会提交。
 
 **本地构建请加 `--cleanDestinationDir`**：Hugo 不会自动删掉上一次生成的 `links/index.xml` 等空 feed。
+
+**缓存**（内容仓 `static/_headers`，`pnpm create:site` 生成的站点已带）：三份 feed 是
+`max-age=0, must-revalidate, s-maxage=300, stale-while-revalidate=3600` —— 浏览器每次回源校验，
+新文章不会晚出现，而 CDN 存 5 分钟，订阅器轮询不再各打穿源站一次（`/posts/index.xml` 实测 412KB）。
+站内搜索索引是 `max-age=31536000, immutable`，配套地址带构建版本号
+（`/search/index.json?v=<构建时间>`，由 `layouts/search/list.html` 写给 `assets/js/search.js`）：
+每次重建自动换成新地址，所以既不会让新文章搜不到，123KB 也只在第一次下载。
 
 ---
 

@@ -42,6 +42,7 @@
 {{- $fmt := lower (.format | default "webp") -}}
 {{- $outH := int (.height | default 0) -}}
 {{- $fit := lower (.fit | default "resize") -}}
+{{- $mode := lower (string (.mode | default "")) -}}
 {{- /* 全局图片管线参数在 params.toml 的 [image]：调用方传了 quality / lqip 就以调用方为准 */ -}}
 {{- /* 这个 partial 用 dict 当入参，取 params 要走全局 site */ -}}
 {{- $img := site.Params.image | default dict -}}
@@ -132,7 +133,13 @@
     {{- $slug := printf "%s-%s" $source $hash -}}
 
     {{- $candidates := slice -}}
-    {{- if gt $outH 0 -}}
+    {{- /* mode = "height"：只按高度等比出一档（页脚第三方 logo 用）。
+           那类图 CSS 只限高不限宽，按宽度收档会把宽条 logo 缩小、可见尺寸就变了，
+           所以这里走 `x{h}`，宽度跟着原比例走。 */ -}}
+    {{- $hOnly := and (eq $mode "height") (gt $outH 0) -}}
+    {{- if $hOnly -}}
+      {{- $candidates = slice $outH -}}
+    {{- else if gt $outH 0 -}}
       {{- $candidates = $widths -}}
     {{- else -}}
       {{- range $w := $widths -}}
@@ -143,33 +150,73 @@
 
     {{- $srcset := slice -}}
     {{- $main := "" -}}
+    {{- $mainW := 0 -}}
+    {{- $mainH := 0 -}}
     {{- $ext := cond (eq $fmt "jpeg") "jpg" $fmt -}}
-    {{- range $w := $candidates -}}
-      {{- $spec := printf "%dx %s q%d" $w $fmt $quality -}}
-      {{- if gt $outH 0 -}}{{- $spec = printf "%dx%d %s q%d" $w $outH $fmt $quality -}}{{- end -}}
-      {{- $v := $res.Resize $spec -}}
-      {{- if and (gt $outH 0) (eq $fit "fill") -}}{{- $v = $res.Fill $spec -}}{{- end -}}
-      {{- $v = resources.Copy (printf "img/x/%s-%dw.%s" $slug $w $ext) $v -}}
-      {{- $srcset = $srcset | append (printf "%s %dw" $v.RelPermalink $w) -}}
-      {{- $main = $v.RelPermalink -}}
+    {{- $err := "" -}}
+    {{- range $c := $candidates -}}
+      {{- $spec := printf "%dx %s q%d" $c $fmt $quality -}}
+      {{- $name := printf "img/x/%s-%dw.%s" $slug $c $ext -}}
+      {{- if gt $outH 0 -}}{{- $spec = printf "%dx%d %s q%d" $c $outH $fmt $quality -}}{{- end -}}
+      {{- if $hOnly -}}
+        {{- $spec = printf "x%d %s q%d" $c $fmt $quality -}}
+        {{- $name = printf "img/x/%s-h%d.%s" $slug $c $ext -}}
+      {{- end -}}
+      {{- /* 包 try：SVG 这类资源不支持 Resize/Fill，直接调用会把**整站构建**打死
+             （实测页脚博友圈那张 .svg）。失败就当没处理成功，回退原地址。 */ -}}
+      {{- if and (gt $outH 0) (eq $fit "fill") (not $hOnly) -}}
+        {{- with try ($res.Fill $spec) -}}
+          {{- if .Err -}}
+            {{- $err = .Err.Error -}}
+          {{- else -}}
+            {{- $v := resources.Copy $name .Value -}}
+            {{- $srcset = $srcset | append (printf "%s %dw" $v.RelPermalink $v.Width) -}}
+            {{- $main = $v.RelPermalink -}}
+            {{- $mainW = $v.Width -}}
+            {{- $mainH = $v.Height -}}
+          {{- end -}}
+        {{- end -}}
+      {{- else -}}
+        {{- with try ($res.Resize $spec) -}}
+          {{- if .Err -}}
+            {{- $err = .Err.Error -}}
+          {{- else -}}
+            {{- $v := resources.Copy $name .Value -}}
+            {{- $srcset = $srcset | append (printf "%s %dw" $v.RelPermalink $v.Width) -}}
+            {{- $main = $v.RelPermalink -}}
+            {{- $mainW = $v.Width -}}
+            {{- $mainH = $v.Height -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
     {{- end -}}
 
     {{- $lqip := "" -}}
-    {{- if $wantLqip -}}
-      {{- $small := $res.Resize (printf "%dx webp q%d" $lqipW $lqipQ) -}}
-      {{- $lqip = printf "data:image/webp;base64,%s" (base64Encode $small.Content) -}}
+    {{- if and $wantLqip $main -}}
+      {{- with try ($res.Resize (printf "%dx webp q%d" $lqipW $lqipQ)) -}}
+        {{- if not .Err -}}{{- $lqip = printf "data:image/webp;base64,%s" (base64Encode .Value.Content) -}}{{- end -}}
+      {{- end -}}
     {{- end -}}
 
+    {{- if $main -}}
     {{- $out = dict
       "ok" true
       "src" $main
       "srcset" (delimit $srcset ", ")
       "sizes" $sizes
       "lqip" $lqip
-      "width" (cond (and (gt $outH 0) (eq $fit "fill")) (index $candidates 0) $res.Width)
-      "height" (cond (and (gt $outH 0) (eq $fit "fill")) $outH $res.Height)
+      "width" (cond $hOnly $mainW (cond (and (gt $outH 0) (eq $fit "fill")) (index $candidates 0) $res.Width))
+      "height" (cond $hOnly $mainH (cond (and (gt $outH 0) (eq $fit "fill")) $outH $res.Height))
       "orig" $src
     -}}
+    {{- else if $isRemote -}}
+      {{- /* 抓到了但处理不动（或抓取本来就失败）：主动关掉抓取不是故障，不出告警 */ -}}
+      {{- $note := "" -}}
+      {{- if $err -}}{{- $note = printf "（%s）" $err -}}{{- end -}}
+      {{- if $allowRemote -}}{{- warnf "img-src: 这张图没能处理，已退回原始链接 → %s%s" $src $note -}}{{- end -}}
+    {{- else if $err -}}
+      {{- warnf "img-src: 这张图处理不了，已按原样输出 → %s（%s）" $src $err -}}
+    {{- end -}}
   {{- else if $isRemote -}}
     {{- /* 主动关掉抓取（[image].remote_fetch = false）不是故障，不出告警；真的抓失败了才提醒 */ -}}
     {{- if $allowRemote -}}{{- warnf "img-src: 抓取失败，已退回原始链接 → %s" $src -}}{{- end -}}

@@ -435,6 +435,11 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   # name 必填（它是这条链接唯一的可读名，空着读屏只念得出「链接」）；
   # show_service_name 是这一行的全站默认，条目自己写了 show_name / showName 就以条目为准
   # —— 想「只挂图不写字」就在那一条上写 show_name = false。
+  # 第三方 logo 走构建期代理（img 填 http(s) 地址时抓下来等比收成 2 倍高的 WebP，
+  # 与友链封面同一套管线）：页脚挂在每一页，改成同源之后走本站的 /img/* 一个月缓存，
+  # 也不再依赖对方站点的缓存策略与在线与否。抓不到就照旧用原地址，SVG 这类处理不动的也照旧。
+  # 关掉这一档（只想让访客直接去对方站点取图时）：optimize_images = false
+  optimize_images = true
   show_service_name = true
   # [[footer.services]]
   #   name = "站点联盟"

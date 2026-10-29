@@ -15,7 +15,9 @@
   var status = document.getElementById('searchStatus');
   if (!form || !input || !list || !status) return;
 
-  var INDEX_URL = 'index.json';
+  /* 索引地址由页面给（带构建版本号，见 layouts/search/list.html）；
+     拿不到属性时退回老写法，页面照常能搜。 */
+  var INDEX_URL = form.getAttribute('data-index-url') || 'index.json';
   var MAX_RESULTS = 30;
   var index = null;
   var indexPromise = null;
