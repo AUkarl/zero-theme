@@ -23,7 +23,7 @@
   if (!src) return;
   if (typeof window.addEventListener !== 'function') { inject(); return; }
 
-  var SEL = 'zero-comment,zero-like,zero-subscribe,zero-moments,zero-login';
+  var SEL = 'zero-comment,zero-like,zero-subscribe,zero-login';
   var EDGE = 400;
   var started = false;
   var queued = false;

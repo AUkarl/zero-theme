@@ -20,8 +20,8 @@
   {{- end -}}
   {{- $switches := resources.Get "js/zero-switches.js" | minify | fingerprint -}}
 <script src="{{ $switches.RelPermalink }}"></script>
-  {{- /* 组件产物（<zero-comment> / <zero-like> / <zero-subscribe> / <zero-moments> / <zero-login>
-         五个自定义元素，122KB / gzip 44KB）不在这里直接引：
+  {{- /* 组件产物（<zero-comment> / <zero-like> / <zero-subscribe> / <zero-login>
+         四个自定义元素，146KB / gzip 54KB）不在这里直接引：
          曾在评论区、操作条、时刻页三处各引一次并靠 .Scratch 判重 —— hugo server 增量重建时
          页面节点的 Scratch 会残留，第二次之后永远判定「已输出」，本地测试就变成
          评论区与点赞整体消失（只有走独立脚本的收藏还在）。改成单一输出点，没有任何运行期状态。

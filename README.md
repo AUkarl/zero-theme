@@ -36,7 +36,7 @@
 | 静态构建 | Hugo **extended**（主题用到图片处理，非 extended 会构建失败） | `min_version = 0.128.0`，本项目已验证 0.165.0 |
 | 样式 | 原生 CSS + `:root` 变量令牌，构建时 minify + 指纹，无预处理器 | — |
 | 脚本 | 手写 JS（`assets/js/*.js`），同样 minify + fingerprint，全部 `defer` | 支持到无模块化旧浏览器 |
-| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，122KB / gzip 44KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚**可见**组件进到视野附近才下载；最多 `[hidden]` 里收起的时刻评论框不再触发下载（点「评论」时由 `shuo.js` 按需加载），落地页 / 关于 / 归档 / 404 一枚都没有，那 44KB 干脆不下 | — |
+| 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，146KB / gzip 54KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚**可见**组件进到视野附近才下载；最多 `[hidden]` 里收起的时刻评论框不再触发下载（点「评论」时由 `shuo.js` 按需加载），落地页 / 关于 / 归档 / 404 一枚都没有，那 54KB 干脆不下 | — |
 | 图标 | Font Awesome 6.4.2 打进仓库（`static/fa/`）。默认加载**子集版**：`fa/css/fa-subset.css`（约 23KB）+ solid/brands 子集字体（约 10KB / 4KB），regular 因字体工具限制仍用完整字重（约 24KB）；页面用到清单外的自定义图标时自动回退完整 FA。后台「前端管理 → 导航 / 页脚」的图标输入带 173 个可选类名。`cdn.font_awesome_css` 填了才改用你的镜像 | — |
 | 数学 | 页面 front matter `math: true` 才加载 MathJax（或 KaTeX 短代码） | — |
 | 字体 | **只用系统字体栈**（`--font`）。曾经引过 Google Fonts，国内不可达且字体晚到导致正文重排（文章页 CLS 0.13），已彻底去掉 | — |
@@ -304,7 +304,7 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   账号页登录 / 注销派发 `zero:session` 时才作废重问）—— 少一次请求就少一次 Worker 与 D1 读。
 - **时刻页**：首屏一页卡片由 Hugo SSR 进 HTML（`[moment].paginate` 条），`shuo.js` 接管时只补短代码媒体、
   绑事件并换相对时间，不再等 JS 白手起家；关闭 JS 时 `<noscript>` 里另有最近 6 条的正文兜底。
-  评论组件只在点「评论」时挂载并加载脚本，收起的卡片不再首屏拉 154KB；评论数用一次批量接口取回。
+  评论组件只在点「评论」时挂载并加载脚本，收起的卡片不再首屏拉 146KB；评论数用一次批量接口取回。
 - **页面加载层**：`max_ms` 默认 800ms，同一会话只显示一次（`sessionStorage` 记住）；
   `<noscript>` 直接隐藏 `#pageLoader`，无 JS 时不会永久遮住正文。
 - **友链**：朋友动态封面与邻站图标带 `width`/`height`（132×99 / 72×72 / 26×26），
