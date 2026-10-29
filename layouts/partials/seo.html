@@ -237,12 +237,18 @@
       {{- with .Params.categories -}}
         {{- $cat := . -}}
         {{- if reflect.IsSlice . }}{{ $cat = index . 0 }}{{ end -}}
-        {{- with $.Site.GetPage (printf "/categories/%s" (urlize (string $cat))) -}}
+        {{- /* 分类名可能是中文：urlize 会把「体育赛事」编码成 %E4%BD%93…，GetPage 用百分号路径
+              查不到，面包屑就少一级；先用原值查，查不到再退回 urlize（ASCII 分类名两种都行）。 */ -}}
+        {{- $catPage := $.Site.GetPage (printf "/categories/%s" (string $cat)) -}}
+        {{- if not $catPage }}{{ $catPage = $.Site.GetPage (printf "/categories/%s" (urlize (string $cat))) }}{{ end -}}
+        {{- with $catPage -}}
           {{- $pos = add $pos 1 -}}
           {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) -}}
         {{- end -}}
       {{- end -}}
-      {{- if and .CurrentSection (not .CurrentSection.IsHome) .CurrentSection.Permalink -}}
+      {{- /* 栏目级只在真的输出 HTML 时才写：posts 现在只出 RSS，`.Permalink` 会变成
+            /posts/index.xml，写进面包屑就是一条指向 feed 的路径。 */ -}}
+      {{- if and .CurrentSection (not .CurrentSection.IsHome) .CurrentSection.Permalink (.CurrentSection.OutputFormats.Get "HTML") -}}
         {{- $pos = add $pos 1 -}}
         {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) -}}
       {{- end -}}
