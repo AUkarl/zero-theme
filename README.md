@@ -412,7 +412,7 @@ outputs: ["HTML", "RSS"]
 **本地构建请加 `--cleanDestinationDir`**：Hugo 不会自动删掉上一次生成的 `links/index.xml` 等空 feed。
 
 **缓存**（内容仓 `static/_headers`，`pnpm create:site` 生成的站点已带）：三份 feed 是
-`max-age=0, must-revalidate, s-maxage=300, stale-while-revalidate=3600` —— 浏览器每次回源校验，
+`max-age=0, s-maxage=300, stale-while-revalidate=3600` —— 浏览器每次回源校验，
 新文章不会晚出现，而 CDN 存 5 分钟，订阅器轮询不再各打穿源站一次（`/posts/index.xml` 实测 412KB）。
 站内搜索索引是 `max-age=31536000, immutable`，配套地址带构建版本号
 （`/search/index.json?v=<构建时间>`，由 `layouts/search/list.html` 写给 `assets/js/search.js`）：
