@@ -44,6 +44,17 @@ defaultContentLanguageInSubdir = false # 是否在 URL 中添加语言前缀（�
   # category = "categories"
   # tag = "tags"
 
+# RSS：只保留三份 feed；其他 section / taxonomy 总览 / term 都不生成。
+#   /index.xml          文章 + 时刻各前 20 条
+#   /posts/index.xml    全部文章（content/zh/posts/_index.md 的 outputs）
+#   /moments/index.xml  全部时刻（content/zh/moments/_index.md 的 outputs）
+[outputs]
+  home = ["HTML", "RSS"]
+  section = ["HTML"]
+  taxonomy = ["HTML"]
+  term = ["HTML"]
+  page = ["HTML"]
+
 # ===== Markdown 渲染 =====
 # 控制 Markdown 解析和代码高亮的行为
 [markup]

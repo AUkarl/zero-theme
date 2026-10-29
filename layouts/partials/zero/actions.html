@@ -16,7 +16,8 @@
     · 运行期 GET /api/config 的同名开关
       —— 后台改开关不必重建站点；模板先写成 hidden，js/zero-switches.js 拿到
          配置后才露出，所以「关掉的功能」不会闪一下再消失
-  订阅入口还多一层：/subscribe/ 页被后台关掉时（subscribeEnabled=false）这里同样隐藏。
+  订阅入口还多两层：/subscribe/ 页被后台关掉时（subscribeEnabled=false）这里隐藏；
+      站点里根本没有这一页（content/zh/subscribe/_index.md 缺失）时也隐藏，免得指向 404。
 
   点赞用组件包里的 <zero-like kind="like">（匿名指纹也能计一次数）；
   收藏不用 <zero-like kind="star">：那个组件允许匿名指纹收藏，
@@ -30,10 +31,13 @@
 {{- $starTitle := $art.actions_title_star | default "收藏这篇，回头再看" -}}
 {{- $subLabel := $art.actions_label_subscribe | default "订阅" -}}
 {{- $subTitle := $art.actions_title_subscribe | default "订阅本站更新" -}}
+{{- /* 订阅 CTA 只有在 /subscribe/ 真有页面时才输出：只按开关判断会让没有该页的站点
+       文章页/页脚一直指到 404（新站从 exampleSite 生成时实测）。 */ -}}
+{{- $subPage := .Site.GetPage "subscribe" -}}
 {{- $want := dict
   "like" (and $zero.enabled (ne .Site.Params.likeEnabled false))
   "star" (and $zero.enabled (ne .Site.Params.starEnabled false))
-  "subscribe" (and $zero.enabled (ne .Site.Params.subscribeEnabled false))
+  "subscribe" (and $zero.enabled (ne .Site.Params.subscribeEnabled false) $subPage)
 -}}
 {{- $any := false -}}
 {{- range $order }}{{ if index $want . }}{{ $any = true }}{{ end }}{{ end -}}
