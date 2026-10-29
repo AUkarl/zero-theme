@@ -50,7 +50,10 @@
 {{- $src := $first -}}{{- $iw := 132 }}{{- $ih := 99 -}}
 {{- if $info.ok -}}{{- $src = $info.src -}}{{- $iw = 264 -}}{{- $ih = 198 -}}{{- end -}}
 <span class="{{ $box }}">
-  <img src="{{ $src }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="{{ $iw }}" height="{{ $ih }}"
+  {{- /* 分页里没到跟的那几张：src 照旧由模板写（**不用 JS 的访客与现在完全一样**），
+         links.js 在初始化时把这些 src 挪到 data-src 上、翻页时再填回来 ——
+         有 JS 的人不再为看不见也翻不到的卡片下原图。 */ -}}
+  <img src="{{ $src }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="{{ $iw }}" height="{{ $ih }}"{{ if .defer }} data-defer="1"{{ end }}
        data-chain="{{ delimit $rest " " }}"
        onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{this.remove()}">
 </span>

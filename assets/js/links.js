@@ -57,11 +57,39 @@
     var totalPages = Math.max(1, Math.ceil(items.length / PER_PAGE));
     var page = 1;
 
+    /* 模板给「当前页之外」的封面照常写了 src（保证不用 JS 的访客看到的和以前一模一样），
+       这里在初始化时把它们挪到 data-src 上、去掉 src —— 浏览器就不会再去下这些原图；
+       翻页时由下面的 loadCovers 填回来。实测一次进页请求 24 张 → 10 张。 */
+    function deferCovers() {
+      Array.prototype.slice.call(grid.querySelectorAll('img[data-defer]')).forEach(function (img) {
+        var s = img.getAttribute('src');
+        if (!s || img.getAttribute('data-src')) return;
+        img.setAttribute('data-src', s);
+        img.removeAttribute('src');
+      });
+    }
+
+    /* 当前页之外的卡片只写 data-src（见 layouts/links/list.html 的 defer）：
+       翻页时把那几张补成 src，其余始终不发请求。 */
+    function loadCovers(list) {
+      list.forEach(function (el) {
+        Array.prototype.slice.call(el.querySelectorAll('img[data-src]')).forEach(function (img) {
+          if (img.getAttribute('src')) return;
+          img.setAttribute('src', img.getAttribute('data-src'));
+        });
+      });
+    }
+
+    if (totalPages > 1) deferCovers();
+
     function render() {
       var start = (page - 1) * PER_PAGE;
+      var shown = [];
       items.forEach(function (el, i) {
         el.hidden = i < start || i >= start + PER_PAGE;
+        if (!el.hidden) shown.push(el);
       });
+      loadCovers(shown);
       pager.innerHTML = '';
       if (totalPages <= 1) { pager.hidden = true; return; }
       pager.hidden = false;

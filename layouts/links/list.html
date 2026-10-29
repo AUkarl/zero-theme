@@ -117,29 +117,35 @@
     <section class="links-panel{{ if eq $active "feed" }} is-active{{ end }}" id="panel-feed" role="tabpanel" aria-labelledby="tab-feed"{{ if ne $active "feed" }} hidden{{ end }}>
       {{- if $items }}
       <div class="feed-grid" id="feedGrid" data-per-page="{{ $lc.per_page | default 10 }}">
-        {{- range $items }}
+        {{- /* 封面延迟：分页只显示 per_page 条，但 49 张卡的 <img> 全在 DOM 里，
+               实测一次进页就请求 17 张、滚到底 24 张 —— 访客在为翻不到的卡片下原图
+               （朋友里有几张是 1–5MB 的正文首图）。所以第一页照旧服务端出图，
+               后面的只写 data-src，由 links.js 在翻页那一下补 src。
+               不用 JS 的访客本来就翻不了页（分页条是 JS 建的），少掉的图不会被需要。 */ -}}
+        {{- $perPage := int ($lc.per_page | default 10) -}}
+        {{- range $i, $it := $items }}
         {{- /* 左侧封面，按这个顺序找第一张能用的：
                ① 这条动态自己的图（抓 RSS 时记下的封面 / 正文首图）
                ② 网站图标：定时任务探到的 favicon（data/linksicons.json），其次检测记录里带回来的 icon
                ③ 提交友链时手填的头像（image 优先，那是「这张卡片的图」；再 icon）
                ④ 邮箱那几家：Gravatar → Cravatar →（QQ 号）QQ
                ⑤ 都没有就留一个空框（不留首字母，也不硬塞一张站长的头像） */ -}}
-        {{- $k := partial "cms/url-key.html" .siteurl -}}
+        {{- $k := partial "cms/url-key.html" $it.siteurl -}}
         {{- $fr := index $byURL $k | default dict -}}
         {{- $st := index $statusN $k | default dict -}}
-        {{- $chain := slice (.image | default "") (index $iconsN $k | default "") ($st.icon | default "") ($fr.image | default "") ($fr.icon | default "") -}}
+        {{- $chain := slice ($it.image | default "") (index $iconsN $k | default "") ($st.icon | default "") ($fr.image | default "") ($fr.icon | default "") -}}
         {{- range (partial "avatar-chain.html" (dict "email" ($fr.email | default "") "size" 256)) -}}
           {{- $chain = $chain | append . -}}
         {{- end -}}
         <article class="feed-card" data-feed-item>
-          {{- partial "links-icon.html" (dict "chain" $chain "box" "feed-cover" "optimize" true "page" $) }}
+          {{- partial "links-icon.html" (dict "chain" $chain "box" "feed-cover" "optimize" true "page" $ "defer" (ge $i $perPage)) }}
           <div class="feed-body">
             <div class="feed-head">
-              <span class="feed-site">{{ .site }}</span>
-              {{- with .date }}<time class="feed-date" datetime="{{ . }}">{{ time.Format "2006-01-02" . }}</time>{{ end }}
+              <span class="feed-site">{{ $it.site }}</span>
+              {{- with $it.date }}<time class="feed-date" datetime="{{ . }}">{{ time.Format "2006-01-02" . }}</time>{{ end }}
             </div>
-            <h2 class="feed-title">{{ partial "cms/safe-link.html" (dict "url" .url "label" .title) }}</h2>
-            {{- with .summary }}<p class="feed-desc">{{ . }}</p>{{ end }}
+            <h2 class="feed-title">{{ partial "cms/safe-link.html" (dict "url" $it.url "label" $it.title) }}</h2>
+            {{- with $it.summary }}<p class="feed-desc">{{ . }}</p>{{ end }}
           </div>
         </article>
         {{- end }}
