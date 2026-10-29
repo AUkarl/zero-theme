@@ -22,6 +22,9 @@
   ============================================================ */ -}}
 {{- $footer := .Site.Params.footer | default dict -}}
 {{- $d := hugo.Data.footer -}}
+{{- /* 页脚链接也要认后台开关：判据与导航、文章页 CTA 共用 partials/zero/switch.html，
+       「这条路径归哪个开关管」见 partials/zero/path-switch.html。 */ -}}
+{{- $zero := partial "zero/api.html" . -}}
 {{- /* 版权那一行的取法（后台 > params > 默认，{year} 已替换）见 partials/copyright.html，
        落地页也用同一份，两边不会出现「页脚改了首页还是旧的」 */ -}}
 {{- $copyright := partial "copyright.html" . -}}
@@ -94,12 +97,14 @@
       {{- $svc := . }}
       {{- /* 图标本体（img / icon 二选一、深浅色反色规则）在 partial "footer-icon.html"，
              社交两排共用同一份。 */ -}}
-      {{- /* link 没填就整条不渲染：空 href 的 <a> 会指向当前页，看着是图标、点了没反应 */ -}}
-      {{- if not $svc.link }}{{ continue }}{{ end -}}
+      {{- /* link 没填就整条不渲染：空 href 的 <a> 会指向当前页，看着是图标、点了没反应。
+             站内页面在这座站里不存在（或归后台开关管）时也照导航同一套口径处理。 */ -}}
+      {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" $svc.link "page" $) -}}
+      {{- if $fl.skip }}{{ continue }}{{ end -}}
       {{- $sn := $svcShow -}}
       {{- $snField := partial "cms/value.html" (dict "data" $svc "keys" (slice "showName" "show_name")) -}}
       {{- if $snField.set }}{{ $sn = $snField.on }}{{ end -}}
-      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}">{{ partial "footer-icon.html" (dict "item" $svc) }}{{ if $sn }} {{ $svc.name }}{{ end }}</a>
+      <a href="{{ $svc.link }}" target="_blank" rel="noopener" title="{{ $svc.name }}" aria-label="{{ $svc.name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" $svc) }}{{ if $sn }} {{ $svc.name }}{{ end }}</a>
       {{- end }}
     </nav>
     {{- end }}
@@ -122,16 +127,18 @@
     {{- with $row1Items }}
     <div class="social-row">
       {{- range . }}
-      {{- if not (.link) }}{{ continue }}{{ end -}}
-      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}">{{ partial "footer-icon.html" (dict "item" .) }}</a>
+      {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" .link "page" $) -}}
+      {{- if $fl.skip }}{{ continue }}{{ end -}}
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" .) }}</a>
       {{- end }}
     </div>
     {{- end }}
     {{- with $row2Items }}
     <div class="social-row">
       {{- range . }}
-      {{- if not (.link) }}{{ continue }}{{ end -}}
-      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}">{{ partial "footer-icon.html" (dict "item" .) }}</a>
+      {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" .link "page" $) -}}
+      {{- if $fl.skip }}{{ continue }}{{ end -}}
+      <a href="{{ .link }}" target="_blank" rel="noopener" title="{{ .name }}" aria-label="{{ .name }}"{{ $fl.attrs | safeHTMLAttr }}>{{ partial "footer-icon.html" (dict "item" .) }}</a>
       {{- end }}
     </div>
     {{- end }}

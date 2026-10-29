@@ -258,7 +258,7 @@ author / toc / math / comments
 | `likeEnabled` / `starEnabled = false` | 操作条里对应那颗胶囊不出现 |
 | `friendsEnabled = false` | 导航「友链」消失，`/links/` 只回「该功能已关闭」 |
 | `friendApplyEnabled = false` | 只隐藏申请表单，友链列表照常 |
-| `subscribeEnabled = false` | 订阅页与文内订阅框消失 |
+| `subscribeEnabled = false` | 订阅页与文内订阅框消失，页脚那条 `/subscribe/` 图标也一起消失（页脚链接的开关判据与导航共用 `partials/zero/path-switch.html`；指向站内不存在页面的页脚链接整条不出） |
 | `analytics` 开关 | 关掉后不发统计请求，也不显示访问量 |
 
 ### 4. 评论组件产物从哪来

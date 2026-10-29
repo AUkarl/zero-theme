@@ -8,7 +8,8 @@
     1. 菜单里显式写了 zero_switch = "xxx"      → 直接用（最可靠，想控制别的页面就用它）
     2. 账号入口（zero_account / zeroAccount 标记，或路径是 /account/）→ accountSystemEnabled：
        后台关掉前台账号系统时，导航上那个登录图标要整块不出现，而不是点进去才看到关闭提示
-    3. 按站内路径猜：/moments/ → momentsEnabled，/links/ → friendsEnabled，
+    3. 按站内路径猜（判据在 partials/zero/path-switch.html，页脚链接共用同一份）：
+       /moments/ → momentsEnabled，/links/ → friendsEnabled，
        /subscribe/ → subscribeEnabled，/work/ → workEnabled，
        /about/ → aboutEnabled（外链不参与猜测）
   ============================================================ */ -}}
@@ -16,19 +17,13 @@
 {{- $key := trim (string ($e.Params.zero_switch | default "")) " " -}}
 {{- $isAccount := or ($e.Params.zero_account | default false) ($e.Params.zeroAccount | default false) -}}
 {{- if and (eq $key "") (not $e.Params.external) -}}
-  {{- $u := lower (trim (string ($e.URL | default "")) " ") -}}
-  {{- if or $isAccount (eq $u "/account/") (hasSuffix $u "/account/") -}}
+  {{- if $isAccount -}}
+    {{- /* 账号入口挂 accountSystemEnabled：后台关掉前台账号系统时，导航上那个登录图标要整块不出现，
+          而不是点进去才看到关闭提示。 */ -}}
     {{- $key = "accountSystemEnabled" -}}
-  {{- else if or (eq $u "/moments/") (hasSuffix $u "/moments/") -}}
-    {{- $key = "momentsEnabled" -}}
-  {{- else if or (eq $u "/links/") (hasSuffix $u "/links/") -}}
-    {{- $key = "friendsEnabled" -}}
-  {{- else if or (eq $u "/subscribe/") (hasSuffix $u "/subscribe/") -}}
-    {{- $key = "subscribeEnabled" -}}
-  {{- else if or (eq $u "/work/") (hasSuffix $u "/work/") -}}
-    {{- $key = "workEnabled" -}}
-  {{- else if or (eq $u "/about/") (hasSuffix $u "/about/") -}}
-    {{- $key = "aboutEnabled" -}}
+  {{- else -}}
+    {{- /* 其余按路径猜，判据与页脚链接共用 partials/zero/path-switch.html 那一份。 */ -}}
+    {{- $key = partial "zero/path-switch.html" ($e.URL | default "") -}}
   {{- end -}}
 {{- end -}}
 {{- return $key -}}

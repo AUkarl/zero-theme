@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  zero/path-switch.html — 站内路径 → 后台开关键名（唯一一份判据）
+  ------------------------------------------------------------
+  用法：{{- $key := partial "zero/path-switch.html" "/subscribe/" -}}
+  返回 ""（这条路径不归任何开关管）或键名。
+
+  导航（zero/nav-switch.html）与页脚链接都用这一份：以前只有导航认得这些键，
+  页脚 data/footer.json 里那条 /subscribe/ 就没人管 —— 后台关掉订阅后，
+  边缘中间件已经把 /subscribe/ 打成 404，页脚图标却还挂着，访客点了就是 404。
+
+  外链（http/https///）、mailto、页内锚点、feed（.xml）都不参与猜测：
+  它们不受功能开关管，也不该被藏起来。
+  ============================================================ */ -}}
+{{- $u := lower (trim (string .) " ") -}}
+{{- $u = replaceRE `[?#].*$` "" $u -}}
+{{- $external := or (hasPrefix $u "http://") (hasPrefix $u "https://") (hasPrefix $u "//") (hasPrefix $u "mailto:") (hasPrefix $u "tel:") (hasPrefix $u "#") -}}
+{{- $key := "" -}}
+{{- if not $external -}}
+  {{- if not (hasPrefix $u "/") }}{{ $u = printf "/%s" $u }}{{ end -}}
+  {{- /* 带不带尾斜杠都要认得：导航里是 /subscribe/，页脚数据里常写成 /subscribe/ 或 /subscribe。
+        先把尾斜杠去掉，再按「等于或以该路径结尾」判。 */ -}}
+  {{- $u = strings.TrimSuffix "/" $u -}}
+  {{- if or (eq $u "/account") (hasSuffix $u "/account") -}}
+    {{- $key = "accountSystemEnabled" -}}
+  {{- else if or (eq $u "/moments") (hasSuffix $u "/moments") -}}
+    {{- $key = "momentsEnabled" -}}
+  {{- else if or (eq $u "/links") (hasSuffix $u "/links") -}}
+    {{- $key = "friendsEnabled" -}}
+  {{- else if or (eq $u "/subscribe") (hasSuffix $u "/subscribe") -}}
+    {{- $key = "subscribeEnabled" -}}
+  {{- else if or (eq $u "/work") (hasSuffix $u "/work") -}}
+    {{- $key = "workEnabled" -}}
+  {{- else if or (eq $u "/about") (hasSuffix $u "/about") -}}
+    {{- $key = "aboutEnabled" -}}
+  {{- end -}}
+{{- end -}}
+{{- return $key -}}
