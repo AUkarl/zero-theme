@@ -48,7 +48,7 @@
 layouts/
   index.html                落地页（自带内联样式的独立 <head>）
   _default/                 baseof / list / single / terms
-  home/ about/ archive/ links/ moments/ account/ privacy/ subscribe/ work/          各页面模板
+  home/ about/ archive/ links/ moments/ account/ subscribe/ work/          各页面模板
   taxonomy/                 category / tag / author
   _markup/render-image.html Markdown 图片钩子（走下面的图片管线）
   shortcodes/               16 个短代码：audio(-163/-qq/-kugou) video(-bilibili/-tencent/-youku/-youtube)
