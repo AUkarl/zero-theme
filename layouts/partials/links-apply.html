@@ -26,12 +26,12 @@
 <div class="apply-col">
   <h2>友链要求</h2>
   {{- with $intro }}
-  <p>{{ . }}</p>
+  <p>{{ partial "zero/md-text.html" (dict "text" .) }}</p>
   {{- end }}
   {{- if $reqs }}
   <ol>
     {{- range $reqs }}
-    <li>{{ . }}</li>
+    <li>{{ partial "zero/md-text.html" (dict "text" .) }}</li>
     {{- end }}
   </ol>
   {{- end }}

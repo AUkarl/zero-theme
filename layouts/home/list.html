@@ -93,7 +93,7 @@
   <section class="section">
     <h1 class="section-title" data-i18n="home-title">{{ i18n "home-title" | default "主页" }}</h1>
     {{- if $cfg.showDesc }}
-    <p class="section-desc" data-i18n="home-desc">{{ $cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。" }}</p>
+    <p class="section-desc" data-i18n="home-desc">{{ partial "zero/md-text.html" (dict "text" ($cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。")) }}</p>
     {{- end }}
     <div class="garden-bar">
       <div class="garden-tabs" role="tablist" aria-label="{{ i18n "home-sort-aria" | default "文章排序" }}">

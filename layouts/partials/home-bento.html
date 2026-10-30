@@ -85,7 +85,7 @@
   <div class="hb-intro">
     {{- with $introEyebrow }}<p class="hb-eyebrow">{{ . }}</p>{{ end }}
     {{- with $introTitle }}<h1 class="hb-title section-title">{{ . }}</h1>{{ end }}
-    {{- with $introDesc }}<p class="hb-desc section-desc">{{ . }}</p>{{ end }}
+    {{- with $introDesc }}<p class="hb-desc section-desc">{{ partial "zero/md-text.html" (dict "text" .) }}</p>{{ end }}
   </div>
   {{- end }}
 

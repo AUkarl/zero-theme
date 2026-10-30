@@ -24,7 +24,7 @@
     <h1 class="section-title" data-i18n="work-title">{{ i18n "work-title" | default "工坊" }}</h1>
     {{- if $w.show_desc }}
     {{- if $w.desc }}
-    <p class="section-desc" data-i18n="work-desc">{{ $w.desc }}</p>
+    <p class="section-desc" data-i18n="work-desc">{{ partial "zero/md-text.html" (dict "text" $w.desc) }}</p>
     {{- else }}
     <p class="section-desc" data-i18n="work-desc">{{ i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。" }}</p>
     {{- end }}
@@ -35,14 +35,14 @@
       {{- if $link }}
       <a class="work-card work-card-link" data-reveal href="{{ $link }}" target="_blank" rel="noopener">
         <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
-        <p data-i18n="work-card-{{ $i }}-desc">{{ $item.desc }}</p>
+        <p data-i18n="work-card-{{ $i }}-desc">{{ partial "zero/md-text.html" (dict "text" $item.desc) }}</p>
         {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
         {{- if $w.show_url_icon }}<i class="fas fa-external-link-alt work-ext-icon"></i>{{ end }}
       </a>
       {{- else }}
       <div class="work-card" data-reveal>
         <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
-        <p data-i18n="work-card-{{ $i }}-desc">{{ $item.desc }}</p>
+        <p data-i18n="work-card-{{ $i }}-desc">{{ partial "zero/md-text.html" (dict "text" $item.desc) }}</p>
         {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
       </div>
       {{- end }}

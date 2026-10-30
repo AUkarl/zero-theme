@@ -21,7 +21,7 @@
     <h1 class="section-title" data-i18n="about-title">{{ i18n "about-title" | default "关于" }}</h1>
     {{- if $a.show_desc }}
     {{- if $a.desc }}
-    <p class="section-desc" data-i18n="about-desc">{{ $a.desc | markdownify }}</p>
+    <p class="section-desc" data-i18n="about-desc">{{ partial "zero/md-text.html" (dict "text" $a.desc) }}</p>
     {{- else }}
     <p class="section-desc" data-i18n="about-desc">{{ i18n "about-desc" | default "一个在数字世界里种花的人。" }}</p>
     {{- end }}
@@ -40,7 +40,7 @@
             {{- end }}
             {{- if $a.show_bio }}
             {{- if $a.tagline }}
-            <p class="about-tagline" data-i18n="about-tagline">{{ $a.tagline }}</p>
+            <p class="about-tagline" data-i18n="about-tagline">{{ partial "zero/md-text.html" (dict "text" $a.tagline) }}</p>
             {{- else }}
             <p class="about-tagline" data-i18n="about-tagline">{{ i18n "about-tagline" | default "独立创作者 · 极简主义践行者 · 数字花园园丁" }}</p>
             {{- end }}
@@ -49,7 +49,7 @@
         </div>
         {{- if $a.show_bio }}
           {{- range $i, $p := $a.bio }}
-        <p data-i18n="about-bio-{{ $i }}">{{ $p | markdownify }}</p>
+        <p data-i18n="about-bio-{{ $i }}">{{ partial "zero/md-text.html" (dict "text" $p) }}</p>
           {{- end }}
           {{- if not $a.bio }}
         <p data-i18n="about-bio-0">{{ i18n "about-me-p1" | default "相信好的设计是隐形的，好的文字是真诚的。" }}</p>
@@ -64,7 +64,7 @@
       <div class="about-section">
         <div class="about-block-title"><i class="fas fa-globe"></i> <span data-i18n="about-site-title">{{ i18n "about-site-title" | default "关于本站" }}</span></div>
         {{- range $i, $p := $a.site }}
-        <p data-i18n="about-site-{{ $i }}">{{ $p | markdownify }}</p>
+        <p data-i18n="about-site-{{ $i }}">{{ partial "zero/md-text.html" (dict "text" $p) }}</p>
         {{- end }}
         {{- if not $a.site }}
         <p data-i18n="about-site-0">{{ i18n "about-site-p1" | default "这是一个用 Hugo 搭建的个人站点，保留了手工搭建的质感。" }}</p>
@@ -112,7 +112,7 @@
         <div class="about-block-title"><i class="fas fa-shield-alt"></i> <span data-i18n="about-declaration-title">{{ i18n "about-declaration-title" | default "站点声明" }}</span></div>
         <div class="site-declaration">
           {{- range $i, $p := $a.declaration }}
-          <p data-i18n="about-declaration-{{ $i }}">{{ $p }}</p>
+          <p data-i18n="about-declaration-{{ $i }}">{{ partial "zero/md-text.html" (dict "text" $p) }}</p>
           {{- end }}
           {{- if not $a.declaration }}
           <p data-i18n="about-declaration-0">{{ i18n "about-declaration-p1" | default "本站所有原创文章均采用 MIT 许可协议，转载请注明出处。" }}</p>
