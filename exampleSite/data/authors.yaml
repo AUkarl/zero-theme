@@ -8,14 +8,14 @@
 # 下面两条就是这两种，改主题那两处判空逻辑时请保证这份 exampleSite 仍能 hugo --minify 构建通过：
 # 只用一种形状测试曾经放过一个打死整站构建的 bug 过去（真实站点写的是 ②，沙箱写的是 ①）。
 zero-author:
-  name: "Zero Author"
+  name: "知止"
   avatar: "/img/avatar.png"
-  bio_zh: "占位作者：换成你自己的名字与简介"
+  bio_zh: "知止（GitHub: AUkarl）"
   website: ""
   verified: true
   social:
     - name: "GitHub"
-      url: "https://github.com/your-username"
+      url: "https://github.com/AUkarl"
       icon: "fab fa-github"
 
 shape-list:

@@ -55,7 +55,7 @@ site_name = "示例站点"              # 网站名称（默认显示）
 
 # --- 作者 ---
 show_author = true                  # 是否显示全局作者信息
-author = "示例作者"                 # 默认作者名
+author = "知止"                     # 默认作者名
 default_author = "default"           # 文章默认作者 ID（对应 data/authors.yaml 中的 key）
 
 # --- 其他 ---
@@ -67,7 +67,7 @@ favicon = "/img/logo-favicon.png"   # 网站图标路径（相对于 static 目�
 # 注意：这两个键必须写在所有 [表] 之前（TOML 规则：出现表头后，裸键都会归到那张表里），
 # 否则会被并进 [[about.declaration]] 变成无效配置，主题就退回它自带的默认值。
 aboutAvatar = "img/avatar.png"   # 头像路径（相对于 static 目录）
-aboutName = "示例作者"            # 显示名称
+aboutName = "知止"                # 显示名称
 
 
 # --------------------------------------------
@@ -310,7 +310,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
   [[footer.social_row1]]
     name = "GitHub"
     icon = "fa-brands fa-github"
-    link = "https://github.com/your-username"
+    link = "https://github.com/AUkarl"
   [[footer.social_row1]]
     name = "Email"
     icon = "fa-solid fa-envelope"
@@ -364,7 +364,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
   # --- 个人简介内容 ---
   # 增减方法: 复制一个 [[about.bio]] 块并修改内容（支持无限段落）
   [[about.bio]]
-    text_zh = "你好，这里是示例作者。"
+    text_zh = "你好，我是知止。"
   [[about.bio]]
     text_zh = "这是第二段示例简介，写点你愿意公开的内容即可。"
   [[about.bio]]
@@ -438,7 +438,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
 [[aboutContacts]]
   label = "社交-Social Media"
   labelKey = "about-findme-email"   # i18n 键名（用于多语言翻译）
-  url = "https://github.com/your-username"
+  url = "https://github.com/AUkarl"
   text = "GitHub"
   external = true                   # 是否外链
 [[aboutContacts]]
@@ -545,7 +545,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
   default_keywords = ["博客", "设计", "技术", "极简", "Hugo", "主题"]  # 默认关键词
   enable_og = true                  # 是否输出 Open Graph 标签
   enable_twitter = true             # 是否输出 Twitter Card 标签
-  site_author = "示例作者"          # 站点作者（用于 meta author 标签）
+  site_author = "知止"              # 站点作者（用于 meta author 标签）
 
 
 # --------------------------------------------
@@ -569,8 +569,8 @@ math = true                         # 是否全局启用数学公式（KaTeX）
 
 [author_profile]
   avatar = "img/avatar.png"         # 默认作者头像路径
-  nickname = "示例作者"             # 作者昵称
-  bio_zh = "这里是示例作者简介。"  # 中文简介
+  nickname = "知止"                 # 作者昵称
+  bio_zh = "知止（GitHub: AUkarl）"  # 中文简介
   show_cc_license = true           # 是否显示 CC 开源协议
 
   # 作者赞赏码（也可在 data/authors.yaml 中按作者配置）
@@ -589,7 +589,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
   [[author_profile.contacts]]
     name = "GitHub"
     icon = "fab fa-github"
-    url = "https://github.com/your-username"
+    url = "https://github.com/AUkarl"
   [[author_profile.contacts]]
     name = "Twitter"
     icon = "fab fa-twitter"
@@ -617,7 +617,7 @@ math = true                         # 是否全局启用数学公式（KaTeX）
 
 [[social]]
   name = "GitHub"
-  url = "https://github.com/your-username"
+  url = "https://github.com/AUkarl"
   icon = "fab fa-github"
 [[social]]
   name = "Twitter"
