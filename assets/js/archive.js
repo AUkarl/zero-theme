@@ -113,6 +113,13 @@ document.addEventListener('DOMContentLoaded', function() {
       );
     }
 
+    /* 搜索结果播报：读屏用户输入完不知道有没有命中，这里把条数写进常驻的 status 区 */
+    const statusEl = document.getElementById('archiveSearchStatus');
+    if (statusEl) {
+      const q = (searchText || '').trim();
+      statusEl.textContent = q ? (filtered.length ? filtered.length + ' 篇文章匹配「' + q + '」' : TEXT.empty) : '';
+    }
+
     /* ---------- 不分组：退回原来的平铺列表 ---------- */
     if (!groupByYear) {
       const sorted = filtered.slice().sort((a, b) => new Date(b.date) - new Date(a.date));

@@ -105,6 +105,7 @@ donate-desc: "如果您觉得这篇文章对您有帮助，欢迎扫码赞赏，
 archive-title: "归档"
 archive-desc: "所有文章的时光索引，按时间线排列。"
 archive-search: "搜索"
+archive-search-label: "搜索文章"
 archive-search-placeholder: "搜索文章..."
 archive-categories: "分类"
 archive-tags: "标签"

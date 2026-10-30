@@ -51,7 +51,9 @@
         {{- if $showSearch }}
         <div class="widget">
           <div class="widget-title">{{ i18n "archive-search" | default "搜索" }}</div>
-          <input type="text" class="search-input" id="archiveSearch" placeholder="{{ i18n "archive-search-placeholder" | default "搜索文章..." }}" />
+          <input type="text" class="search-input" id="archiveSearch" aria-label="{{ i18n "archive-search-label" | default "搜索文章" }}" placeholder="{{ i18n "archive-search-placeholder" | default "搜索文章..." }}" />
+          {{- /* 结果条数给读屏播报：输入时不看屏幕也知道搜到几篇、还是什么都没有 */}}
+          <p class="zero-sr-only" role="status" aria-live="polite" id="archiveSearchStatus"></p>
         </div>
         {{- end }}
         {{- if $showCats }}
