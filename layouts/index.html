@@ -525,7 +525,7 @@
           {{- /* 与 partials/header.html、404.html 同一颗按钮：以前这里是裸 div，
                  aria-label 落在无 role 的 div 上属非法用法，而且没有 tabindex/keydown，
                  只用键盘的人根本切不了主题（T3-1）。改成 button 后外观由 .toolbar-btn 兜住。 */}}
-          <button type="button" class="toolbar-btn" id="themeToggle" title="{{ $themeTitle }}" aria-label="{{ $themeTitle }}" onclick="event.stopPropagation()">
+          <button type="button" class="toolbar-btn" id="themeToggle" title="{{ $themeTitle }}" aria-label="{{ $themeTitle }}" data-theme-label="{{ i18n "theme-toggle-current" | default "切换主题（当前：{name}）" }}" data-theme-name-auto="{{ i18n "theme-auto" | default "自动" }}" data-theme-name-light="{{ i18n "theme-light" | default "浅色" }}" data-theme-name-dark="{{ i18n "theme-dark" | default "深色" }}" onclick="event.stopPropagation()">
             <i id="themeIcon" class="fas fa-adjust" aria-hidden="true"></i>
           </button>
         </div>
@@ -612,6 +612,16 @@
       function applyTheme(theme) {
         document.documentElement.setAttribute('data-theme', theme);
         if (iconEl) iconEl.className = iconMap[theme] || 'fas fa-adjust';
+        /* 图标换了读屏看不到状态：把「当前是哪一档」写进可访问名称 */
+        if (toggleBtn) {
+          var tpl = toggleBtn.getAttribute('data-theme-label');
+          var name = toggleBtn.getAttribute('data-theme-name-' + theme);
+          if (tpl && name) {
+            var label = tpl.replace('{name}', name);
+            toggleBtn.setAttribute('aria-label', label);
+            toggleBtn.setAttribute('title', label);
+          }
+        }
       }
     })();
 

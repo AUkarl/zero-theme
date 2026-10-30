@@ -49,15 +49,15 @@
           <p class="za-gate-main">{{ i18n "zero-account-gate-title" | default "登录注册已关闭，如需访问请联系站长。" }}</p>
         </div>
         {{- else -}}
-        <div class="account-tabs" id="zeroAccountTabs" hidden>
-          <button type="button" class="active-tab" data-tab="login">{{ i18n "zero-account-tab-login" | default "登录" }}</button>
+        <div class="account-tabs" id="zeroAccountTabs" role="tablist" aria-label="{{ i18n "zero-account-tabs-label" | default "登录方式" }}" hidden>
+          <button type="button" role="tab" id="zaTab-login" class="active-tab" data-tab="login" aria-selected="true" aria-controls="accountForm" tabindex="0">{{ i18n "zero-account-tab-login" | default "登录" }}</button>
           {{- /* 注册标签不在这里出现：account.js 读到 /api/config 的 allowRegister 才插入，
                  后台关掉注册时静态输出里就没有它 */ -}}
           {{- /* 第三个入口：找回密码 = 真正的重置流程（发验证码 → 填码 + 新密码），
                  与 登录 / 注册 同一套标签切换；没配邮件通道时接口会当场回明「发不出验证码」 */ -}}
-          <button type="button" class="za-forgotbtn" id="zaForgot" data-tab="reset" hidden>{{ i18n "zero-account-forgot-link" | default "找回密码" }}</button>
+          <button type="button" role="tab" class="za-forgotbtn" id="zaForgot" data-tab="reset" aria-selected="false" aria-controls="accountForm" tabindex="-1" hidden>{{ i18n "zero-account-forgot-link" | default "找回密码" }}</button>
         </div>
-        <form class="account-form" id="accountForm" hidden>
+        <form class="account-form" id="accountForm" role="tabpanel" aria-labelledby="zaTab-login" hidden>
           <div id="accountFormContent"></div>
           <div class="error-msg" id="accountError"></div>
           <div class="success-msg" id="accountSuccess"></div>

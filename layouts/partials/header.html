@@ -131,7 +131,7 @@
             {{- $esw := partial "zero/switch.html" (dict "zero" $zeroNav "key" $e.switchKey) -}}
         <a class="ctrl-btn nav-ctrl-link{{ if $e.zeroAccount }} nav-account{{ end }}"{{ with $ctrlId }} id="{{ . }}" title="{{ i18n "zero-nav-login" | default "登录" }}" aria-label="{{ i18n "zero-nav-login" | default "登录" }}"{{ end }} href="{{ $ehref }}"{{ $esw.attrs | safeHTMLAttr }}{{ if $e.external }} target="_blank" rel="noopener"{{ end }}{{ if not $e.zeroAccount }} title="{{ $e.name }}" aria-label="{{ $e.name }}"{{ end }}>{{ with $e.icon }}<i class="{{ . }}" aria-hidden="true"></i>{{ end }}{{ with $e.image }}<img class="nav-icon-img" src="{{ . | relURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async">{{ end }}{{ if not $e.iconOnly }}<span class="nav-label" data-i18n="nav-{{ $e.name }}">{{ $e.name }}</span>{{ end }}</a>
           {{- else if eq .kind "theme" -}}
-        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ i18n "theme-toggle" | default "切换主题" }}" aria-label="{{ i18n "theme-toggle" | default "切换主题" }}"><i class="{{ $themeIcon }}" aria-hidden="true"></i></button>
+        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ i18n "theme-toggle" | default "切换主题" }}" aria-label="{{ i18n "theme-toggle" | default "切换主题" }}" data-theme-label="{{ i18n "theme-toggle-current" | default "切换主题（当前：{name}）" }}" data-theme-name-auto="{{ i18n "theme-auto" | default "自动" }}" data-theme-name-light="{{ i18n "theme-light" | default "浅色" }}" data-theme-name-dark="{{ i18n "theme-dark" | default "深色" }}"><i class="{{ $themeIcon }}" aria-hidden="true"></i></button>
           {{- end -}}
         {{- end }}
       </div>

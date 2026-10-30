@@ -187,13 +187,39 @@
       syncRegisterTab();
       if (!registerAllowed() && tab !== 'login') tab = 'login';
       Array.prototype.forEach.call(tabsEl.querySelectorAll('button[data-tab]'), function (b) {
-        b.classList.toggle('active-tab', b.dataset.tab === tab);
+        var on = b.dataset.tab === tab;
+        b.classList.toggle('active-tab', on);
+        /* 真 tab 语义：读屏要知道「现在在哪一档、这一档管的是下面哪块内容」 */
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.setAttribute('aria-controls', 'accountForm');
+        b.setAttribute('tabindex', on ? '0' : '-1');
+        if (!b.id) b.id = 'zaTab-' + b.dataset.tab;
       });
+      var active = tabsEl.querySelector('button[data-tab="' + tab + '"]');
+      if (active) form.setAttribute('aria-labelledby', active.id);
       // 找回密码这一档：登录页与它自己那一步都要显示，注册页不需要
       if (forgotBtn) {
         forgotBtn.hidden = tab !== 'login' && tab !== 'reset';
         forgotBtn.classList.toggle('is-open', tab === 'reset');
       }
+    }
+
+    /** 方向键在几档之间走（Tab 本身只停在当前档上，这是 tablist 的惯例） */
+    function tabKeydown(e) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+      var list = Array.prototype.filter.call(tabsEl.querySelectorAll('button[data-tab]'), function (b) {
+        return !b.hidden;
+      });
+      if (!list.length) return;
+      var i = list.indexOf(document.activeElement);
+      if (i < 0) return;
+      e.preventDefault();
+      if (e.key === 'Home') i = 0;
+      else if (e.key === 'End') i = list.length - 1;
+      else i = (i + (e.key === 'ArrowRight' ? 1 : list.length - 1)) % list.length;
+      list[i].focus();
+      list[i].click();
     }
 
     function field(name, label, type, attrs) {
@@ -278,6 +304,7 @@
       syncTabs();
       renderForm();
     });
+    tabsEl.addEventListener('keydown', tabKeydown);
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();

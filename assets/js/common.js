@@ -266,6 +266,16 @@ document.addEventListener('DOMContentLoaded', function() {
       else if (theme === 'dark') icon.className = 'fas fa-moon';
       else icon.className = 'fas fa-adjust';
     }
+    /* 图标换了读屏看不到状态：把「当前是哪一档」写进可访问名称 */
+    if (themeToggle) {
+      const tpl = themeToggle.getAttribute('data-theme-label');
+      const name = themeToggle.getAttribute('data-theme-name-' + theme);
+      if (tpl && name) {
+        const label = tpl.replace('{name}', name);
+        themeToggle.setAttribute('aria-label', label);
+        themeToggle.setAttribute('title', label);
+      }
+    }
   }
 
   if (themeToggle) {

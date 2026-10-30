@@ -249,7 +249,7 @@
         <span>{{ (partial "site-config.html" .).navName }}</span>
       </div>
       <div class="nav-controls" style="margin-left:auto;">
-        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ T "theme-toggle" }}" aria-label="{{ T "theme-toggle" }}"><i class="fas fa-sun" aria-hidden="true"></i></button>
+        <button type="button" class="ctrl-btn" id="themeToggle" title="{{ T "theme-toggle" }}" aria-label="{{ T "theme-toggle" }}" data-theme-label="{{ i18n "theme-toggle-current" | default "切换主题（当前：{name}）" }}" data-theme-name-auto="{{ i18n "theme-auto" | default "自动" }}" data-theme-name-light="{{ i18n "theme-light" | default "浅色" }}" data-theme-name-dark="{{ i18n "theme-dark" | default "深色" }}"><i class="fas fa-sun" aria-hidden="true"></i></button>
       </div>
     </div>
   </nav>
