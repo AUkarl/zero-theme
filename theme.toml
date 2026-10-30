@@ -18,5 +18,5 @@ features = ["minimalist-design", "dark-mode", "landing-page", "bento-home", "mom
 min_version = "0.128.0"
 
 [author]
-  name = "zero theme contributors"
+  name = "知止 (GitHub: AUkarl)"
   homepage = "https://github.com/AUkarl/zero-theme"

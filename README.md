@@ -33,7 +33,7 @@
 
 | 层 | 用什么 | 版本要求 |
 | --- | --- | --- |
-| 静态构建 | Hugo **extended**（主题用到图片处理，非 extended 会构建失败） | `min_version = 0.128.0`，本项目已验证 0.165.0 |
+| 静态构建 | Hugo **extended**（主题用到图片处理，非 extended 会构建失败） | `min_version = 0.128.0`，我在 0.165.0 上验证过 |
 | 样式 | 原生 CSS + `:root` 变量令牌，构建时 minify + 指纹，无预处理器 | — |
 | 脚本 | 手写 JS（`assets/js/*.js`），同样 minify + fingerprint，全部 `defer` | 支持到无模块化旧浏览器 |
 | 评论 / 点赞 / 订阅组件 | Svelte 5 编译出的 Web Component（`assets/js/zero-comment.js`，146KB / gzip 54KB，由 zero-stack 产出后同步进来）。不再每页硬加载：`zero-component-lazy.js` 探针等到页面上真有一枚**可见**组件进到视野附近才下载；最多 `[hidden]` 里收起的时刻评论框不再触发下载（点「评论」时由 `shuo.js` 按需加载），落地页 / 关于 / 归档 / 404 一枚都没有，那 54KB 干脆不下 | — |
@@ -150,7 +150,7 @@ npm run build        # hugo --minify 构建示例站
 - **`data/seo.json` 写成驼峰不是「报错」而是「整份作废」**：主题自带一份 `themes/zero/data/seo.json`（snake_case 默认值），
   Hugo 先把主题那份与站点那份并成 `hugo.Data.seo`，`defaultDescription` 这种驼峰键只会作为「多出来的一个键」存在，
   模板读的始终是 `default_description` —— 于是后台 SEO 面板显示的是文件里的值（接口按驼峰归一过）、
-  前台用的却是主题默认值，而站长随手点一次保存就把驼峰写成 snake_case，那一刻文件里的内容才真的生效。
+  前台用的却是主题默认值，而你随手点一次保存就把驼峰写成 snake_case，那一刻文件里的内容才真的生效。
   改法只有一条：把这份文件的键名改成 snake_case（在后台 SEO 页存一次就够了），别指望模板兼容驼峰。
 - **只留差量**：站点 params 里不要照抄主题默认值，写了改不动，还看不出改了什么。
 
@@ -432,7 +432,7 @@ hugo --minify                      # 产物在 public/
 ```
 
 - **Cloudflare Pages**：构建命令 `hugo --minify`，输出目录 `public`，
-  并设环境变量 `HUGO_VERSION`（extended 版；下限是 `min_version` 的 0.128，**zero-stack 这套按 0.165.0 验证并把生成仓库的两个 workflow 钉在同一版本**，两边不一致时容易出「本地和 Actions 都过、Pages 红」）。
+  并设环境变量 `HUGO_VERSION`（extended 版；下限是 `min_version` 的 0.128，**我按 0.165.0 验证过，`create:site` 生成的两个 workflow 也钉在同一版本**，两边不一致时容易出「本地和 Actions 都过、Pages 红」）。
   站点仓库以子模块引主题时，Pages 直连 Git 的构建**不拉子模块**，构建命令要先自己 clone 主题 —— 见 zero-stack 的 `docs/DEPLOYMENT.md` §6.3。
 - **GitHub Actions**：`pnpm create:site` 生成的仓库里已经带好 workflow
   （`peaceiris/actions-hugo@v3` + Pages 部署），把 secrets 配好即可。
@@ -492,5 +492,5 @@ regular 字重目前因 fontTools 对 woff2 的 glyf 变换报错而保留完整
 
 ## 许可证
 
-Apache-2.0，全文见仓库根目录的 `LICENSE`。
-页脚的主题作者署名不属于「可自定义内容」，请保留。
+Apache-2.0，全文见仓库根目录的 `LICENSE`（Copyright 2026 知止 (GitHub: AUkarl)）。
+页脚 `designed by 知止` 那行是我的署名，不属于「可自定义内容」，请保留。
