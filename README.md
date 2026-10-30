@@ -314,8 +314,8 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
 - **页脚第三方 logo**：`data/footer.json` 里填 http(s) 图片的条目同样走构建期代理
   （`[footer].optimize_images = true`，按高度等比收成 2 倍高的 WebP，`x{h}` 不裁切、不改可见尺寸）。
   页脚挂在每一页，同源化之后吃本站 `/img/*` 的一个月缓存，也不再依赖对方站点的在线与否与缓存策略；
-  抓不到、或 SVG 这类 Hugo 处理不了的格式，照旧用原地址。动图（如虫洞那张 73 帧的 WebP）会保留动画、
-  体积基本不变 —— 要把它压小只能去掉动画，那是设计取舍，不由模板替你决定。
+  抓不到、或 SVG 这类 Hugo 处理不了的格式，照旧用原地址。动图会保留动画、
+  体积基本不变 —— 要把它压小只能去掉动画。
 - **分享图与分享按钮**：文章/页面输出 1200×630 JPEG 的 `og:image`（`img-src` 的 `format=jpg` + `fit=fill`），
   微信等只认 JPEG 的平台也能出图；AVIF 封面走上传期 WebP 变体再转 JPEG；页面图和默认图都处理不了时
   依次回退 favicon → 主题自带 `bj.png`，不会把 404 地址丢给平台。文章页底部有微博 / X / Telegram / 邮件 /
@@ -328,16 +328,14 @@ Markdown 里的图片（以及封面、卡片图）都走同一套：
   约 6.3k 高 —— 手机档 CLS **0.22**（`<footer>` 一项占满），与哪次改动都无关，是这条路固有的。
   实测（同一份内容各建一次、交替跑）：手机 **0.2209 → 0**，桌面 **0.0983 → 0**。
   **改卡片形状时必须同时改 partial 与 `home.js` 里的 `cardHtml()`** —— 两边不一致会让第 1 页和
-  第 2 页长得不一样（R53 那次是模板 h3→h2、JS 漏改，样式一个元素都没命中）。这一条有实测守着：
-  量一次「服务端渲的那张卡」与「JS 重建的同一张卡」的属性逐项对比，本次就是它抓出
-  partial 里 `%s` 打整数输出成 `%!s(int=1080)`、`width`/`height` 失效的问题。
+  第 2 页长得不一样。
 
 ---
 
 ## 账号安全 / SEO 细节
 
 - **修改密码**不再只认身份验证器：用户中心会按 `/api/security` 返回的 `secondFactors` 渲染
-  邮箱验证码 / 验证器 / GitHub 任一可用项；没有第二凭据时给出可操作提示，而不是一张禁用表单。
+  邮箱验证码 / 验证器 / GitHub 任一可用项；没有第二凭据时给出可操作提示。
 - **分类 / 标签**：只有 1–2 篇文章的聚合页自动 `noindex, follow`，保留用户浏览但不让搜索引擎收录；
   详情页 `<title>` 追加「· 分类 / · 标签」，不再与同名标签页完全重复；描述按页面内容/名称+篇数生成。
 - **结构化数据**：文章改用 `BlogPosting`，面包屑补分类层级；分类/标签页输出 `CollectionPage + ItemList`，
@@ -472,13 +470,6 @@ npm run check:behavior:mobile                 # 同一套判据在 390×844 下�
 在别的工作区里跑它可以指认已装好的内核：
 `ZERO_PLAYWRIGHT=/path/to/node_modules/playwright-core node scripts/check-behavior.mjs <产物目录>`。
 
-改主题文件后在真实站点里验证时，记住三件事（都是踩过的坑）：
-
-1. 同步主题进 `themes/zero` 是整目录替换，**必须重启 hugo**，否则 shortcode 注册表是旧的，
-   轻则 500，重则服务直接退出；
-2. 起服务用 `hugo server --disableFastRender`，否则新加的页面 / 模板改动不会重建；
-3. 站点目录下 `.hugo_build.lock` 会串行化所有构建，进程被强杀后留下的锁会让之后每次构建
-   一动不动地等 —— 确认没有 hugo 进程在跑再删掉它。
 
 ### 重新生成 Font Awesome 子集
 
@@ -498,22 +489,8 @@ python scripts/build-fa-subset.py \
 `fa-needed-full.html` 会让那一页改用完整 `all.min.css`，不会出现空白图标。
 regular 字重目前因 fontTools 对 woff2 的 glyf 变换报错而保留完整字体，其余两档正常子集化。
 
-## 常见问题
-
-| 现象 | 原因与解法 |
-| --- | --- |
-| 后台改了文章 / 设置，前台还是旧的 | 前台是静态页，要触发站点重建；本地看 `hugo server` 有没有在跑、是不是 `--disableFastRender` |
-| 本地能看到某篇文章，线上没有 | 那篇是草稿（`draft: true`），本地服务是用 `-D` 起的；去掉 `-D` |
-| 「修改于 …」不显示 | 只认 `lastmod`，且要和 `date` 不同才会显示；`updated` 是旧写法，Hugo 不读 |
-| 未来日期的文章凭空消失 | Hugo 没有对应配置项（`[build].future` 与 `enableFuture` 都不认），只有构建命令加 `-F/--buildFuture` 才生成；后台保存时已把这类稿子转成显式草稿，到时间后取消草稿再保存 |
-| 评论区高度 0 / 组件没加载 | 组件脚本没随 `zero/boot.html` 输出（不要用 `.Scratch` 去重）；或 `apiBaseURL` 没填 |
-| 图片全是外链、没有 WebP | `[image] remote_fetch = false`，或图源不可达；`hugo server` 卡住就是抓取超时，调 `remote_timeout` |
-| 改了 `params.toml` 没反应 | 那一项已经有 `data/*.json` 覆盖（导航 / 首页 / 页脚 / 关于 / 工坊 / 时刻 / 基本信息 / SEO 都是），改后台才对 |
-| SEO 配置不生效 | `data/seo.json` 的键区分大小写，统一 snake_case；params 那份则大小写不敏感 |
-| 首屏字体抖动 / 空白久 | 主题不引外部字体；若你自己加了 `head_custom` 字体链接，用 `font-display: swap` 并预留尺寸 |
-| `hugo` 命令不返回 | 残留的 `.hugo_build.lock`，确认没进程后删掉 |
 
 ## 许可证
 
-Apache-2.0，全文见仓库根目录的 `LICENSE`（与 `zero-stack` 保持一致，专利授权条款比 MIT 更明确）。
+Apache-2.0，全文见仓库根目录的 `LICENSE`。
 页脚的主题作者署名不属于「可自定义内容」，请保留。
