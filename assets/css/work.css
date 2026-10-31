@@ -7,6 +7,8 @@
 .work-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* 行高取该行最高的一张，卡片再各自 height:100% —— 不然简介长短一差，同一行就参差 */
+  grid-auto-rows: 1fr;
   gap: 20px;
 }
 
@@ -18,6 +20,11 @@
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  /* 竖排三段：标题一行、简介两行、状态贴底，卡片高度由网格决定 */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 158px;
 }
 
 .work-card:hover {
@@ -30,29 +37,46 @@
   font-size: 1.05rem;
   margin-bottom: 4px;
   color: var(--text);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
 }
 
 .work-card p {
   font-size: 0.88rem;
   color: var(--text-secondary);
+  margin: 0 0 10px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 /* --- 状态标签 --- */
 .work-card .status {
   display: inline-block;
   font-size: 0.72rem;
-  margin-top: 10px;
+  /* 简介短的那几张靠它把状态顶到同一水平线；上面 p 自带 10px 下边距，短内容也不会贴脸 */
+  margin-top: auto;
   color: var(--text-secondary);
   background: var(--tag-bg);
   padding: 2px 14px;
   border-radius: var(--radius);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* --- 可点击卡片 --- */
 a.work-card-link {
   text-decoration: none;
   color: inherit;
-  display: block;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
   position: relative;
 }

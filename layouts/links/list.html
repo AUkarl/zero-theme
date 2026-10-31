@@ -88,6 +88,7 @@
 {{- $zeroL := partial "zero/api.html" . -}}
 {{- $swF := partial "zero/switch.html" (dict "zero" $zeroL "key" "friendsEnabled") -}}
 {{- $swA := partial "zero/switch.html" (dict "zero" $zeroL "key" "friendApplyEnabled") -}}
+{{- $swFd := partial "zero/switch.html" (dict "zero" $zeroL "key" "friendFeedEnabled") -}}
 
 <main class="main" id="main">
   <section class="section links-page">
@@ -99,7 +100,7 @@
     <div class="links-body"{{ $swF.attrs | safeHTMLAttr }}>
     <div class="links-tabs" role="tablist" aria-label="友链">
       {{- if $onFeed }}
-      <button type="button" class="links-tab{{ if eq $active "feed" }} is-active{{ end }}" role="tab" id="tab-feed" data-tab="feed" aria-selected="{{ if eq $active "feed" }}true{{ else }}false{{ end }}" aria-controls="panel-feed">朋友动态</button>
+      <button type="button" class="links-tab{{ if eq $active "feed" }} is-active{{ end }}" role="tab" id="tab-feed" data-tab="feed" aria-selected="{{ if eq $active "feed" }}true{{ else }}false{{ end }}" aria-controls="panel-feed"{{ $swFd.attrs | safeHTMLAttr }}>朋友动态</button>
       {{- end }}
       {{- if $onNeighbors }}
       <button type="button" class="links-tab{{ if eq $active "neighbors" }} is-active{{ end }}" role="tab" id="tab-neighbors" data-tab="neighbors" aria-selected="{{ if eq $active "neighbors" }}true{{ else }}false{{ end }}" aria-controls="panel-neighbors">左邻右舍</button>
@@ -114,7 +115,7 @@
 
     {{- /* ---------- 朋友动态 ---------- */ -}}
     {{- if $onFeed }}
-    <section class="links-panel{{ if eq $active "feed" }} is-active{{ end }}" id="panel-feed" role="tabpanel" aria-labelledby="tab-feed"{{ if ne $active "feed" }} hidden{{ end }}>
+    <section class="links-panel{{ if eq $active "feed" }} is-active{{ end }}" id="panel-feed" role="tabpanel" aria-labelledby="tab-feed"{{ if ne $active "feed" }} hidden{{ end }}{{ $swFd.attrs | safeHTMLAttr }}>
       {{- if $items }}
       <div class="feed-grid" id="feedGrid" data-per-page="{{ $lc.per_page | default 10 }}">
         {{- /* 封面延迟：分页只显示 per_page 条，但 49 张卡的 <img> 全在 DOM 里，

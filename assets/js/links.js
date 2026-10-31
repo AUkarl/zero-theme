@@ -12,8 +12,12 @@
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.links-tab'));
   var panels = Array.prototype.slice.call(document.querySelectorAll('.links-panel'));
 
+  function eligibleTabs() {
+    return tabs.filter(function (t) { return !t.hidden && !t.closest('[hidden]'); });
+  }
+
   function activate(name, focusTab) {
-    if (!name || !tabs.some(function (t) { return t.dataset.tab === name; })) return;
+    if (!name || !eligibleTabs().some(function (t) { return t.dataset.tab === name; })) return;
     tabs.forEach(function (t) {
       var on = t.dataset.tab === name;
       t.classList.toggle('is-active', on);
@@ -40,9 +44,16 @@
       });
     });
     var fromHash = (location.hash || '').replace('#', '');
-    activate(fromHash || (tabs[0] && tabs[0].dataset.tab));
+    var first = eligibleTabs()[0];
+    activate(fromHash || (first && first.dataset.tab));
     window.addEventListener('hashchange', function () {
       activate((location.hash || '').replace('#', ''));
+    });
+    document.addEventListener('zero:switches', function () {
+      var on = eligibleTabs().filter(function (t) { return t.classList.contains('is-active'); });
+      if (on.length) return;
+      var next = eligibleTabs()[0];
+      if (next) activate(next.dataset.tab);
     });
   }
 
