@@ -1,0 +1,73 @@
+{{- /* ============================================================
+  subscribe/list.html — 邮箱订阅页（/subscribe/）
+  ------------------------------------------------------------
+  三块内容：
+    1. 说明：订阅能收到什么、怎么确认、怎么退订
+    2. 订阅表单（partials/zero/subscribe.html，与文章页 / 账号页同一套）
+    3. 已订阅状态查询：GET /api/subscribe/status?email=
+
+  开关：subscribeEnabled（GET /api/config 的扁平键）
+    · 关掉时表单与查询整块不显示，只留一句「订阅功能已关闭」
+    · 模板把可关区块先写成 hidden，由 js/zero-switches.js 拿到配置后才露出，
+      所以关闭态不会闪一下
+    · 构建期 params.subscribeEnabled = false 时这里连区块都不输出
+  没配 params.apiBaseURL（纯静态站）时给一句说明，不留空白。
+  ============================================================ */ -}}
+
+{{- define "main" -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $on := (ne .Site.Params.subscribeEnabled false) -}}
+{{- $sw := partial "zero/switch.html" (dict "zero" $zero "key" "subscribeEnabled") -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title">{{ i18n "subscribe-title" | default "邮箱订阅" }}</h1>
+    <p class="section-desc">{{ i18n "subscribe-desc" | default "留下邮箱，新文章写好了直接发给你，不用守着 RSS。" }}</p>
+
+    <div class="zero-subscribe-page">
+      {{- if not $zero.enabled -}}
+      <div class="zsp-block">
+        <p>{{ i18n "zero-subscribe-no-backend" | default "本站尚未配置订阅服务（params.apiBaseURL 为空），订阅入口暂时不可用。" }}</p>
+      </div>
+      {{- else if not $on -}}
+      {{- /* 构建期就关掉：不输出任何表单，只给一句话 */ -}}
+      <aside class="zero-closed"><p>{{ i18n "zero-subscribe-closed" | default "订阅功能已关闭。" }}</p></aside>
+      {{- else -}}
+
+      {{- /* ---------- 订阅表单 ---------- */ -}}
+      <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
+        <h2>{{ i18n "subscribe-form-title" | default "订阅新文章" }}</h2>
+        {{- partial "zero/subscribe.html" (dict "p" . "zero" $zero) -}}
+        <p class="zsp-note">{{ i18n "subscribe-double-opt-in-note" | default "提交后会先收到一封确认邮件，点一下里面的链接才算订阅成功（这一步是为了防止别人拿你的邮箱乱订）。" }}</p>
+      </div>
+
+      {{- /* ---------- 状态查询 ---------- */ -}}
+      <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
+        <h2>{{ i18n "subscribe-query-title" | default "查一查订了没有" }}</h2>
+        <div class="zero-subscribe-query">
+          <label class="zsf-sr-only" for="zsQueryEmail">{{ i18n "zero-subscribe-email-label" | default "邮箱地址" }}</label>
+          <input type="email" id="zsQueryEmail" maxlength="200" autocomplete="email"
+                 placeholder="{{ i18n `subscribe-query-placeholder` | default `输入你的邮箱，查询订阅状态` }}">
+          <button type="button" class="zs-query-btn">{{ i18n "subscribe-query-btn" | default "查询状态" }}</button>
+          <p class="zs-state" role="status" aria-live="polite"></p>
+          {{- partial "zero/subscribe-i18n.html" . -}}
+        </div>
+      </div>
+
+      {{- /* ---------- 退订说明 ---------- */ -}}
+      <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
+        <h2>{{ i18n "subscribe-unsub-title" | default "怎么退订" }}</h2>
+        <p>{{ i18n "subscribe-unsub-desc" | default "每封推送邮件的最下面都有一条退订链接，点开就立刻退出名单，不用回信也不用登录。退订之后再想收，回到上面重新提交并确认一次即可。" }}</p>
+        <p class="zsp-note">{{ i18n "subscribe-privacy-note" | default "邮箱只用来发文章通知，不会公开，也不会给别人。" }}</p>
+      </div>
+
+      {{- /* 开关关掉时露出的那句话（由 zero-switches.js 控制显示） */ -}}
+      {{- partial "zero/closed.html" (dict "zero" $zero "key" "subscribeEnabled" "text" (i18n "zero-subscribe-closed" | default "订阅功能已关闭。")) -}}
+      {{- end -}}
+
+      {{- with .Content }}
+      <div class="zsp-block zsp-content">{{ . }}</div>
+      {{- end }}
+    </div>
+  </section>
+</main>
+{{- end -}}

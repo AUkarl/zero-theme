@@ -1,0 +1,40 @@
+{{- /* ============================================================
+  cms/value.html — 读后台 data 目录里某个 json 文件的一个字段
+  ------------------------------------------------------------
+  用法：
+    {{- $f := partial "cms/value.html" (dict "data" $d "keys" (slice "poweredByText" "powered_by_text")) -}}
+    {{- if $f.set }} $f.value 原值 / $f.text 收成的字符串 / $f.on 归一后的布尔 {{ end }}
+
+  为什么要 set 这个返回值：得区分「后台明确写了空值」和「后台压根没写这个键」。
+  只看值的真假会把 poweredByText: "" 这种「明确留空 = 关掉这一行」误判成「没配」，
+  于是文案又退回 params 的旧内容，后台怎么改都不生效。
+
+  为什么要 on：Go 模板把任何非空字符串当真值，后台若写成 "false" 就会被 if 认成开，
+  所以布尔项一律走 on（false / "false" / 0 / "0" / "no" / "off" / 空 → false；
+  数组与对象按「有没有内容」判）。
+
+  keys 按给出的顺序试，先命中的算数：驼峰是 CMS 契约写法，下划线照顾手改的老数据。
+  data 不是 map（文件不存在、或被写成数组）时返回 set=false，调用方照旧回落 params，
+  模板不会因为后台写了个奇怪形状就整页报错。
+  ============================================================ */ -}}
+{{- $d := .data -}}
+{{- $set := false -}}
+{{- $value := "" -}}
+{{- $text := "" -}}
+{{- $on := false -}}
+{{- if reflect.IsMap $d -}}
+  {{- range .keys -}}
+    {{- if and (not $set) (isset $d .) -}}
+      {{- $set = true -}}
+      {{- $value = index $d . -}}
+      {{- $text = partial "cms/str.html" (dict "value" $value) -}}
+      {{- if or (reflect.IsMap $value) (reflect.IsSlice $value) -}}
+        {{- $on = gt (len $value) 0 -}}
+      {{- else -}}
+        {{- $s := strings.ToLower $text -}}
+        {{- $on = and (ne $s "") (ne $s "false") (ne $s "0") (ne $s "no") (ne $s "off") -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return (dict "set" $set "value" $value "text" $text "on" $on) -}}

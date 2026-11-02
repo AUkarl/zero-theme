@@ -1,0 +1,31 @@
+{{- /* ============================================================
+  _default/terms.html — 分类/标签分类页
+  展示所有分类或标签及其文章数量
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- partial "zero/inline-css.html" (slice "css/archive.css") -}}
+{{- end -}}
+
+{{- define "main" -}}
+<main class="main" id="main">
+  <section class="section">
+    {{- /* 与 <title>/og:title 同一个口径（partials/page-title.html）：分类法一览页的 .Title 是
+           Hugo 按 taxonomy 名自动给的，中文站 /author/ 因此 h1 顶着英文「Author」而标签页写着「作者」，
+           两处不一致。走同一个 partial 之后两者永远同步，其余分类法（categories / tags）行为不变。 */ -}}
+    <h1 class="section-title">{{ partial "page-title.html" . }}</h1>
+    <div style="max-width:800px; margin:0 auto;">
+      <div class="tag-cloud-static" style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">
+        {{- range .Data.Terms.Alphabetical }}
+        {{- $label := .Page.Title -}}
+        {{- if and (eq $.Data.Plural "author") hugo.Data.authors -}}
+          {{- with index hugo.Data.authors .Name -}}{{- with .name -}}{{- $label = string . -}}{{- end -}}{{- end -}}
+        {{- end -}}
+        <a class="cloud-item" href="{{ .Page.RelPermalink }}" style="text-decoration:none;">
+          {{ $label }} <span class="count">{{ .Count }}</span>
+        </a>
+        {{- end }}
+      </div>
+    </div>
+  </section>
+</main>
+{{- end -}}

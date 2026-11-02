@@ -1,0 +1,28 @@
+{{- /*
+  audio.html — HTML5 音频播放器短代码
+  用法: {{< audio src="music.mp3" title="歌曲名" artist="艺术家" autoplay loop >}}
+        备选格式：ogg="…" wav="…"，type="audio/mpeg"
+  校验: src / ogg / wav 走 http/https 白名单（见 partials/shortcodes/safe-url.html），
+        src 缺失或非法时输出一句提示，不再渲染一个空播放器。
+*/ -}}
+{{- $src := partial "shortcodes/safe-url.html" (.Get "src") -}}
+{{- if not $src -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "audio" "param" "src") -}}
+{{- else -}}
+<div class="audio-player">
+  {{- with .Get "title" }}
+  <div class="audio-info">
+    <span class="audio-title">{{ . }}</span>
+    {{- with $.Get "artist" }}
+    <span class="audio-artist">{{ . }}</span>
+    {{- end }}
+  </div>
+  {{- end }}
+  <audio controls preload="metadata" {{ if .Get "autoplay" }}autoplay{{ end }} {{ if .Get "loop" }}loop{{ end }}>
+    <source src="{{ $src }}" {{ with .Get "type" }}type="{{ . }}"{{ else }}type="audio/mpeg"{{ end }} />
+    {{- with partial "shortcodes/safe-url.html" (.Get "ogg") }}<source src="{{ . }}" type="audio/ogg" />{{ end }}
+    {{- with partial "shortcodes/safe-url.html" (.Get "wav") }}<source src="{{ . }}" type="audio/wav" />{{ end }}
+    您的浏览器不支持音频播放。
+  </audio>
+</div>
+{{- end -}}

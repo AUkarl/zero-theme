@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  zero/poststats.html — 构建期文章统计（站点 data/poststats.json）
+  ------------------------------------------------------------
+  这份文件由后台定时任务 poststats:export 写回内容仓库（与朋友动态同一机制），
+  内容是每篇文章的 阅读 / 评论 / 点赞 / 收藏 四个数。
+
+  为什么要导出一份进仓库：这些数只存在 D1 里，Hugo 构建时拿不到。
+  没有它，首页精选只能按日期排，「最热」只能靠前端现查评论系统 ——
+  没开 JavaScript、或者后台把评论系统换成 zero 之后，那种排法就是错的。
+
+  返回 dict：
+    ready      有没有这份数据（没有时主题回落到旧的运行期取数逻辑）
+    posts      permalink → { views, comments, likes, stars }
+    wViews / wComments / wLikes / wStars
+               热度分权重，取 [home.bento] 的 views_weight / comments_weight / likes_weight / stars_weight
+  ============================================================ */ -}}
+{{- $bento := .Site.Params.home.bento | default dict -}}
+{{- $data := hugo.Data.poststats -}}
+{{- $posts := dict -}}
+{{- with $data }}{{ $posts = .posts | default dict }}{{ end -}}
+{{- /* 权重写成 0 是真的不算，不能用 default（default 会把 0 当没填） */ -}}
+{{- $wViews := $bento.views_weight -}}
+{{- if eq $wViews nil }}{{ $wViews = 1 }}{{ end -}}
+{{- $wComments := $bento.comments_weight -}}
+{{- if eq $wComments nil }}{{ $wComments = 5 }}{{ end -}}
+{{- $wLikes := $bento.likes_weight -}}
+{{- if eq $wLikes nil }}{{ $wLikes = 3 }}{{ end -}}
+{{- $wStars := $bento.stars_weight -}}
+{{- if eq $wStars nil }}{{ $wStars = 5 }}{{ end -}}
+{{- return dict
+  "posts" $posts
+  "ready" (and (not (not $data)) (gt (len $posts) 0))
+  "wViews" (float $wViews)
+  "wComments" (float $wComments)
+  "wLikes" (float $wLikes)
+  "wStars" (float $wStars)
+-}}

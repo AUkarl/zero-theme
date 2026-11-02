@@ -1,0 +1,78 @@
+{{- /* ============================================================
+  zero/design.html — 把 [design] 配置输出成 CSS 变量
+  ------------------------------------------------------------
+  主题的外观全部由 assets/css/*.css 里 :root 的那批 --变量 决定（common.css 一份、
+  zero.css 一份）。这里做的事只有一件：配置里填了值的项，用一段内联 style 覆盖掉，
+  没填（""）的项一行都不输出，继续吃 CSS 里的默认值。
+
+  所以 [design] 是浅色、[design.dark] 是深色、[design.zero] 是组件条那一套；
+  三段同名键分别落到 :root / [data-theme="dark"] 与自动深色的 media 查询上，
+  改一个颜色不会把另外两套带歪。
+
+  define 块之间不共享变量，head.html 与落地页各自调一次。
+  ============================================================ */ -}}
+{{- $d := .Site.Params.design | default dict -}}
+{{- $light := $d | default dict -}}
+{{- $dark := $d.dark | default dict -}}
+{{- $zero := $d.zero | default dict -}}
+{{- $zeroDark := $zero.dark | default dict -}}
+
+{{- /* 键名 → CSS 变量名。新增外观项在这里加一行即可，发射逻辑在 zero/design-var.html */ -}}
+{{- $map := dict
+  "font_family" "--font"
+  "base_font_size" "--font-size"
+  "line_height" "--line-height"
+  "radius" "--radius"
+  "nav_height" "--nav-height"
+  "max_width" "--max-width"
+  "bg" "--bg"
+  "card_bg" "--card-bg"
+  "text" "--text"
+  "text_secondary" "--text-secondary"
+  "border" "--border"
+  "shadow" "--shadow"
+  "tag_bg" "--tag-bg"
+  "tag_active_bg" "--tag-active-bg"
+  "tag_active_color" "--tag-active-color"
+  "accent" "--logo-accent-text"
+  "btn_bg" "--btn-bg"
+  "btn_color" "--btn-color"
+  "scroll_btn_bg" "--scroll-btn-bg"
+  "scroll_btn_color" "--scroll-btn-color"
+  "shuo_name" "--shuo-name"
+-}}
+{{- $zeroMap := dict
+  "action_bg" "--zero-action-bg"
+  "action_border" "--zero-action-border"
+  "action_fg" "--zero-action-fg"
+  "action_muted" "--zero-action-muted"
+  "chip_bg" "--zero-chip-bg"
+  "chip_border" "--zero-chip-border"
+  "chip_fg" "--zero-chip-fg"
+  "react_fg" "--zero-react-fg"
+  "star_fg" "--zero-star-fg"
+  "field_bg" "--zero-field-bg"
+  "field_border" "--zero-field-border"
+  "input_bg" "--zero-input-bg"
+  "input_fg" "--zero-input-fg"
+  "accent_bg" "--zero-accent-bg"
+  "accent_fg" "--zero-accent-fg"
+  "ok_fg" "--zero-ok-fg"
+  "error_fg" "--zero-error-fg"
+-}}
+
+{{- $lightCss := partial "zero/design-var.html" (dict "src" $light "map" $map) -}}
+{{- $zeroCss := partial "zero/design-var.html" (dict "src" $zero "map" $zeroMap) -}}
+{{- $darkCss := partial "zero/design-var.html" (dict "src" $dark "map" $map) -}}
+{{- $zeroDarkCss := partial "zero/design-var.html" (dict "src" $zeroDark "map" $zeroMap) -}}
+{{- if or $lightCss $zeroCss -}}
+<style>
+  :root { {{ $lightCss }}{{ $zeroCss }} }
+  {{- if or $darkCss $zeroDarkCss }}
+  [data-theme="dark"] { {{ $darkCss }}{{ $zeroDarkCss }} }
+  @media (prefers-color-scheme: dark) {
+    [data-theme="auto"] { {{ $darkCss }}{{ $zeroDarkCss }} }
+  }
+  {{- end }}
+</style>
+{{- end -}}

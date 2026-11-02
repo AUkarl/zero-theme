@@ -1,0 +1,48 @@
+{{- /* ============================================================
+  nav/entry-data.html — 把 data 目录里 nav.json 的一条菜单项收成统一字段
+  ------------------------------------------------------------
+  用法：{{- partial "nav/entry-data.html" (dict "item" $i) -}}
+  字段含义见 nav/items.html 的说明。
+
+  后台契约里的字段名是驼峰（iconOnly / zeroAccount），下划线写法一并认，
+  省得手改 JSON 时踩「写了却没生效」。
+
+  zeroAccount 是「账号入口」的显式标记：common.js 靠 #navAccount 这个 id
+  在登录成功后把图标换成头像。后台表单没这个字段、只填了 /account/ 链接时，
+  按链接认出来 —— 否则头像功能会悄悄失效，而页面上看不出任何异常。
+
+  开关键名（受 /api/config 的 subscribeEnabled 之类控制）交给
+  zero/nav-switch.html 算：把 data 项伪装成菜单项的形状传进去，
+  「显式 zeroSwitch 优先、否则按路径猜 /moments/ /links/ /subscribe/」这套
+  判断就只有一份，不会出现菜单和 data 两边规则不一致。
+  ============================================================ */ -}}
+{{- $i := .item -}}
+{{- $url := partial "cms/str.html" (dict "value" (or $i.url $i.link)) -}}
+{{- $external := (partial "cms/value.html" (dict "data" $i "keys" (slice "external"))).on -}}
+{{- $switchRaw := partial "cms/str.html" (dict "value" (or $i.zeroSwitch $i.zero_switch)) -}}
+{{- $acct := (partial "cms/value.html" (dict "data" $i "keys" (slice "zeroAccount" "zero_account"))).on -}}
+{{- if and (not $acct) (not $external) (in (strings.ToLower $url) "/account/") -}}
+  {{- $acct = true -}}
+{{- end -}}
+{{- /* weight 只认数字（JSON 的数都读成 float64）；写成别的形状就当 0，
+       一条坏数据不该让整站构建失败 */ -}}
+{{- $wStr := partial "cms/str.html" (dict "value" (or $i.weight 0)) -}}
+{{- $weight := 0.0 -}}
+{{- if findRE `^-?[0-9]+(\.[0-9]+)?$` $wStr -}}
+  {{- $weight = float $wStr -}}
+{{- end -}}
+{{- return (dict
+  "name"        (partial "cms/str.html" (dict "value" (or $i.name $i.title)))
+  "url"         $url
+  "weight"      $weight
+  "icon"        (partial "cms/str.html" (dict "value" (or $i.icon $i.iconClass)))
+  "image"       (partial "cms/str.html" (dict "value" (or $i.image $i.img)))
+  "identifier"  (partial "cms/str.html" (dict "value" (or $i.identifier $i.id)))
+  "parent"      (partial "cms/str.html" (dict "value" $i.parent))
+  "controls"    (eq (partial "cms/str.html" (dict "value" $i.position)) "controls")
+  "external"    $external
+  "iconOnly"    (partial "cms/value.html" (dict "data" $i "keys" (slice "iconOnly" "icon_only"))).on
+  "zeroAccount" $acct
+  "switchKey"   (partial "zero/nav-switch.html" (dict "entry" (dict "URL" $url "Params" (dict "external" $external "zero_switch" $switchRaw "zeroAccount" $acct))))
+  "menuEntry"   nil
+) -}}

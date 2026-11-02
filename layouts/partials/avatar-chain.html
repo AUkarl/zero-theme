@@ -1,0 +1,34 @@
+{{- /* ============================================================
+  avatar-chain.html — 只有邮箱时能拿到的那几个头像地址（按优先级排好）
+  ------------------------------------------------------------
+  友链三处（朋友动态 / 左邻右舍 / 站点联盟）与作者署名、作者框都用这一份。
+  用法（Hugo 的 append 是「管道末尾那个才是列表」，写成 append 列表 元素 会把顺序颠倒）：
+    {{- range (partial "avatar-chain.html" (dict "email" $m.email "size" 128)) -}}
+      {{- $chain = $chain | append . -}}
+    {{- end -}}
+  返回切片：Gravatar → Cravatar →（QQ / Foxmail 且 @ 前是纯数字时）QQ 头像。
+  邮箱不合法就返回空切片，调用方自己决定是留白还是退回默认图。
+
+  为什么是三张而不是一张：这三家都按「邮箱小写后的 MD5」取图，但谁也没法在别人没登记的
+  邮箱上给图 —— 所以都带 d=404（没有就回 404），由 <img onerror> 一张一张往下试，
+  全试空了按需求留白。d=mp 那种「给一张通用灰影人」的写法会把这条链当场截断，
+  永远退不到下一家，也就看不到本人真上传过头像的那些站点。
+  ============================================================ */ -}}
+{{- $mail := trim (lower (.email | default "")) " " -}}
+{{- /* 只有这一个 return：Hugo 的 return 只在 partial 末尾被特殊处理，
+       中间再来一个「提前返回」会让整份模板解析不出来（报 want 0 got 1） */ -}}
+{{- $out := slice -}}
+{{- if in $mail "@" -}}
+  {{- $parts := strings.Split $mail "@" -}}
+  {{- $local := index $parts 0 -}}
+  {{- $domain := index $parts 1 | default "" -}}
+  {{- $h := md5 $mail -}}
+  {{- $size := int (.size | default 128) -}}
+  {{- $out = slice (printf "https://www.gravatar.com/avatar/%s?d=404&s=%d" $h $size) (printf "https://cravatar.cn/avatar/%s?d=404&s=%d" $h $size) -}}
+  {{- if and (or (eq $domain "qq.com") (eq $domain "foxmail.com")) (findRE "^[0-9]{5,12}$" $local) -}}
+    {{- /* QQ 号头像不吃 MD5，直接按号码取，尺寸参数是 s=100 那套，没有 d=404 的说法：
+           号码不存在时它回一张默认图，挂在链尾不影响前面的判断 */ -}}
+    {{- $out = $out | append (printf "https://q1.qlogo.cn/g?b=qq&nk=%s&s=100" $local) -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

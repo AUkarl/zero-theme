@@ -1,0 +1,15 @@
+{{- /* ============================================================
+  zero/design-var.html — 按「键名 → CSS 变量名」的映射表输出一串声明
+  只由 zero/design.html 调用；这里填了值的键各输一行 `--x:值;`，空值一行都不出。
+  纯数字的字号补 px，行高原样输出（行高本来就没单位）。
+  ============================================================ */ -}}
+{{- $src := .src | default dict -}}
+{{- $map := .map | default dict -}}
+{{- range $key, $var := $map -}}
+  {{- $raw := index $src $key -}}
+  {{- if $raw -}}
+    {{- $val := string $raw -}}
+    {{- if and (eq $key "base_font_size") (findRE `^[0-9.]+$` $val) -}}{{- $val = printf "%spx" $val -}}{{- end -}}
+    {{ printf "%s:%s;" $var $val | safeCSS -}}
+  {{- end -}}
+{{- end -}}

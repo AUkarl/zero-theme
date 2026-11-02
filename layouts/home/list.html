@@ -1,0 +1,167 @@
+{{- /* ============================================================
+  home/list.html — 主页模板（两种布局，由配置切换）
+  ------------------------------------------------------------
+  [home] layout = "bento"（默认）
+      → 新版：精选 Bento Grid + 全部文章等高网格（partials/home-bento*.html）
+  [home] layout = "grid"
+      → 旧版：文章卡片规整网格（本文件下方）
+  两个布局各自的样式与脚本也按该开关分别加载。
+
+  开关的来源：站点 data/home.json（后台「前端管理」写这个文件）优先，
+  没有这个文件时回落到 params.toml 的 [home]。
+  ============================================================ */ -}}
+
+
+{{- define "styles" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento-styles.html" . -}}
+{{- else -}}
+{{- $home := .Site.Params.home -}}
+{{- $widthRatio := $home.width_ratio | default 100 -}}
+{{- partial "zero/inline-css.html" (slice "css/home.css") -}}
+{{- partial "home-grid-vars.html" . }}
+<style>
+  /* 从配置注入的 CSS 变量 */
+  .main { max-width: {{ $widthRatio }}%; margin-left: auto; margin-right: auto; }
+</style>
+{{- end -}}
+{{- end -}}
+
+{{- define "main" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento.html" . -}}
+{{- else -}}
+{{- $home := $cfg.params -}}
+{{- $paginate := $home.paginate | default 20 -}}
+{{- /* 摘要截断字数：[home].summary_length */ -}}
+{{- $summaryLen := $home.summary_length | default 120 -}}
+{{- $showImages := (ne $home.show_images false) -}}
+{{- $showSummary := (ne $home.show_summary false) -}}
+{{- /* 分页那一行的文案：服务端骨架（home-pager.html）与 home.js 共用这一份，
+       两边各自兜底就会长成两种样子。改语言在 i18n 里改，不用碰脚本。 */ -}}
+{{- $labels := dict
+  "prev" (i18n "prev" | default "上一页")
+  "next" (i18n "next" | default "下一页")
+  "page" (i18n "page" | default "第")
+  "pageSuffix" (i18n "page-suffix" | default "页")
+  "pageTotal" (i18n "page-total" | default "共")
+  "jump" (i18n "page-jump" | default "输入页码跳转") -}}
+{{- $pages := where (index hugo.Sites 0).RegularPages "Section" "posts" -}}
+{{- /* 显式按日期倒序（最新 → 最旧），不依赖 Hugo 默认排序；
+       前端按此顺序从左到右、从上到下依次渲染卡片 */ -}}
+{{- $pages = $pages.ByDate.Reverse -}}
+{{- $ps := partial "zero/poststats.html" . -}}
+{{- $data := slice -}}
+{{- range $page := $pages -}}
+  {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" $page) -}}
+  {{- /* 分类/标签一律转成字符串：数字标签（如 1984）会让前端 toLowerCase() 抛错 */ -}}
+  {{- $cats := partial "zero/strings.html" ($page.Params.categories | default slice) -}}
+  {{- $cat := "" -}}
+  {{- with $cats }}{{ $cat = index . 0 }}{{ end -}}
+  {{- $tags := partial "zero/strings.html" ($page.Params.tags | default slice) -}}
+  {{- $imgRaw := partial "one-string.html" ($page.Params.image | default $page.Params.img) -}}
+  {{- if and $imgRaw (not (or (hasPrefix $imgRaw "http://") (hasPrefix $imgRaw "https://"))) }}{{ $imgRaw = $imgRaw | absURL }}{{ end -}}
+  {{- $imgInfo := partial "img-src.html" (dict "src" $imgRaw "page" $page "variant" "cover" "sizes" "(max-width: 768px) 92vw, (max-width: 1024px) 45vw, 28vw" "widths" (slice 400 800)) -}}
+  {{- $sum := ($page.Description | default $page.Summary | plainify | truncate $summaryLen) -}}
+  {{- $item := dict
+    "title" $page.Title
+    "desc" $sum
+    "date" ($page.Date.Format "2006-01-02")
+    "category" $cat
+    "tags" $tags
+    "image" $page.Params.image
+    "img" $imgInfo
+    "permalink" $page.RelPermalink
+    "views" $sc.views
+    "comments" $sc.comments
+    "likes" $sc.likes
+    "stars" $sc.stars
+    "score" $sc.score
+    "pinned" $sc.pinned
+    "titleZh" "" "descZh" "" "categoryZh" "" "tagsZh" slice
+    "titleEn" "" "descEn" "" "categoryEn" "" "tagsEn" slice
+    "permalinkZh" "" "permalinkEn" ""
+  -}}
+  {{- /* 站点仅中文：直接写入中文数据（占位键保留，供前端兼容读取） */ -}}
+  {{- $item = merge $item (dict "titleZh" $page.Title "descZh" $sum "categoryZh" $cat "tagsZh" $tags "permalinkZh" $page.RelPermalink) -}}
+  {{- $data = $data | append $item -}}
+{{- end -}}
+{{- $totalPages := cond (gt (len $data) 0) (int (math.Ceil (div (float (len $data)) (float $paginate)))) 0 -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title" data-i18n="home-title">{{ i18n "home-title" | default "主页" }}</h1>
+    {{- if $cfg.showDesc }}
+    <p class="section-desc" data-i18n="home-desc">{{ partial "zero/md-text.html" (dict "text" ($cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。")) }}</p>
+    {{- end }}
+    <div class="garden-bar">
+      <div class="garden-tabs" role="tablist" aria-label="{{ i18n "home-sort-aria" | default "文章排序" }}">
+        <button type="button" class="garden-tab is-active" data-gsort="latest" aria-pressed="true">{{ i18n "hb-tab-latest" | default "最新" }}</button>
+        <button type="button" class="garden-tab" data-gsort="earliest" aria-pressed="false">{{ i18n "hb-tab-earliest" | default "最早" }}</button>
+        <button type="button" class="garden-tab" data-gsort="hot" aria-pressed="false">{{ i18n "hb-tab-hot" | default "最热" }}</button>
+      </div>
+    </div>
+    <div class="garden-wrapper">
+      {{- /* 首屏这一屏的卡片与分页条由服务端渲出来（A+C）。
+             以前 #gardenGrid 在 HTML 里是空的，二十张卡（约 20KB）在 DOMContentLoaded 那一下
+             一次性插入，正文从约 2.5k 高长到约 8.8k 高，页脚被整段推下去 —— 线上 /home/ 那
+             0.1 上下的 CLS 全是这一条（footer 一项就占满），跟哪一轮改动都无关，是 grid 这条路固有的。
+             这里渲的是「第 1 页 + 最新 + 没筛选」这一批，与 home.js 默认要渲的完全同一批对象
+             （$data 就是下面那份 JSON，没有第二个数据源）；home.js 认出这一点时只接管、不重写。
+             卡片是平铺的，靠 .is-skeleton 那套 grid 布局在各断点摆成 --home-columns 列 ——
+             列数与 home.js 随后分出来的列数一致，接管时不会整段位移。 */ -}}
+      <div class="garden-grid is-skeleton" id="gardenGrid">
+        {{- range $i, $a := $data -}}
+          {{- if lt $i $paginate -}}
+            {{- partial "home-card.html" (dict "item" $a "showImages" $showImages "showSummary" $showSummary) -}}
+          {{- end -}}
+        {{- end -}}
+      </div>
+      <div class="pagination" id="pagination">
+        {{- if gt $totalPages 0 -}}
+          {{- partial "home-pager.html" (dict "labels" $labels "page" 1 "totalPages" $totalPages) -}}
+        {{- end -}}
+      </div>
+    </div>
+    <script type="application/json" id="gardenData">
+    {{ $data | jsonify | safeJS }}
+    </script>
+    <!-- 主页配置注入 JS -->
+    <script>
+      window.homeConfig = {
+        paginate: {{ $paginate }},
+        showImages: {{ $showImages }},
+        showSummary: {{ $showSummary }},
+        /* 有 data/poststats.json 时「最热」用构建期算好的分数，不再请求评论系统 */
+        buildStats: {{ $ps.ready }},
+        labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }},
+        labels: {{ $labels | jsonify }}
+      };
+    </script>
+  </section>
+</main>
+{{- end -}}
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $cfg := partial "home-config.html" . -}}
+{{- if eq $cfg.layout "bento" -}}
+{{- partial "home-bento-scripts.html" . -}}
+{{- else -}}
+{{- $home := .Site.Params.home -}}
+<script>
+  /* 主页界面文案：站点只有中文，这里只留一份字典 */
+  window.i18nMap = {
+    zh: {
+      'home-title': '主页',
+      'home-desc': '{{ $cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。" }}',
+      'prev': '上一页', 'next': '下一页',
+      'page': '第', 'page-suffix': '页'
+    }
+  };
+</script>
+{{- $homeJS := resources.Get "js/home.js" | minify | fingerprint -}}
+<script defer src="{{ $homeJS.RelPermalink }}"></script>
+{{- end -}}
+{{- end -}}

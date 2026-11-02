@@ -1,0 +1,17 @@
+{{- /* ============================================================
+  cms/flag.html — 取一个开关：后台没写这个键才用 params 侧的默认值
+  ------------------------------------------------------------
+  用法：
+    {{- $show := partial "cms/flag.html" (dict "data" $d "keys" (slice "showPoweredBy" "show_powered_by") "default" (ne $footer.show_powered_by false)) -}}
+
+  为什么不能写成 $d.showPoweredBy | default true：Go 模板里 false 也算空值，
+  后台明确关掉的开关会被 default 吃掉，页面永远关不掉。
+  params 侧的默认值也过一遍同一套真假判断，两边写法（布尔 / "false"）结果才一致。
+  ============================================================ */ -}}
+{{- $f := partial "cms/value.html" (dict "data" .data "keys" .keys) -}}
+{{- $d := partial "cms/value.html" (dict "data" (dict "v" .default) "keys" (slice "v")) -}}
+{{- $out := $d.on -}}
+{{- if $f.set -}}
+  {{- $out = $f.on -}}
+{{- end -}}
+{{- return $out -}}

@@ -1,0 +1,89 @@
+{{- /* ============================================================
+  author-byline.html — 文章署名（支持多作者）
+  ------------------------------------------------------------
+  front matter 的 author 既可以写一个作者标识，也可以写成列表；标识对应
+  data/authors.yaml 的键，同时也是 /author/<标识>/ 的地址片段。
+  静态渲染只吃 data/authors.yaml 与站点参数；yaml 里没登记的新作者，
+  由 zero-authors.js 在运行时向 /api/authors 补齐昵称与头像。
+  认证徽章已删除：署名旁不再画对勾，作者身份看「用户组」那句文字和作者资料页。
+  文案直接写中文字面量（站点已改成纯中文，模板不再新增 i18n 调用）。
+  ============================================================ */ -}}
+{{- $ids := slice -}}
+{{- with .Params.author | default (partial "site-config.html" .).defaultAuthor -}}
+  {{- $list := . -}}
+  {{- if not (reflect.IsSlice $list) -}}{{- $list = slice $list -}}{{- end -}}
+  {{- range $list -}}
+    {{- $id := trim (string .) " " -}}
+    {{- if $id -}}{{- $ids = $ids | append $id -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $ids -}}
+{{- $data := hugo.Data.authors -}}
+{{- $profile := .Site.Params.author_profile -}}
+{{- $default := trim (string ((partial "site-config.html" .).defaultAuthor | default "")) " " -}}
+{{- $linkTitle := "TA 的全部文章" -}}
+<div class="author-byline" data-author-ids="{{ delimit $ids "," }}">
+  <span class="byline-label">作者</span>
+  {{- range $id := $ids -}}
+  {{- $p := dict -}}
+  {{- with $data -}}{{- with index $data $id -}}{{- $p = . -}}{{- end -}}{{- end -}}
+  {{- $name := "" -}}
+  {{- with $p.name -}}{{- $name = string . -}}{{- end -}}
+  {{- if and (not $name) $profile (eq $id $default) -}}
+    {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
+  {{- end -}}
+  {{- $known := ne $name "" -}}
+  {{- if not $known -}}{{- $name = $id -}}{{- end -}}
+  {{- /* 头像链：作者表里填的 → 作者邮箱的 Gravatar/Cravatar/QQ → 站点默认图。
+         与底部作者框（partials/zero/author-view.html）同一条口径，两处不会一个有图一个没图。 */ -}}
+  {{- $filled := "" -}}
+  {{- with $p.avatar -}}{{- $filled = string . -}}{{- end -}}
+  {{- $mail := "" -}}
+  {{- with $p.email -}}{{- $mail = string . -}}{{- end -}}
+  {{- $chain := slice -}}
+  {{- if $filled -}}
+    {{- $chain = slice $filled -}}
+  {{- else -}}
+    {{- range (partial "avatar-chain.html" (dict "email" $mail "size" 128)) -}}
+      {{- $chain = $chain | append (string .) -}}
+    {{- end -}}
+    {{- if not $chain -}}{{- $chain = slice ($.Site.Params.authorAvatar | default "img/avatar.png") -}}{{- end -}}
+  {{- end -}}
+  {{- $urls := slice -}}
+  {{- range $u := $chain -}}
+    {{- $s := string $u | relURL -}}
+    {{- if and $s (not (in $urls $s)) -}}{{- $urls = $urls | append $s -}}{{- end -}}
+  {{- end -}}
+  {{- $rest := slice -}}
+  {{- range $i, $s := $urls -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $s -}}{{- end -}}{{- end -}}
+  {{- $avatar := index $urls 0 -}}
+  {{- /* 作者页链接：Site.Taxonomies 的键是 front matter 里那个值**小写化**之后的样子
+         （"Big Name" 存在 "big name" 底下），空格与大小写都不动，只有生成的目录名才 urlize。
+         以前只查 urlize 之后那个键，于是标识里一旦有大写 / 空格 / 中文，署名就成点不动的死字。
+         三档依次查：原值 → 小写 → urlize，命中哪个都用它。 */ -}}
+  {{- $term := "" -}}
+  {{- if isset $.Site.Taxonomies "author" -}}
+    {{- $tax := $.Site.Taxonomies.author -}}
+    {{- $term = index $tax $id -}}
+    {{- if not $term -}}{{- $term = index $tax (lower $id) -}}{{- end -}}
+    {{- if not $term -}}{{- $term = index $tax ($id | urlize) -}}{{- end -}}
+  {{- end -}}
+  {{- $open := "<span class=\"byline-link\">" -}}
+  {{- $close := "</span>" -}}
+  {{- if $term -}}
+    {{- $open = printf "<a class=\"byline-link\" href=\"%s\" title=\"%s\">" $term.Page.RelPermalink $linkTitle -}}
+    {{- $close = "</a>" -}}
+  {{- end -}}
+  <span class="byline-item" data-author="{{ $id }}" data-initial="{{ substr $name 0 1 }}" data-raw="{{ if $known }}0{{ else }}1{{ end }}">
+    {{- $open | safeHTML -}}
+    {{- /* 名字紧跟着就摆在旁边（<span class="byline-name">），alt 再写一遍会被读屏念两遍
+           （axe: image-redundant-alt）。头像是装饰图，退成 alt="" + aria-hidden。 */ -}}
+    <img class="byline-avatar" src="{{ $avatar }}" alt="" aria-hidden="true" loading="lazy"
+         data-chain="{{ delimit $rest " " }}"
+         onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{var h=this.closest('.byline-item');if(h)h.classList.add('is-fallback')}">
+    <span class="byline-name">{{ $name }}</span>
+    {{- $close | safeHTML -}}
+  </span>
+  {{- end -}}
+</div>
+{{- end -}}

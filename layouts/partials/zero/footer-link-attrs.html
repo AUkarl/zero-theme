@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  zero/footer-link-attrs.html — 页脚一条链接的「该不该出、挂哪个开关」
+  ------------------------------------------------------------
+  用法（footer.html 里，需要先拿到 partial "zero/api.html" 的结果）：
+    {{- $fl := partial "zero/footer-link-attrs.html" (dict "zero" $zero "link" .link "page" $) -}}
+    {{- if $fl.skip }}{{ continue }}{{ end }}
+    <a href="…"{{ $fl.attrs | safeHTMLAttr }}>
+
+  两件事：
+    1. 站内页面地址（以 / 结尾）在这座站里根本不存在 → 整条不出。
+       页脚数据是 data/footer.json，删页面不会反过来删掉这里的链接，
+       留着就是一个点开 404 的图标。feed（.xml）、外链、锚点照常出。
+    2. 路径归功能开关管（订阅 / 友链 / 时刻 / 工坊 / 关于 / 账号）→ 挂上
+       data-zero-switch，与导航、文章页 CTA 同一套运行期判据（键名见 path-switch.html）。
+  返回 (dict "skip" bool "attrs" string)
+  ============================================================ */ -}}
+{{- $link := trim (string (.link | default "")) " " -}}
+{{- $skip := false -}}
+{{- $attrs := "" -}}
+{{- if not $link -}}
+  {{- $skip = true -}}
+{{- else -}}
+  {{- $key := partial "zero/path-switch.html" $link -}}
+  {{- if hasPrefix $link "/" -}}
+    {{- $path := replaceRE `[?#].*$` "" $link -}}
+    {{- if hasSuffix $path "/" -}}
+      {{- $clean := trim $path "/" -}}
+      {{- $target := $.page.Site.GetPage (printf "/%s" $clean) -}}
+      {{- if not $target }}{{ $skip = true }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if and $key (not $skip) -}}
+    {{- $sw := partial "zero/switch.html" (dict "zero" .zero "key" $key) -}}
+    {{- $attrs = $sw.attrs -}}
+  {{- end -}}
+{{- end -}}
+{{- return (dict "skip" $skip "attrs" $attrs) -}}

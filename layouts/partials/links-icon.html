@@ -1,0 +1,60 @@
+{{- /* ============================================================
+  links-icon.html — 友链三处（朋友动态 / 左邻右舍 / 站点联盟）共用的图标位
+  ------------------------------------------------------------
+  用法：
+    {{- partial "links-icon.html" (dict "chain" $chain "box" "neighbor-icon" "size" "md") -}}
+    chain  按优先级排好的候选地址切片（各家自己拼，见下面的顺序说明）
+    box    外层 <span> 的 class（决定尺寸与圆角，CSS 已有）
+
+  行为：第一张直接输出成 <img src>，剩下的挂在 data-chain 上（空格分隔 —— 链上都是
+  图床与站点拼出来的规整地址，不会带空格）；某张加载失败就换下一张，全失败就把这张图
+  删掉，只留外层那个空的圆角底框。
+
+  为什么不显示首字母：这是按需求定的 —— 「都没有则留空」。以前每个取不到图的格子都顶一个
+  站名首字母，一排朋友里总有几个和图标无关的字母，看着像图坏了。
+
+  onerror 写成内联的：这三处本来就不依赖任何 JS 文件，脚本没加载也要能退图。
+
+  调用方的顺序（都在这个文件外面决定，改优先级不用动这里）：
+    朋友动态   文章自己的封面 → 正文插图（后端已合并成同一个 image 字段）→ 定时任务探到的 favicon
+               （data/linksicons.json）→ 检测记录带回来的 icon → 提交友链时填的头像/icon
+               → 邮箱那几家 → 留白
+    左邻右舍   提交友链时填的头像 → 定时任务抓的 favicon（data/linksicons.json）→ 邮箱那几家 → 留白
+    站点联盟   同上
+  ============================================================ */ -}}
+{{- $box := .box | default "links-icon" -}}
+{{- $valid := slice -}}
+{{- range .chain -}}
+  {{- $u := trim (string .) " " -}}
+  {{- if and $u (not (in $valid $u)) -}}{{- $valid = $valid | append $u -}}{{- end -}}
+{{- end -}}
+{{- if not $valid -}}
+<span class="{{ $box }}"></span>
+{{- else -}}
+{{- $first := index $valid 0 -}}
+{{- $rest := slice -}}
+{{- range $i, $u := $valid -}}{{- if gt $i 0 -}}{{- $rest = $rest | append $u -}}{{- end -}}{{- end -}}
+{{- /* 固定尺寸只用于给浏览器预留宽高（CLS），真实尺寸仍由 CSS 决定。 */ -}}
+{{- $w := 0 }}{{ $h := 0 }}
+{{- if eq $box "feed-cover" }}{{ $w = 132 }}{{ $h = 99 }}
+{{- else if eq $box "neighbor-icon" }}{{ $w = 72 }}{{ $h = 72 }}
+{{- else if eq $box "alliance-icon" }}{{ $w = 26 }}{{ $h = 26 }}{{ end }}
+{{- $opt := .optimize | default false -}}
+{{- $optOn := and $opt (ne .Site.Params.links.optimize_images false) -}}
+{{- $info := dict "ok" false -}}
+{{- if $optOn -}}
+  {{- /* 上传期清单里有 cover 变体就直接用现成的 WebP（h360/h720），不要再抓原图：
+         原图可能是 AVIF，Hugo 解不了会退回几 MB 的原链；非本站图清单里没有，仍走远程缩略。 */ -}}
+  {{- $info = partial "img-src.html" (dict "src" $first "page" .page "variant" "cover" "widths" (slice 264) "height" 198 "fit" "fill" "format" "webp" "quality" 74 "lqip" false "remote" true "timeout" "6s") -}}
+{{- end -}}
+{{- $src := $first -}}{{- $iw := 132 }}{{- $ih := 99 -}}
+{{- if $info.ok -}}{{- $src = $info.src -}}{{- $iw = 264 -}}{{- $ih = 198 -}}{{- end -}}
+<span class="{{ $box }}">
+  {{- /* 分页里没到跟的那几张：src 照旧由模板写（**不用 JS 的访客与现在完全一样**），
+         links.js 在初始化时把这些 src 挪到 data-src 上、翻页时再填回来 ——
+         有 JS 的人不再为看不见也翻不到的卡片下原图。 */ -}}
+  <img src="{{ $src }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" width="{{ $iw }}" height="{{ $ih }}"{{ if .defer }} data-defer="1"{{ end }}
+       data-chain="{{ delimit $rest " " }}"
+       onerror="var l=(this.dataset.chain||'').split(' ');if(l[0]){this.dataset.chain=l.slice(1).join(' ');this.src=l[0]}else{this.remove()}">
+</span>
+{{- end -}}

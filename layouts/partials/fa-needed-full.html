@@ -1,0 +1,45 @@
+{{- /* 判断当前页面是否用了图标清单外的 FA 类名。
+       清单内的图标走 fa/css/fa-subset.css（字体只有用到的字形）；清单外回退完整 FA，
+       保证后台任填一个 FA 类名仍然能显示，不会因为子集缺字形变空白。 */ -}}
+{{- $full := newScratch -}}
+{{- $full.Set "v" false -}}
+{{- $catalog := dict -}}
+{{- with resources.Get "fa-icons.json" }}{{ $catalog = . | transform.Unmarshal }}{{ end -}}
+{{- $known := slice -}}
+{{- range ($catalog.classes | default slice) -}}
+  {{- $parts := split . " " -}}
+  {{- with index $parts (sub (len $parts) 1) -}}{{- $known = $known | append . -}}{{- end -}}
+{{- end -}}
+{{- if not $known -}}{{- $full.Set "v" true -}}{{- end -}}
+{{- $generic := slice "fa-solid" "fa-regular" "fa-brands" "fa-fw" "fa-ul" "fa-li" "fa-border" "fa-pull-left" "fa-pull-right" "fa-spin" "fa-pulse" "fa-stack" "fa-inverse" "fa-rotate-90" "fa-rotate-180" "fa-rotate-270" "fa-flip-horizontal" "fa-flip-vertical" -}}
+{{- $values := slice -}}
+{{- with hugo.Data.nav -}}
+  {{- with .items -}}
+    {{- range . -}}
+      {{- with .icon }}{{ $values = $values | append . }}{{ end -}}
+      {{- with .children }}{{ range . }}{{ with .icon }}{{ $values = $values | append . }}{{ end }}{{ end }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- with hugo.Data.footer -}}
+  {{- range (slice .services .socialRow1 .social_row1 .socialRow2 .social_row2) -}}
+    {{- with . }}{{ range . }}{{ with .icon }}{{ $values = $values | append . }}{{ end }}{{ end }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+{{- with site.Params.footer -}}
+  {{- range (slice .services .social_row1 .socialRow1 .social_row2 .socialRow2) -}}
+    {{- with . }}{{ range . }}{{ with .icon }}{{ $values = $values | append . }}{{ end }}{{ end }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+{{- with site.Params.theme_switch_icon }}{{ $values = $values | append . }}{{ end -}}
+{{- with site.Params.themeSwitchIcon }}{{ $values = $values | append . }}{{ end -}}
+{{- /* 正文里可能手写 <i class="fa-...">：扫出来一起判断。 */ -}}
+{{- $raw := .RawContent | default "" -}}
+{{- range (findRE `fa-[a-z0-9-]+` $raw) }}{{ $values = $values | append . }}{{ end -}}
+{{- range $values -}}
+  {{- range (split (string .) " ") -}}
+    {{- $t := . -}}
+    {{- if and (hasPrefix $t "fa-") (not (in $generic $t)) (not (in $known $t)) }}{{ $full.Set "v" true }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+{{- return ($full.Get "v") -}}

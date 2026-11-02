@@ -1,0 +1,12 @@
+# Hugo 构建产物
+exampleSite/public/
+exampleSite/resources/
+exampleSite/.hugo_build.lock
+exampleSite/themes/
+
+# 本地依赖
+node_modules/
+
+# 操作系统
+.DS_Store
+Thumbs.db

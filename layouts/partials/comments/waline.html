@@ -1,0 +1,22 @@
+{{- /* comments/waline.html — Waline 评论系统 */ -}}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@waline/client@latest/dist/waline.css">
+<div id="waline"></div>
+<script type="module">
+  import { init } from 'https://cdn.jsdelivr.net/npm/@waline/client@latest/dist/waline.js';
+  init({
+    el: '#waline',
+    serverURL: '{{ .cfg.waline_server_url }}',
+    emoji: {{ .cfg.waline_emoji | default (slice "https://cdn.jsdelivr.net/npm/@waline/emojis/weibo") | jsonify | safeJS }},
+    commentSorting: '{{ .cfg.waline_comment_sorting | default "latest" }}',
+    {{- /* 文章页访客计数（Waline 的 visitor 选项，与下面浏览量那枚计数器是两回事） */}}
+    visitor: {{ ne .cfg.waline_visitor false }},
+    {{- /* 必填字段：默认昵称 + 邮箱；写成 [] 就都不强制 */}}
+    requiredMeta: {{ .cfg.waline_required_meta | default (slice "nick" "mail") | jsonify | safeJS }},
+    {{- with .cfg.waline_hint }}placeholder: {{ . | jsonify }},{{ end }}
+    {{- /* Waline v3 移除了 visitor/pageview 布尔选项，浏览量改为传入 CSS 选择器 */}}
+    {{- if ne .cfg.waline_pageview false }}
+    pageview: '.waline-pageview-count',
+    {{- end }}
+    lang: 'zh-CN'
+  });
+</script>

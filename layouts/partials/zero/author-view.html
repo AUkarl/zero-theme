@@ -1,0 +1,129 @@
+{{- /* ============================================================
+  zero/author-view.html — 解析「这篇文章的作者」
+  ------------------------------------------------------------
+  用法：{{- $v := partial "zero/author-view.html" . -}}
+  返回 dict：id / name / avatar / avatarChain / email / bio / donate / contacts / isOwner
+  顶部署名、底部作者框、赞赏弹窗、作者资料页都读这一份，保证几处说的是同一个人。
+  avatarChain 是头像的依次候选（本人填的 → 邮箱的 Gravatar/Cravatar/QQ → 站点默认图），
+  渲染处把它放进 data-chain，图片 404 就一张一张往下试。
+
+  取值顺序：data/authors.yaml[author] > author_profile（仅默认作者）> 站点参数。
+  投稿作者没登记的字段一律留空，不借用站长的简介、联系方式与赞赏码。
+  ============================================================ */ -}}
+{{- /* 默认作者与署名都可能来自后台「基本信息」（data/site.json），params 只是回落 */ -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $raw := .Params.author | default $siteCfg.defaultAuthor -}}
+{{- if reflect.IsSlice $raw -}}{{- $raw = index $raw 0 -}}{{- end -}}
+{{- $id := trim (string $raw) " " -}}
+{{- $isOwner := eq $id (trim (string ($siteCfg.defaultAuthor | default "")) " ") -}}
+{{- $entry := dict -}}
+{{- with hugo.Data.authors -}}{{- with index . $id -}}{{- $entry = . -}}{{- end -}}{{- end -}}
+{{- $profile := .Site.Params.author_profile -}}
+
+{{- $name := "" -}}
+{{- $known := false -}}
+{{- with $entry.name -}}{{- $name = string . -}}{{- if ne $name "" -}}{{- $known = true -}}{{- end -}}{{- end -}}
+{{- if and (not $name) $isOwner $profile -}}
+  {{- with $profile.nickname -}}{{- $name = string . -}}{{- end -}}
+{{- end -}}
+{{- if and (not $name) $isOwner -}}
+  {{- with $siteCfg.author -}}{{- $name = string . -}}{{- end -}}
+{{- end -}}
+{{- if not $name -}}{{- $name = $id -}}{{- end -}}
+
+{{- $avatar := "" -}}
+{{- with $entry.avatar -}}{{- $avatar = string . -}}{{- end -}}
+{{- if and (not $avatar) $isOwner $profile -}}
+  {{- with $profile.avatar -}}{{- $avatar = string . -}}{{- end -}}
+{{- end -}}
+{{- /* 头像退化链：本人填的 → 按邮箱的 Gravatar→Cravatar→QQ → 站点默认图。
+       投稿作者没填头像时以前直接顶站长那张（params.authorAvatar），看着就像「头像配错了人」；
+       现在先按作者自己的邮箱取，最后才用默认图兜底。 */ -}}
+{{- $email := "" -}}
+{{- with $entry.email -}}{{- $email = string . -}}{{- end -}}
+{{- $mailChain := slice -}}
+{{- if and (not $avatar) $email -}}
+  {{- range (partial "avatar-chain.html" (dict "email" $email "size" 128)) -}}
+    {{- $mailChain = $mailChain | append (string .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $fallback := string (.Site.Params.authorAvatar | default "img/avatar.png") -}}
+{{- $avatarChain := slice -}}
+{{- if $avatar -}}
+  {{- $avatarChain = slice $avatar -}}
+{{- else if $mailChain -}}
+  {{- $avatarChain = $mailChain -}}
+{{- else -}}
+  {{- $avatarChain = slice $fallback -}}
+{{- end -}}
+{{- if not $avatar -}}{{- $avatar = index $avatarChain 0 -}}{{- end -}}
+
+{{- /* 简介：bio 是主题配置文件里的键名，bio_zh 是旧站点与 data/authors.yaml 里常见的写法，两边都认 */ -}}
+{{- $bio := "" -}}
+{{- with (or $entry.bio $entry.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
+{{- if and (not $bio) $isOwner $profile -}}
+  {{- with (or $profile.bio $profile.bio_zh) -}}{{- $bio = string . -}}{{- end -}}
+{{- end -}}
+
+{{- $list := slice -}}
+{{- with $entry.donate -}}
+  {{- if reflect.IsSlice . -}}{{- $list = . -}}{{- else -}}{{- $list = slice . -}}{{- end -}}
+{{- end -}}
+{{- if and (not $list) $isOwner $profile $profile.donate -}}
+  {{- if reflect.IsSlice $profile.donate -}}{{- $list = $profile.donate -}}{{- else -}}{{- $list = slice $profile.donate -}}{{- end -}}
+{{- end -}}
+{{- /* 赞赏码只属于站长：params.donate 与 author_profile.donate 是站主自己配的，
+       投稿作者的框里挂上站长的收款码是错的。作者表里那条填了 donate 才显示按钮。 */ -}}
+{{- if and (not $list) $isOwner -}}
+  {{- with .Site.Params.donate -}}
+    {{- if reflect.IsSlice . -}}{{- $list = . -}}{{- else -}}{{- $list = slice . -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 空码不进列表：qr="" 时 donate-modal.html 里 `| relURL` 会得到 "/"，
+       前台就是一张永远加载失败的图；按钮也只在该作者真有一张码时才该出现。
+       出厂 params.toml 曾带一条 qr="" 的示例条目，新建的站第一篇文章页就中招。 */ -}}
+{{- $real := slice -}}
+{{- range $item := $list -}}
+  {{- $s := $item -}}
+  {{- if reflect.IsMap $item -}}{{- $s = $item.qr -}}{{- end -}}
+  {{- with $s -}}{{- $real = $real | append $item -}}{{- end -}}
+{{- end -}}
+{{- $list = $real -}}
+
+{{- $contacts := dict -}}
+{{- if or $entry.social $entry.email -}}
+  {{- $contacts = $entry -}}
+{{- else if and $isOwner $profile $profile.contacts -}}
+  {{- $contacts = dict "social" $profile.contacts -}}
+{{- else if and $isOwner .Site.Params.social -}}
+  {{- $contacts = dict "social" .Site.Params.social -}}
+{{- end -}}
+{{- /* 同理剔掉 url="" 的联系方式：空链接渲染出来是作者框里一个点不开的图标。
+       但 social 有两种合法形状，两种都得原样留着：
+         ① 条目列表 [{name,url,icon}…] —— 出厂 params.social、params.author_profile.contacts 是这种；
+         ② 名字→地址的表 {github:"https://…", email:"mailto:…"} —— data/authors.yaml 里站长老那一条是这种。
+       只按 ① 过滤会把 ② 每个元素当成「没有 url 的字符串」整组清空（range 到 map 上拿到的是值不是项，
+       取 .url 直接报错打死构建）。沙箱那份作者表是 ①，所以这条只有在他真实站点的数据上才炸出来。 */ -}}
+{{- if $contacts -}}
+  {{- $soc := $contacts.social -}}
+  {{- if reflect.IsSlice $soc -}}
+    {{- $keep := slice -}}
+    {{- range $s := $soc -}}
+      {{- if reflect.IsMap $s -}}
+        {{- with $s.url -}}{{- $keep = $keep | append $s -}}{{- end -}}
+      {{- else -}}
+        {{- with $s -}}{{- $keep = $keep | append $s -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $contacts = merge (dict) $contacts (dict "social" $keep) -}}
+  {{- else if reflect.IsMap $soc -}}
+    {{- $keep := dict -}}
+    {{- range $k, $v := $soc -}}
+      {{- with $v -}}{{- $keep = merge $keep (dict $k $v) -}}{{- end -}}
+    {{- end -}}
+    {{- $contacts = merge (dict) $contacts (dict "social" $keep) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return dict "id" $id "known" $known "name" $name "avatar" $avatar "avatarChain" $avatarChain "email" $email "bio" $bio "donate" $list "contacts" $contacts "isOwner" $isOwner -}}

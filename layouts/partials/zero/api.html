@@ -1,0 +1,11 @@
+{{- /* ============================================================
+  zero/api.html — 汇总 zero-stack 后端配置，供各 zero-* partial 复用
+  返回 (dict "base" ... "enabled" ...)
+
+  base    ：params.apiBaseURL（末尾斜杠会被去掉）
+  enabled ：params.zeroEnabled；未显式设置时，只要 base 非空就视为启用
+  ============================================================ */ -}}
+{{- $base := strings.TrimSuffix "/" (trim (.Site.Params.apiBaseURL | default "") " ") -}}
+{{- $flag := .Site.Params.zeroEnabled -}}
+{{- if not (isset .Site.Params "zeroenabled") -}}{{- $flag = true -}}{{- end -}}
+{{- return (dict "base" $base "enabled" (and $flag (ne $base ""))) -}}

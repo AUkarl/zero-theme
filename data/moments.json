@@ -1,0 +1,11 @@
+{
+  "paginate": 10,
+  "showLocation": true,
+  "defaultLocation": "",
+  "bannerShowBackground": true,
+  "bannerImage": "",
+  "showAvatar": false,
+  "showNickname": false,
+  "nickname": "",
+  "avatar": ""
+}

@@ -1,0 +1,47 @@
+{{- /* ============================================================
+  links-neighbor.html — 左邻右舍里的一个站点格子
+  ------------------------------------------------------------
+  入参（dict）：
+    site  来自 data/links.yaml 的站点信息（name / url / desc / icon / image / email / rss）
+    st    来自 data/linksstatus.json 的检测结果（用到的只有 group / online / icon / rss / daysSincePost）
+    icons 来自 data/linksicons.json 的 favicon 缓存（{站点地址: 图标地址}，定时任务写）
+
+  布局：左 3 右 7 两栏
+    左栏：网站图标（手填头像 → 定时任务抓的 favicon → Gravatar→Cravatar→QQ → 留白）
+    右栏：上=网站名（加粗）/ 中=简介（最多两行）/ 下=在线状态 + RSS 图标 + 最近更新
+  ============================================================ */ -}}
+{{- $site := .site -}}
+{{- $st := .st | default dict -}}
+{{- $icons := .icons | default dict -}}
+{{- $chain := slice ($site.icon | default "") ($site.image | default "") (index $icons (partial "cms/url-key.html" ($site.url | default "")) | default "") ($st.icon | default "") -}}
+{{- range (partial "avatar-chain.html" (dict "email" ($site.email | default "") "size" 128)) -}}
+  {{- $chain = $chain | append . -}}
+{{- end -}}
+{{- $rss := $site.rss | default ($st.rss | default "") -}}
+{{- $isOnline := $st.online | default false -}}
+{{- $group := $st.group | default "active" -}}
+<div class="neighbor{{ if eq $group "lost" }} is-lost{{ end }}">
+  {{- partial "links-icon.html" (dict "chain" $chain "box" "neighbor-icon") }}
+  <div class="neighbor-body">
+    <div class="neighbor-top">
+      <a class="neighbor-name" href="{{ $site.url }}" target="_blank" rel="noopener">{{ $site.name }}</a>
+    </div>
+    <p class="neighbor-desc">{{ $site.desc }}</p>
+    <div class="neighbor-bottom">
+      <span class="neighbor-state {{ if $isOnline }}is-online{{ else }}is-offline{{ end }}">
+        <i class="fas {{ if $isOnline }}fa-circle-check{{ else }}fa-plug-circle-xmark{{ end }}" aria-hidden="true"></i>
+        {{ if $isOnline }}{{ i18n "links-online" | default "在线" }}{{ else }}{{ i18n "links-offline" | default "失联" }}{{ end }}
+      </span>
+      {{- /* 有最新文章时间才显示更新信息；天数为 0（今天更新）也要显示——
+             直接用 with 会把 0 当空值吞掉，所以用 latestPost 判断有没有数据 */ -}}
+      {{- with $st.latestPost }}
+      {{- $d := $st.daysSincePost | default 0 }}
+      <span class="neighbor-updated">{{ if gt (int $d) 0 }}{{ i18n "links-updated-days" | default "最近更新" }} {{ $d }} {{ i18n "links-days-ago" | default "天前" }}{{ else }}{{ i18n "links-updated-today" | default "今天更新" }}{{ end }}</span>
+      {{- end }}
+      <span class="neighbor-links">
+        {{- with $rss }}<a href="{{ . }}" target="_blank" rel="noopener" title="RSS" aria-label="RSS"><i class="fas fa-rss" aria-hidden="true"></i></a>{{ end }}
+        <a href="{{ $site.url }}" target="_blank" rel="noopener" title="{{ i18n "links-visit" | default "访问站点" }}" aria-label="{{ i18n "links-visit" | default "访问站点" }}"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i></a>
+      </span>
+    </div>
+  </div>
+</div>

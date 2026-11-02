@@ -1,0 +1,38 @@
+{{- /* ============================================================
+  work-content.html — 工坊页内容归一化：data 目录的 works.json 优先，回落 [works] params
+  ------------------------------------------------------------
+  用法：{{- $w := partial "work-content.html" . -}}
+  返回 (dict "desc" "items" "show_desc")，items 每项：title / desc / status / url
+  字段对照：data 的 title / desc / status / url ↔ params 的 titleZh / descZh / statusZh / url。
+
+  为什么要归一化：params 那套字段名带大写后缀（历史遗留，还配过 i18nKey 做中英切换），
+  后台契约要的是短名字。收成一种形状后模板只有一条渲染路径，
+  没有 works.json 时读到的仍然是 params 的老内容。
+
+  顶层写成数组的 works 数据（早期 data/works.yaml 的形状）也认：直接当 items 用。
+  页面开关 [work].enable 仍只读 params —— 要不要留这个页面不是内容编辑该决定的事。
+  ============================================================ */ -}}
+{{- $work := .Site.Params.work | default dict -}}
+{{- $d := hugo.Data.works -}}
+{{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "descZh") "fallback" ($work.desc | default $work.desc_zh)) -}}
+{{- $raw := partial "cms/list.html" (dict "data" $d "keys" (slice "items" "works") "fallback" .Site.Params.works) -}}
+{{- if reflect.IsSlice $d -}}
+  {{- $raw = $d -}}
+{{- end -}}
+{{- $items := slice -}}
+{{- range $raw -}}
+  {{- if reflect.IsMap . -}}
+    {{- $items = $items | append (dict
+      "title"  (partial "cms/str.html" (dict "value" (or .title .titleZh .title_zh .name)))
+      "desc"   (partial "cms/str.html" (dict "value" (or .desc .descZh .desc_zh)))
+      "status" (partial "cms/str.html" (dict "value" (or .status .statusZh .status_zh)))
+      "url"    (partial "cms/str.html" (dict "value" (or .url .link)))) -}}
+  {{- end -}}
+{{- end -}}
+{{- return (dict
+  "desc" $desc
+  "items" $items
+  "show_desc" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showDesc" "show_desc") "default" (ne $work.show_desc false)))
+  "show_status" (ne $work.show_status false)
+  "show_url_icon" (ne $work.show_url_icon false)
+) -}}

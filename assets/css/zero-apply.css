@@ -1,0 +1,192 @@
+/* ============================================================
+   zero-apply.css — 友链在线申请表单
+   配色沿用 links.css 的变量，保证与四个板块同一个视觉。
+   本文件自带一套 --apply-* 变量（:root / [data-theme="dark"] /
+   prefers-color-scheme: dark 下的 [data-theme="auto"] 三处成对写），
+   友链页没有加载 zero.css，所以变量必须就地定义才不会退回浅色兜底值。
+   ============================================================ */
+
+:root {
+  --apply-surface: #ffffff;
+  --apply-line: #e2e2e2;
+  --apply-lead: #666666;
+  --apply-input-bg: #fbfbfb;
+  --apply-input-fg: #333333;
+  --apply-input-focus-bg: #ffffff;
+  --apply-hint: #999999;
+  --apply-accent-bg: #0d8368;
+  --apply-accent-fg: #ffffff;
+  --apply-required: #d0453b;
+  --apply-error: #d0453b;
+  --apply-ok: #0d8368;
+}
+
+[data-theme="dark"] {
+  --apply-surface: #2a2a2a;
+  --apply-line: #444444;
+  --apply-lead: #b5b5b5;
+  --apply-input-bg: #1e1e1e;
+  --apply-input-fg: #eeeeee;
+  --apply-input-focus-bg: #232323;
+  --apply-hint: #9a9a9a;
+  --apply-accent-bg: #7beec7;
+  --apply-accent-fg: #06251b;
+  --apply-required: #f87171;
+  --apply-error: #f87171;
+  --apply-ok: #7beec7;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] {
+    --apply-surface: #2a2a2a;
+    --apply-line: #444444;
+    --apply-lead: #b5b5b5;
+    --apply-input-bg: #1e1e1e;
+    --apply-input-fg: #eeeeee;
+    --apply-input-focus-bg: #232323;
+    --apply-hint: #9a9a9a;
+    --apply-accent-bg: #7beec7;
+    --apply-accent-fg: #06251b;
+    --apply-required: #f87171;
+    --apply-error: #f87171;
+    --apply-ok: #7beec7;
+  }
+}
+
+.zero-apply {
+  margin: 8px 0 20px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--apply-line, #e2e2e2);
+  border-radius: 12px;
+  background: var(--apply-surface, #fff);
+}
+
+.zero-apply[hidden] {
+  display: none;
+}
+
+.za-lead {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+  color: var(--apply-lead, #666);
+}
+
+/* 固定三列：第一行 站点名称 / 站点地址 / 站长邮箱，
+   第二行 RSS 链接 / 头像链接 / 我方链接，「简介」用 .za-full 横跨全部列。
+   窄屏逐级降列（两列 → 一列），否则输入框会被挤得没法打字。 */
+.za-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.za-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1024px) {
+  .za-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .za-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.za-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.88rem;
+  color: var(--text-secondary, #555);
+}
+
+.za-field em {
+  color: var(--apply-required, #d0453b);
+  font-style: normal;
+}
+
+.za-field input,
+.za-field textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--apply-line, #ddd);
+  border-radius: 8px;
+  background: var(--apply-input-bg, var(--input-bg, #fbfbfb));
+  color: var(--apply-input-fg, #333);
+}
+
+.za-field input::placeholder {
+  color: var(--apply-hint, #999);
+}
+
+/* 原来 focus 把底色写死成 #fff，深色模式下会跳成一块白，这里换成变量 */
+.za-field input:focus,
+.za-field textarea:focus {
+  outline: none;
+  border-color: var(--logo-accent-text, #0d8368);
+  background: var(--apply-input-focus-bg, #fff);
+}
+
+.za-field small {
+  color: var(--apply-hint, #999);
+  font-size: 0.78rem;
+}
+
+/* 蜜罐：视觉与读屏都隐藏，但保留在 DOM 里给脚本填 */
+.za-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.za-btn {
+  margin-top: 14px;
+  padding: 9px 22px;
+  font: inherit;
+  font-weight: 600;
+  /* 深色下 --logo-accent-text 是浅绿，白字压在浅绿上读不出来，所以成对给文字色 */
+  color: var(--apply-accent-fg, #fff);
+  background: var(--apply-accent-bg, #0d8368);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.za-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.za-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.za-msg {
+  margin: 12px 0 0;
+  font-size: 0.88rem;
+  min-height: 1.2em;
+}
+
+.za-msg:empty {
+  margin: 0;
+}
+
+.za-msg.is-error {
+  color: var(--apply-error, #d0453b);
+}
+
+.za-msg.is-success {
+  color: var(--apply-ok, #0d8368);
+}
+
+.za-closed {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--apply-line, #ddd);
+  border-radius: 10px;
+  color: var(--apply-lead, #888);
+  font-size: 0.9rem;
+}

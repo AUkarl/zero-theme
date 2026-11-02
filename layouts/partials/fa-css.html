@@ -1,0 +1,26 @@
+{{- /* ============================================================
+  fa-css.html — Font Awesome 的加载入口（head.html / index.html / 404.html 共用）
+  ------------------------------------------------------------
+  默认优先用 static/fa/css/fa-subset.css（字体只含图标清单里的字形）；
+  当前页面、导航、页脚、正文里出现清单外图标时，回退 full all.min.css。
+  这样后台仍可任选 FA 类名；常用图标走小字体，冷门图标不会空白。
+  [cdn].font_awesome_css 填了就仍用那个完整 CDN（自建/CDN 场景）。
+  ============================================================ */ -}}
+{{- $cdn := .Site.Params.cdn | default dict -}}
+{{- $custom := trim (string ($cdn.font_awesome_css | default "")) " " -}}
+{{- $remote := or (hasPrefix $custom "http://") (hasPrefix $custom "https://") (hasPrefix $custom "//") -}}
+{{- $needsFull := partial "fa-needed-full.html" . -}}
+{{- $faURL := "" -}}
+{{- if $custom -}}
+  {{- $faURL = $custom -}}
+{{- else if not $needsFull -}}
+  {{- $faURL = "fa/css/fa-subset.css" | relURL -}}
+{{- else -}}
+  {{- $faURL = "fa/css/all.min.css" | relURL -}}
+{{- end -}}
+{{- if $remote -}}
+  {{- $host := replaceRE `^(?:https?:)?//([^/]+).*$` "$1" $faURL -}}
+<link rel="preconnect" href="https://{{ $host }}" crossorigin>
+{{- end -}}
+<link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ $faURL }}"></noscript>

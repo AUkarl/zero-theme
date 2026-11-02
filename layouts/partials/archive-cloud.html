@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  archive-cloud.html — 归档页侧栏「分类」的第一版（服务端渲）
+  ------------------------------------------------------------
+  为什么：#categoryCloud 原来是个空 div，等 archive.js 填完才有高度。
+  移动端侧栏排在文章列表上面，它从 0 长到一百多像素时，把下面的列表和页脚整体
+  往下推 —— 列表改成服务端预渲之后，这条就是归档页剩下的最大一次位移。
+  这里先渲出同样的一份，JS 随后原样覆盖（它仍然重渲并重新绑事件），
+  所以外观、点击筛选都不变，只是首屏就有高度。
+
+  ⚠ 改这里必须同时核对 assets/js/archive.js：
+     · 分类取「第一个分类」，与注入数据里的 category 字段同一口径（见 archive/list.html）
+     · 顺序 = 按日期倒序遍历文章、第一次出现的分类排前面（JS 用的是 Map 的插入顺序）
+     · 文案「全部」= JS 里的 TEXT.all；class 名与 data-type/data-value 逐字一致
+     · 第一个 cloud-item 带 active-filter（JS 渲出来也是默认「全部」高亮）
+  ============================================================ */ -}}
+{{- $pages := .pages -}}
+{{- /* 只统计字符串，口径与 archive.js 的 getArchiveCounts(archiveData,'category') 一致 */ -}}
+{{- $keys := slice -}}
+{{- range $pages -}}
+  {{- $cats := partial "zero/strings.html" (.Params.categories | default slice) -}}
+  {{- $c := "" -}}
+  {{- if $cats }}{{ $c = index $cats 0 }}{{ end -}}
+  {{- if and $c (not (in $keys $c)) }}{{ $keys = $keys | append $c }}{{ end -}}
+{{- end -}}
+{{- /* 「全部」写死而不取 i18n：archive.js 的 TEXT.all 也是同一个硬编码词，
+       两边口径必须一致，否则 JS 覆盖的那一瞬间文字会跳。 */ -}}
+<span class="cloud-item active-filter" data-type="category" data-value="all">全部 <span class="count">{{ len $pages }}</span></span>
+{{- range $c := $keys -}}
+  {{- $n := 0 -}}
+  {{- range $p := $pages -}}
+    {{- $cats := partial "zero/strings.html" ($p.Params.categories | default slice) -}}
+    {{- $pc := "" -}}
+    {{- if $cats }}{{ $pc = index $cats 0 }}{{ end -}}
+    {{- if eq $pc $c }}{{ $n = add $n 1 }}{{ end -}}
+  {{- end -}}
+<span class="cloud-item" data-type="category" data-value="{{ $c }}">{{ $c }} <span class="count">{{ $n }}</span></span>
+{{- end -}}

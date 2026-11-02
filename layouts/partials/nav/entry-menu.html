@@ -1,0 +1,29 @@
+{{- /* ============================================================
+  nav/entry-menu.html — 把一条 menus.*.toml 的菜单项收成统一字段
+  ------------------------------------------------------------
+  用法：{{- partial "nav/entry-menu.html" (dict "entry" $e) -}}   $e 为 *menu.MenuEntry
+  字段含义见 nav/items.html 的说明。
+
+  params 里的键名保留原来的下划线写法（icon_only / zero_account），
+  同时认驼峰，后台哪天把菜单也导出成 JSON 不用再改模板。
+
+  menuEntry 存的是原始菜单对象：判断「当前页高亮」时除了比 URL，还要问
+  $.HasMenuCurrent，而这个 API 只认 Hugo 的菜单对象，data 项没有它。
+  ============================================================ */ -}}
+{{- $e := .entry -}}
+{{- $p := $e.Params | default dict -}}
+{{- return (dict
+  "name"        (string $e.Name)
+  "url"         (string $e.URL)
+  "weight"      (float $e.Weight)
+  "icon"        (trim (string ($p.icon | default "")) " ")
+  "image"       (trim (string ($p.image | default "")) " ")
+  "identifier"  (string $e.Identifier)
+  "parent"      (string $e.Parent)
+  "controls"    (eq (trim (string ($p.position | default "")) " ") "controls")
+  "external"    (partial "cms/value.html" (dict "data" $p "keys" (slice "external" "External"))).on
+  "iconOnly"    (partial "cms/value.html" (dict "data" $p "keys" (slice "icon_only" "iconOnly"))).on
+  "zeroAccount" (partial "cms/value.html" (dict "data" $p "keys" (slice "zero_account" "zeroAccount"))).on
+  "switchKey"   (partial "zero/nav-switch.html" (dict "entry" $e))
+  "menuEntry"   $e
+) -}}

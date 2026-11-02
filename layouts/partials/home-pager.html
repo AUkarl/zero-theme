@@ -1,0 +1,23 @@
+{{- /* ============================================================
+  home-pager.html — 首页 grid 的分页条（服务端骨架专用）
+  ------------------------------------------------------------
+  与 assets/js/home.js 里 renderGarden() 生成分页那一段逐项一致：
+  「‹ 上一页  第 [输入框] 页 / 共 N 页  下一页 ›」。
+  这一条也是 DCL 之后才出现的，所以一起烘进首屏。
+
+  入参：dict "labels" (homeConfig.labels 那一份) "page" 当前页 "totalPages" 共几页
+  ============================================================ */ -}}
+{{- $L := .labels | default dict -}}
+{{- $page := int (.page | default 1) -}}
+{{- $total := int (.totalPages | default 1) -}}
+{{- $prev := $L.prev | default "上一页" -}}
+{{- $next := $L.next | default "下一页" -}}
+{{- $wordPage := $L.page | default "第" -}}
+{{- $wordUnit := $L.pageSuffix | default "页" -}}
+{{- $wordTotal := $L.pageTotal | default "共" -}}
+{{- $ariaJump := $L.jump | default "输入页码跳转" -}}
+<button class="page-btn prev-btn" {{ if le $page 1 }}disabled{{ end }} data-page="{{ sub $page 1 }}">‹ {{ $prev }}</button
+><span class="page-jump"><span class="page-jump-word">{{ $wordPage }}</span
+><input class="page-input" type="number" min="1" max="{{ $total }}" step="1" value="{{ $page }}" inputmode="numeric" aria-label="{{ $ariaJump }}"
+><span class="page-jump-word">{{ $wordUnit }} / {{ $wordTotal }} {{ $total }} {{ $wordUnit }}</span
+></span><button class="page-btn next-btn" {{ if ge $page $total }}disabled{{ end }} data-page="{{ add $page 1 }}">{{ $next }} ›</button>

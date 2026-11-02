@@ -1,0 +1,80 @@
+{{- /* ============================================================
+  page/work.html — 工坊页
+  展示进行中的创作项目卡片
+  项目来源：data 目录里的 works.json（后台 CMS 写）优先，
+  没这个文件时回落 params（[work] 的描述 + [[works]] 列表）。
+  字段对照与取值规则见 partials/work-content.html。
+
+  两层开关，别混：
+    · params.work.enable = false（构建期）→ 这一页连内容都不渲染，只剩一句「配置里已关闭」
+    · workEnabled = false（后台开关，GET /api/config）→ 整页内容默认隐藏，拿到配置后换成
+      「工坊页已关闭」；内容仓库带了 functions/_middleware.ts 的站，边缘还会把 /work/ 直接返回 404
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- partial "zero/inline-css.html" (slice "css/work.css") -}}
+{{- end -}}
+
+{{- define "main" -}}
+{{- $w := partial "work-content.html" . -}}
+{{- $zeroW := partial "zero/api.html" . -}}
+{{- $swWork := partial "zero/switch.html" (dict "zero" $zeroW "key" "workEnabled") -}}
+{{- if (ne .Site.Params.work.enable false) }}
+<main class="main" id="main">
+  <section class="section"{{ $swWork.attrs | safeHTMLAttr }}>
+    <h1 class="section-title" data-i18n="work-title">{{ i18n "work-title" | default "工坊" }}</h1>
+    {{- if $w.show_desc }}
+    {{- if $w.desc }}
+    <p class="section-desc" data-i18n="work-desc">{{ partial "zero/md-text.html" (dict "text" $w.desc) }}</p>
+    {{- else }}
+    <p class="section-desc" data-i18n="work-desc">{{ i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。" }}</p>
+    {{- end }}
+    {{- end }}
+    <div class="work-grid">
+      {{- range $i, $item := $w.items }}
+      {{- $link := $item.url -}}
+      {{- if $link }}
+      <a class="work-card work-card-link" data-reveal href="{{ $link }}" target="_blank" rel="noopener">
+        <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
+        <p data-i18n="work-card-{{ $i }}-desc">{{ partial "zero/md-text.html" (dict "text" $item.desc) }}</p>
+        {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
+        {{- if $w.show_url_icon }}<i class="fas fa-external-link-alt work-ext-icon"></i>{{ end }}
+      </a>
+      {{- else }}
+      <div class="work-card" data-reveal>
+        <h2 data-i18n="work-card-{{ $i }}-title">{{ $item.title }}</h2>
+        <p data-i18n="work-card-{{ $i }}-desc">{{ partial "zero/md-text.html" (dict "text" $item.desc) }}</p>
+        {{- if and $w.show_status $item.status }}<span class="status" data-i18n="work-card-{{ $i }}-status">{{ $item.status }}</span>{{ end }}
+      </div>
+      {{- end }}
+      {{- end }}
+    </div>
+  </section>
+  {{- partial "zero/closed.html" (dict "zero" $zeroW "key" "workEnabled" "text" "工坊页已关闭。") -}}
+</main>
+{{- else }}
+<main class="main" id="main">
+  <section class="section" style="text-align:center;padding:60px 20px;">
+    <p style="color:var(--text-secondary);" data-i18n="work-disabled">工坊页当前未开放。</p>
+  </section>
+</main>
+{{- end }}
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $w := partial "work-content.html" . -}}
+{{- /* 工坊页文案：卡片正文按序号登记，键名要和上面渲染的 data-i18n 一一对应。
+       值走 jsonify —— 项目描述是后台写的，出现引号时不能让整段脚本解析失败。 */ -}}
+<script>
+  window.i18nMap = {
+    'zh': {
+      'work-title': {{ i18n "work-title-zh" | default "工坊" | jsonify | safeJS }},
+      'work-desc': {{ $w.desc | default (i18n "work-desc-zh" | default "正在进行的创作项目，记录从灵感到成品的旅程。") | jsonify | safeJS }}
+      {{- range $i, $item := $w.items }},
+      'work-card-{{ $i }}-title': {{ $item.title | jsonify | safeJS }},
+      'work-card-{{ $i }}-desc': {{ $item.desc | jsonify | safeJS }},
+      'work-card-{{ $i }}-status': {{ $item.status | jsonify | safeJS }}
+      {{- end }}
+    }
+  };
+</script>
+{{- end -}}

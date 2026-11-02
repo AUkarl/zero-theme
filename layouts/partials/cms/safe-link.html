@@ -1,0 +1,10 @@
+{{- /* 只有 http(s):// 开头的绝对地址才给 <a href>。
+       接口侧（services/friends-groups.ts）已经拦住了坏协议，这一层兜的是两种情况：
+       links.yaml 里手写的老数据、以及定时抓来的 friendfeed.json 里别人家的 RSS 字段。
+       javascript: / data: 原样进 href 就是「点一下在你自己的域名下执行脚本」。 */ -}}
+{{- $u := trim (.url | string) " " | lower | strings.TrimSuffix "/" -}}
+{{- if or (hasPrefix $u "http://") (hasPrefix $u "https://") -}}
+<a href="{{ .url }}"{{ with .cls }} class="{{ . }}"{{ end }} target="_blank" rel="noopener">{{ .label }}</a>
+{{- else -}}
+{{ .label }}
+{{- end -}}

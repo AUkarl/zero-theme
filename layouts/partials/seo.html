@@ -1,0 +1,298 @@
+{{- /* ============================================================
+  seo.html — SEO 元数据
+  参数取法见 partials/seo-config.html：data/seo.json（后台「前端管理 → SEO」）
+  优先，params.toml 的 [seo] 兜底
+
+  输出：description / canonical / robots / Open Graph / Twitter Card
+        / JSON-LD（Article、BreadcrumbList、WebSite）
+
+  新增标签全部可用 [seo] 下的开关关闭，默认行为与旧版兼容。
+  ============================================================ */ -}}
+{{- $seo := partial "seo-config.html" . -}}
+
+{{- /* ---------- description：页面 description → .Description → 摘要 → SEO 默认描述 → 站点描述 ----------
+  「SEO 默认描述」排在「站点描述」前面是有意的：后台两个面板都写了一句话给 meta，
+  以前是站点描述压着默认描述，而 site-config.html 的 description 最差会兜到站点标题 ——
+  结果「前端管理 → SEO → 默认描述」实测一次都取不到（站长填了前台一个字不变，是个死控件）。
+  现在默认描述是全站 meta 的首选，站点描述退成兜底；两格都空就不出 description 标签，
+  不再拿站点名冒充描述（体检工具报「缺描述」是真缺，比假装有强）。
+  ---------- */ -}}
+{{- $descMax := $seo.description_length | default 160 -}}
+{{- $desc := "" -}}
+{{- /* 每一档都过 one-string：data/*.json 与 front matter 里的描述写成数组/对象时，
+       以前会一路撞到下面那句 plainify 上，报 `unable to cast map[string]interface{}`
+       把**整站构建**打死（每一页都跑这个 partial）。切片就取第一项，映射等怪形状当没填。 */ -}}
+{{- with .Params.description }}{{ $desc = partial "one-string.html" . }}{{ end -}}
+{{- if not $desc }}{{ with .Description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with .Summary }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- /* 列表页/关于页/工坊页等没有 front matter description 时，用本页正文做唯一描述；
+       以前 79 个非文章页共用一条站点默认描述，搜索结果里全是同一句。首页仍用 SEO 默认描述。 */ -}}
+{{- if and (not $desc) (not .IsPage) (not .IsHome) }}{{ with .Content }}{{ $desc = . | plainify }}{{ end }}{{ end -}}
+{{- /* 标签/分类页多数没有 _index.md，正文是空的；用名称 + 篇数生成唯一描述。 */ -}}
+{{- if and (not $desc) (eq .Kind "term") }}{{ $desc = printf "%s · 共 %d 篇内容。" .Title .Pages.Len }}{{ end -}}
+{{- if not $desc }}{{ with $seo.default_description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
+{{- if not $desc }}{{ with (partial "site-config.html" .).description }}{{ $desc = partial "one-string.html" . }}{{ end }}{{ end -}}
+{{- if or (reflect.IsSlice $desc) (reflect.IsMap $desc) }}{{ $desc = "" }}{{ end -}}
+{{- $desc = $desc | plainify | htmlUnescape | replaceRE `\s+` " " | strings.TrimSpace | truncate $descMax -}}
+
+{{- /* ---------- 分享图：页面 image/img → 配置默认 → 站点 logo ---------- */ -}}
+{{- $image := partial "one-string.html" (.Params.image | default .Params.img) -}}
+{{- if not $image }}{{ $image = partial "one-string.html" $seo.og_image_default }}{{ end -}}
+{{- /* 后台已把 SEO 的默认分享图并入「基本信息 → 分享图」；没有 data/seo.json 的站也要优先用它，别直接掉到 favicon。 */ -}}
+{{- if not $image }}{{ $image = partial "one-string.html" (partial "site-config.html" .).ogImage }}{{ end -}}
+{{- if not $image }}{{ $image = partial "one-string.html" ((partial "site-config.html" .).favicon | default "img/logo-nav.png") }}{{ end -}}
+{{- /* OG 图必须是 1200×630 的 JPEG：很多平台（微信、部分消息客户端）不显示 WebP。
+       单次调用允许抓远程源图，哪怕全局 [image].remote_fetch=false；抓不到再退回原地址。
+       本站上传的图若是 AVIF，原图 Hugo 解不了：先查上传期变体清单，拿现成的 h720 WebP
+       再转 1200×630 JPEG，别去抓 AVIF。 */ -}}
+{{- $ogInfo := partial "img-src.html" (dict "src" $image "page" . "variant" "cover" "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+{{- if and $ogInfo.ok $ogInfo.variant -}}
+  {{- $ogInfo = partial "img-src.html" (dict "src" $ogInfo.src "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+{{- end -}}
+{{- if not $ogInfo.ok -}}
+  {{- /* 页面自己的图处理不了（AVIF/抓取失败）时再试一次配置默认图 */ -}}
+  {{- $fallback := partial "one-string.html" $seo.og_image_default -}}
+  {{- if and $fallback (ne $fallback $image) -}}
+    {{- $try := partial "img-src.html" (dict "src" $fallback "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+    {{- if $try.ok -}}{{- $ogInfo = $try -}}{{- $image = $fallback -}}{{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $ogInfo.ok -}}
+  {{- /* 最后的兜底：favicon → 主题自带 bj.png。宁可分享卡片显示一张能打开的图，
+         也不要把一个 404 的默认图地址丢给平台（线上曾配过不存在的 /img/bj.webp）。 */ -}}
+  {{- $fav := partial "one-string.html" ((partial "site-config.html" .).favicon | default "img/logo-nav.png") -}}
+  {{- if $fav -}}
+    {{- $try := partial "img-src.html" (dict "src" $fav "page" . "widths" (slice 1200) "height" 630 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+    {{- if $try.ok -}}{{- $ogInfo = $try -}}{{- end -}}
+    {{- $image = $fav -}}
+  {{- else -}}
+    {{- $image = "/img/bj.png" -}}
+  {{- end -}}
+{{- end -}}
+{{- if $ogInfo.ok -}}
+  {{- $image = $ogInfo.src | absURL -}}
+{{- else if not (or (hasPrefix $image "http://") (hasPrefix $image "https://")) -}}
+  {{- $image = $image | absURL -}}
+{{- end -}}
+{{- $keywords := .Params.keywords | default $seo.default_keywords | default (partial "site-config.html" .).keywords -}}
+{{- /* 作者署名：front matter 的 author 写的是「标识」，SEO 要的是名字。
+       顺序 = data/authors.yaml 里这个标识的 name → 站长的作者资料 → 标识本身；
+       文章没写 author 时用默认作者标识，再退回 params.author / [seo].site_author。 */ -}}
+{{- $siteCfg := partial "site-config.html" . -}}
+{{- $authorsData := hugo.Data.authors | default dict -}}
+{{- $ownerId := trim (string ($siteCfg.defaultAuthor | default "")) " " -}}
+{{- $ownerName := "" -}}
+{{- with index $authorsData $ownerId -}}{{- $ownerName = string .name -}}{{- end -}}
+{{- if not $ownerName -}}{{- $ownerName = trim (string ($siteCfg.author | default "")) " " -}}{{- end -}}
+{{- $idList := slice -}}
+{{- $authorParam := .Params.author -}}
+{{- if $authorParam -}}
+  {{- if reflect.IsSlice $authorParam -}}
+    {{- range $one := $authorParam -}}{{- $t := trim (string $one) " " -}}{{- if $t -}}{{- $idList = $idList | append $t -}}{{- end -}}{{- end -}}
+  {{- else -}}
+    {{- $t := trim (string $authorParam) " " -}}{{- if $t -}}{{- $idList = $idList | append $t -}}{{- end -}}
+  {{- end -}}
+{{- else if $ownerId -}}
+  {{- $idList = slice $ownerId -}}
+{{- end -}}
+{{- $nameList := slice -}}
+{{- range $id := $idList -}}
+  {{- $n := "" -}}
+  {{- with index $authorsData $id -}}{{- $n = string .name -}}{{- end -}}
+  {{- if not $n -}}{{- $n = $ownerName -}}{{- end -}}
+  {{- if not $n -}}{{- $n = $id -}}{{- end -}}
+  {{- $nameList = $nameList | append $n -}}
+{{- end -}}
+{{- $author := delimit (uniq $nameList) ", " -}}
+{{- if not $author -}}{{- $author = $siteCfg.author | default $seo.site_author | default $ownerName -}}{{- end -}}
+
+{{- /* ---------- 标题 / 站点名 ---------- */ -}}
+{{- $siteName := (partial "site-config.html" .).navName -}}
+{{- /* 首页的 .Title 是 content/_index.md 里的标题（新建站时那份还是示例站的 "Example Site"），
+       分享卡片会顶着它 —— 和浏览器标签、RSS 统一：首页只用站点名 */ -}}
+{{- /* 标题口径只有一份：见 partials/page-title.html（没写 title 的内容会退正文摘要→日期→站名，
+       以前这里 `.Title | default $siteName` 会让分享卡片顶着站点名） */ -}}
+{{- $pageTitle := partial "page-title.html" . -}}
+{{- if or .IsHome (eq .Section "home") }}{{ $pageTitle = $siteName }}{{ end -}}
+
+{{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
+{{- if (ne $seo.enable_canonical false) }}
+<link rel="canonical" href="{{ .Permalink }}">
+{{- end }}
+
+{{- /* ---------- robots（判据在 partials/seo-robots.html，sitemap 也用同一份） ---------- */ -}}
+{{- with partial "seo-robots.html" . }}
+<meta name="robots" content="{{ . }}">
+{{- end }}
+
+{{- /* ---------- 基础 meta ---------- */ -}}
+{{- /* 没写出描述时干脆不出这条标签：内容真的缺，就让它缺得可见，
+       不要用站点名凑一条假描述把体检工具糊过去。 */ -}}
+{{- with $desc }}<meta name="description" content="{{ . }}">
+{{- end }}
+{{- if (ne $seo.enable_keywords false) }}
+  {{- with $keywords }}
+    {{- /* delimit 只吃切片：keywords 被人写成一句字符串（后台那格就是逗号分隔的输入框）时，
+           以前这句会让整站构建死在 delimit 上，与 description 那条是同一家族 */ -}}
+    {{- if reflect.IsSlice . }}
+<meta name="keywords" content="{{ delimit . ", " }}">
+    {{- else if eq (printf "%T" .) "string" }}
+<meta name="keywords" content="{{ . }}">
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- with $author }}
+<meta name="author" content="{{ . }}">
+{{- end }}
+
+{{- /* ---------- Open Graph ---------- */ -}}
+{{- if (ne $seo.enable_og false) }}
+<meta property="og:title" content="{{ $pageTitle }}">
+{{- with $desc }}<meta property="og:description" content="{{ . }}">{{ end }}
+<meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
+<meta property="og:url" content="{{ .Permalink }}">
+<meta property="og:site_name" content="{{ $siteName }}">
+{{- /* og:locale 要的是 zh_CN 这种形状：hugo.toml 顶层那句 locale = "zh-CN" 进的是 .Language.Locale，
+       以前取的 .Language.Lang 只有 "zh"（里面没有 "-" 可替换），所以线上一直是 og:locale=zh。
+       不要写成 Locale | default LanguageCode | default Lang —— default 是急切求值的，
+       中间那档 v0.158 起已废弃，就算永远取不到也会**每页**喷一条 deprecated WARN（实测）。 */ -}}
+<meta property="og:locale" content="{{ replace (.Language.Locale | default .Language.Lang | default "zh") "-" "_" }}">
+{{- range .Translations }}
+<meta property="og:locale:alternate" content="{{ replace (.Language.Locale | default .Language.Lang | default "zh") "-" "_" }}">
+{{- end }}
+{{- with $image }}
+<meta property="og:image" content="{{ . }}">
+<meta property="og:image:alt" content="{{ $pageTitle }}">
+{{- if $ogInfo.ok }}
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+{{- end }}
+{{- end }}
+{{- if .IsPage }}
+<meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
+<meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
+{{- with $author }}<meta property="article:author" content="{{ . }}">{{ end }}
+{{- with .Params.categories }}<meta property="article:section" content="{{ if reflect.IsSlice . }}{{ index . 0 }}{{ else }}{{ . }}{{ end }}">{{ end }}
+{{- with .Params.tags }}{{ if reflect.IsSlice . }}{{ range . }}<meta property="article:tag" content="{{ . }}">{{ end }}{{ else }}<meta property="article:tag" content="{{ . }}">{{ end }}{{ end }}
+{{- end }}
+{{- end }}
+
+{{- /* ---------- Twitter Card ---------- */ -}}
+{{- if (ne $seo.enable_twitter false) }}
+<meta name="twitter:card" content="{{ if $image }}summary_large_image{{ else }}summary{{ end }}">
+<meta name="twitter:title" content="{{ $pageTitle }}">
+{{- with $desc }}<meta name="twitter:description" content="{{ . }}">{{ end }}
+{{- with $image }}
+<meta name="twitter:image" content="{{ . }}">
+<meta name="twitter:image:alt" content="{{ $pageTitle }}">
+{{- end }}
+{{- with $seo.twitter_site }}
+<meta name="twitter:site" content="{{ . }}">
+{{- end }}
+{{- with $seo.twitter_creator }}
+<meta name="twitter:creator" content="{{ . }}">
+{{- end }}
+{{- end }}
+
+{{- /* ---------- 结构化数据 ---------- */ -}}
+{{- if (ne $seo.enable_jsonld false) -}}
+  {{- $publisherLogo := $seo.publisher_logo | default (partial "site-config.html" .).logo | default "img/logo-nav.png" -}}
+  {{- if not (or (hasPrefix $publisherLogo "http://") (hasPrefix $publisherLogo "https://")) -}}
+    {{- $publisherLogo = $publisherLogo | absURL -}}
+  {{- end -}}
+
+  {{- if .IsPage -}}
+    {{- $article := dict
+      "@context" "https://schema.org"
+      "@type" "BlogPosting"
+      "headline" $pageTitle
+      "description" $desc
+      "inLanguage" (.Language.Lang | default "zh")
+      "author" (dict "@type" "Person" "name" ($author | default $siteName))
+      "publisher" (dict "@type" "Organization" "name" $siteName "logo" (dict "@type" "ImageObject" "url" $publisherLogo))
+      "datePublished" (.Date.Format "2006-01-02T15:04:05Z07:00")
+      "dateModified" (.Lastmod.Format "2006-01-02T15:04:05Z07:00")
+      "mainEntityOfPage" (dict "@type" "WebPage" "@id" .Permalink)
+      "wordCount" .WordCount
+    -}}
+    {{- with $image }}{{ $article = merge $article (dict "image" (slice .)) }}{{ end -}}
+    {{- /* categories / tags 兼容「列表」与「单个字符串」两种写法 */ -}}
+    {{- with .Params.categories -}}
+      {{- $cat := . -}}
+      {{- if reflect.IsSlice . }}{{ $cat = index . 0 }}{{ end -}}
+      {{- $article = merge $article (dict "articleSection" $cat) -}}
+    {{- end -}}
+    {{- with .Params.tags -}}
+      {{- $kw := . -}}
+      {{- if reflect.IsSlice . }}{{ $kw = delimit . ", " }}{{ end -}}
+      {{- $article = merge $article (dict "keywords" $kw) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $article | jsonify | safeJS }}</script>
+
+    {{- /* 面包屑：站点 → 栏目 → 文章
+       栏目那一级只有在**真的渲染出来了**才写：内容仓给 `_index.md` 写 `build: { render: never }`
+       （主题 exampleSite 出厂就是这份写法）时，`.CurrentSection.Permalink` 是空串，
+       以前会照样 append 出一条 `"item":""` 的无效项 —— Google 富结果校验就是卡在这。 */ -}}
+    {{- if (ne $seo.enable_breadcrumb false) -}}
+      {{- $pos := 1 -}}
+      {{- $items := slice (dict "@type" "ListItem" "position" $pos "name" $siteName "item" .Site.Home.Permalink) -}}
+      {{- with .Params.categories -}}
+        {{- $cat := . -}}
+        {{- if reflect.IsSlice . }}{{ $cat = index . 0 }}{{ end -}}
+        {{- /* 分类名可能是中文：urlize 会把「体育赛事」编码成 %E4%BD%93…，GetPage 用百分号路径
+              查不到，面包屑就少一级；先用原值查，查不到再退回 urlize（ASCII 分类名两种都行）。 */ -}}
+        {{- $catPage := $.Site.GetPage (printf "/categories/%s" (string $cat)) -}}
+        {{- if not $catPage }}{{ $catPage = $.Site.GetPage (printf "/categories/%s" (urlize (string $cat))) }}{{ end -}}
+        {{- with $catPage -}}
+          {{- $pos = add $pos 1 -}}
+          {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .Title "item" .Permalink) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- /* 栏目级只在真的输出 HTML 时才写：posts 现在只出 RSS，`.Permalink` 会变成
+            /posts/index.xml，写进面包屑就是一条指向 feed 的路径。 */ -}}
+      {{- if and .CurrentSection (not .CurrentSection.IsHome) .CurrentSection.Permalink (.CurrentSection.OutputFormats.Get "HTML") -}}
+        {{- $pos = add $pos 1 -}}
+        {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" .CurrentSection.Title "item" .CurrentSection.Permalink) -}}
+      {{- end -}}
+      {{- $pos = add $pos 1 -}}
+      {{- $items = $items | append (dict "@type" "ListItem" "position" $pos "name" $pageTitle "item" .Permalink) -}}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BreadcrumbList" "itemListElement" $items | jsonify | safeJS }}</script>
+    {{- end -}}
+  {{- else if eq .Kind "term" -}}
+    {{- $isAuthor := eq (lower (string .Data.Singular)) "author" -}}
+    {{- $node := dict
+      "@context" "https://schema.org"
+      "@type" (cond $isAuthor "ProfilePage" "CollectionPage")
+      "name" $pageTitle
+      "description" $desc
+      "url" .Permalink
+      "inLanguage" (.Language.Lang | default "zh")
+    -}}
+    {{- if $isAuthor -}}
+      {{- $node = merge $node (dict "mainEntity" (dict "@type" "Person" "name" .Title)) -}}
+    {{- else -}}
+      {{- $items := slice -}}
+      {{- range $i, $p := first 20 .Pages.ByDate.Reverse -}}
+        {{- $items = $items | append (dict "@type" "ListItem" "position" (add $i 1) "name" $p.Title "item" $p.Permalink) -}}
+      {{- end -}}
+      {{- $node = merge $node (dict "mainEntity" (dict "@type" "ItemList" "itemListElement" $items)) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $node | jsonify | safeJS }}</script>
+  {{- else -}}
+    {{- $site := dict
+      "@context" "https://schema.org"
+      "@type" "WebSite"
+      "name" $siteName
+      "url" .Site.BaseURL
+      "description" ($seo.default_description | default (partial "site-config.html" .).description | default "")
+      "inLanguage" (.Language.Lang | default "zh")
+    -}}
+    {{- if $seo.enable_search_action | default false -}}
+      {{- $site = merge $site (dict "potentialAction" (dict
+        "@type" "SearchAction"
+        "target" (printf "%sarchive/?q={search_term_string}" .Site.BaseURL)
+        "query-input" "required name=search_term_string")) -}}
+    {{- end -}}
+<script type="application/ld+json">{{ $site | jsonify | safeJS }}</script>
+  {{- end -}}
+{{- end -}}

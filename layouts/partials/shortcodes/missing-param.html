@@ -1,0 +1,14 @@
+{{- /* ============================================================
+  partials/shortcodes/missing-param.html — 短代码缺参数 / 参数不合法时的可见提示
+  ------------------------------------------------------------
+  用法：{{- partial "shortcodes/missing-param.html" (dict "name" "audio" "param" "src" "page" .Page) -}}
+
+  为什么要有：后台编辑器的插入面板会生成这些短代码，少填一个字段时
+  原来的表现是「页面上一个空播放器 / 一张破图」，看不出是谁的锅。
+  这里改成一句话说明，作者在预览里就能立刻发现是哪个短代码少了什么。
+  ============================================================ */ -}}
+{{- $name := .name | default "shortcode" -}}
+{{- $param := .param | default "" -}}
+<aside class="zero-config-hint shortcode-missing-param">
+  <p>{{ printf "[shortcode %s] missing %s / 短代码 %s 缺少 %s 参数（外部地址只接受 http:// 与 https://），已跳过渲染。" $name $param $name $param }}</p>
+</aside>

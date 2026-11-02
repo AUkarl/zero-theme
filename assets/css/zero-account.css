@@ -1,0 +1,50 @@
+/* ============================================================
+   zero-account.css — /account/ 登录页专属补充
+   ------------------------------------------------------------
+   容器、卡片、标签行、表单、按钮、提示信息、找回密码那一行文案、整页关闭时
+   的收口提示与它们的明暗配色都在 account.css；这里只补 account.js 动态渲染
+   出来的两处：输入框下方的小字说明 .za-hint，以及登录接口要动态码时才出现的
+   提示块 .za-totp。
+
+   颜色一律走变量：正文与次要文字吃 common.css 的 --text / --text-secondary
+   （明暗两套由 [data-theme] 自动切换）。提醒色 common.css 没有全局变量，就在
+   本页作用域内定义局部变量（不动全局 :root），浅色一套，[data-theme="dark"]
+   与系统深色下的 [data-theme="auto"] 各一套，保证深底上仍然可读。
+   ============================================================ */
+
+.account-box {
+  --za-alert: #96601a;
+  --za-alert-border: rgba(150, 96, 26, 0.35);
+  --za-alert-soft: rgba(150, 96, 26, 0.08);
+}
+
+[data-theme="dark"] .account-box {
+  --za-alert: #fbbf24;
+  --za-alert-border: rgba(251, 191, 36, 0.42);
+  --za-alert-soft: rgba(251, 191, 36, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="auto"] .account-box {
+    --za-alert: #fbbf24;
+    --za-alert-border: rgba(251, 191, 36, 0.42);
+    --za-alert-soft: rgba(251, 191, 36, 0.12);
+  }
+}
+
+.account-box .za-hint {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+/* 动态码那一格的说明：贴在输入框下面，讲清「为什么突然多出一格」 */
+.account-box .za-totp {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--za-alert-border);
+  border-radius: var(--radius);
+  background: var(--za-alert-soft);
+  color: var(--za-alert);
+}

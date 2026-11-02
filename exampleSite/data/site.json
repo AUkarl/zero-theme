@@ -1,0 +1,18 @@
+{
+  "name": "示例站点",
+  "navName": "示例站点",
+  "siteUrl": "",
+  "description": "占位站点描述：换成你自己的一句话。",
+  "keywords": [
+    "博客",
+    "示例",
+    "Hugo"
+  ],
+  "logo": "/img/logo-nav.png",
+  "showLogo": true,
+  "showName": true,
+  "favicon": "/img/logo-favicon.png",
+  "ogImage": "/img/logo-favicon.png",
+  "landingImage": "img/bj2.png",
+  "defaultAuthor": "zero-author"
+}

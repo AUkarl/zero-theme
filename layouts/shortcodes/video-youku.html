@@ -1,0 +1,16 @@
+{{- /* video-youku.html — 优酷视频嵌入
+   用法: {{< video-youku id="XMTI3MzQ1NjA4" >}}
+   校验: id 必填且只保留安全字符，避免把引号 / 奇怪协议拼进 iframe 地址 */ -}}
+{{- $id := replaceRE `[^A-Za-z0-9_=/-]` "" (string (.Get "id" | default "")) -}}
+{{- $src := partial "shortcodes/safe-url.html" (printf "https://player.youku.com/embed/%s" $id) -}}
+{{- if or (not $id) (not $src) -}}
+  {{- partial "shortcodes/missing-param.html" (dict "name" "video-youku" "param" "id") -}}
+{{- else -}}
+<div class="shortcode-embed youku-video">
+  {{- partial "video-lite.html" (dict
+        "src" $src
+        "title" (.Get "title" | default "优酷视频")
+        "label" "优酷"
+        "allow" "autoplay; encrypted-media" "fullscreen" true "referrer" "no-referrer-when-downgrade") -}}
+</div>
+{{- end -}}

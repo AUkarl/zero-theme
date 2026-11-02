@@ -1,0 +1,113 @@
+{{- /* ============================================================
+  page/archive.html — 归档页
+  按年份时间线展示所有文章，含弹幕标签云、分类筛选、搜索
+  数据由 Hugo 模板注入 JSON，由 archive.js 渲染
+  ============================================================ */ -}}
+{{- define "styles" -}}
+{{- partial "zero/inline-css.html" (slice "css/archive.css") -}}
+{{- end -}}
+
+{{- define "main" -}}
+{{- $archiveCfg := .Site.Params.archive | default dict -}}
+{{- /* 文章范围与首页、RSS 用同一份 [home].mainSections */ -}}
+{{- $mainSections := .Site.Params.home.mainSections | default (slice "posts") -}}
+{{- $showSearch := cond (isset $archiveCfg "enable_search") (ne $archiveCfg.enable_search false) true -}}
+{{- $showCats := cond (isset $archiveCfg "enable_categories") (ne $archiveCfg.enable_categories false) true -}}
+{{- /* 分组模式与文章范围：列表的服务端版本与注入给 JS 的数据必须用同一份、同一顺序
+       （按日期倒序），否则「首屏那一版」和「点筛选后 JS 渲的那一版」会排得不一样。 */ -}}
+{{- $groupByYear := ne $archiveCfg.group_by_year false -}}
+{{- $pages := sort (where .Site.RegularPages "Section" "in" $mainSections) "Date" "desc" -}}
+<main class="main" id="main">
+  <section class="section">
+    <h1 class="section-title">{{ i18n "archive-title" | default "归档" }}</h1>
+    {{- if ne $archiveCfg.show_desc false }}
+    {{- $archiveDesc := $archiveCfg.desc | default $archiveCfg.desc_zh -}}
+    {{- if $archiveDesc }}
+    <p class="section-desc">{{ $archiveDesc }}</p>
+    {{- else }}
+    <p class="section-desc">{{ i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}</p>
+    {{- end }}
+    {{- end }}
+    <div class="archive-wrapper{{ if not $groupByYear }} is-flat{{ end }}{{ if and $groupByYear (not $pages) }} is-empty{{ end }}">
+      {{- /* 左侧时间刻度尺：本体由 archive-timeline.js 渲染，移动端换成下面的横向月份条 */ -}}
+      <div class="archive-timeline" id="archiveTimeline">
+        <div class="tl-ruler" id="tlRuler" tabindex="0" role="group"
+             aria-label="{{ i18n "archive-timeline-label" | default "时间刻度尺：滚轮或拖拽滑动，方向键切换月份" }}">
+          <div class="tl-viewport" id="tlViewport">
+            <div class="tl-glow" aria-hidden="true"></div>
+            <div class="tl-track" id="tlTrack">
+              <svg class="tl-svg" id="tlSvg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"></svg>
+              <div class="tl-years" id="tlYears" aria-hidden="true"></div>
+              <div class="tl-nodes" id="tlNodes"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tl-chips" id="tlChips"></div>
+      </div>
+      <div class="archive-list" id="archiveList" data-server-rendered="1">
+        {{- if $groupByYear }}{{ partial "archive-list.html" (dict "pages" $pages) }}{{ else }}{{ partial "archive-flat.html" (dict "pages" $pages) }}{{ end -}}
+      </div>
+      <aside class="archive-sidebar">
+        {{- if $showSearch }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-search" | default "搜索" }}</div>
+          <input type="text" class="search-input" id="archiveSearch" aria-label="{{ i18n "archive-search-label" | default "搜索文章" }}" placeholder="{{ i18n "archive-search-placeholder" | default "搜索文章..." }}" />
+          {{- /* 结果条数给读屏播报：输入时不看屏幕也知道搜到几篇、还是什么都没有 */}}
+          <p class="zero-sr-only" role="status" aria-live="polite" id="archiveSearchStatus"></p>
+        </div>
+        {{- end }}
+        {{- if $showCats }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-categories" | default "分类" }}</div>
+          <div class="tag-cloud-static" id="categoryCloud">{{ partial "archive-cloud.html" (dict "pages" $pages) }}</div>
+        </div>
+        {{- end }}
+        {{- if ne $archiveCfg.enable_tag_danmaku false }}
+        <div class="widget">
+          <div class="widget-title">{{ i18n "archive-tags" | default "标签" }}</div>
+          <div class="danmaku-wrapper" id="tagDanmaku"></div>
+        </div>
+        {{- end }}
+      </aside>
+    </div>
+  </section>
+</main>
+
+{{- /* 将文章数据注入 JSON 供 archive.js 使用（与上面服务端渲的列表同一份、同一顺序） */ -}}
+<script type="application/json" id="archiveData">
+{{- $data := slice -}}
+{{- range $page := $pages -}}
+  {{- /* 分类/标签一律转成字符串：YAML 里不写引号的 1984 是数字，
+         jsonify 出来还是数字，前端 toLowerCase() 会抛 TypeError 把整个搜索打死。 */ -}}
+  {{- $cats := partial "zero/strings.html" ($page.Params.categories | default slice) -}}
+  {{- $cat := "" -}}
+  {{- with $cats }}{{ $cat = index . 0 }}{{ end -}}
+  {{- $tags := partial "zero/strings.html" ($page.Params.tags | default slice) -}}
+  {{- $item := dict
+    "title" $page.Title
+    "date" ($page.Date.Format "2006-01-02")
+    "category" $cat
+    "tags" $tags
+    "permalink" $page.RelPermalink
+  -}}
+  {{- $data = $data | append $item -}}
+{{- end -}}
+{{ $data | jsonify | safeJS }}
+</script>
+{{- end -}}
+
+{{- define "scripts" -}}
+{{- $archiveCfg := .Site.Params.archive | default dict -}}
+<script>
+  window.archiveConfig = {
+    groupByYear: {{ ne $archiveCfg.group_by_year false }},
+    enableDanmaku: {{ ne $archiveCfg.enable_tag_danmaku false }},
+    danmakuLanes: {{ $archiveCfg.danmaku_lanes | default 5 }},
+    danmakuSpeed: {{ $archiveCfg.danmaku_speed | default 28 }}
+  };
+</script>
+{{- $timelineJS := resources.Get "js/archive-timeline.js" | minify | fingerprint -}}
+<script defer src="{{ $timelineJS.RelPermalink }}"></script>
+{{- $archiveJS := resources.Get "js/archive.js" | minify | fingerprint -}}
+<script defer src="{{ $archiveJS.RelPermalink }}"></script>
+{{- end -}}

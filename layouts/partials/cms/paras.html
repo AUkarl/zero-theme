@@ -1,0 +1,29 @@
+{{- /* ============================================================
+  cms/paras.html — 把「一段一段的文字」收成字符串切片
+  ------------------------------------------------------------
+  用法：
+    {{- $bio := partial "cms/paras.html" (dict "list" $raw) -}}
+
+  为什么要收：params 侧的 [[about.bio]] 是表格数组，每项一个 text_zh；
+  后台写的是纯字符串数组。渲染处（含 i18n 注入脚本）只该有一种形状，
+  不然同一个字段要写两遍取值。
+
+  空白段落直接丢掉：后台编辑器里留个空行是很常见的，
+  但空 <p> 会在页面上撑出一段没内容的间距。
+  ============================================================ */ -}}
+{{- $list := .list -}}
+{{- $out := slice -}}
+{{- if reflect.IsSlice $list -}}
+  {{- range $list -}}
+    {{- $t := "" -}}
+    {{- if reflect.IsMap . -}}
+      {{- $t = partial "cms/str.html" (dict "value" (or .text_zh .text .content)) -}}
+    {{- else -}}
+      {{- $t = partial "cms/str.html" (dict "value" .) -}}
+    {{- end -}}
+    {{- if ne $t "" -}}
+      {{- $out = $out | append $t -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

@@ -1,0 +1,18 @@
+{{- /* ============================================================
+  moments/provider.html — 解析时刻页生效的评论 provider
+  规则：
+    1. 显式写了 [moment] comment_provider 就用它；
+    2. 没写时，填了 params.apiBaseURL 走 zero，否则沿用旧的 waline 默认；
+  调用方再用返回的 zero.enabled 判断「provider 是 zero 但后端地址没配」，
+  这种情况不加载组件、不发请求。
+  ============================================================ */ -}}
+{{- $zero := partial "zero/api.html" . -}}
+{{- $mCfg := .Site.Params.moment | default dict -}}
+{{- /* 写了但留空 = 明确禁用评论；整个键都没写才走下面的默认 */ -}}
+{{- $provider := "" -}}
+{{- if isset $mCfg "comment_provider" -}}
+  {{- $provider = $mCfg.comment_provider | default "" -}}
+{{- else -}}
+  {{- $provider = cond (gt (len $zero.base) 0) "zero" "waline" -}}
+{{- end -}}
+{{- return (dict "provider" $provider "zero" $zero) -}}

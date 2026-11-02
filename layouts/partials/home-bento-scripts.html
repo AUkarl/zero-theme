@@ -1,0 +1,32 @@
+{{- /* ============================================================
+  home-bento-scripts.html — 新版主页的脚本与前端配置
+  统计来源解析见 partials/home-bento-stats-config.html（与 head 预连接共用一份逻辑）
+  ============================================================ */ -}}
+{{- $bento := .Site.Params.home.bento | default dict -}}
+{{- $stats := partial "home-bento-stats-config.html" . -}}
+{{- $ps := partial "zero/poststats.html" . -}}
+<script>
+  window.hbConfig = {
+    featuredMode: {{ $bento.featured_mode | default "auto" }},
+    initialRows: {{ $bento.initial_rows | default 3 }},
+    loadRows: {{ $bento.load_rows | default 5 }},
+    showViews: {{ $bento.show_views | default false }},
+    /* 有 data/poststats.json 时排序与浏览量全在构建期算好，前端不再请求评论系统 */
+    buildStats: {{ $ps.ready }},
+    provider: {{ $stats.provider }},
+    serverUrl: {{ $stats.serverUrl }},
+    viewsWeight: {{ $ps.wViews }},
+    commentsWeight: {{ $ps.wComments }},
+    likesWeight: {{ $ps.wLikes }},
+    starsWeight: {{ $ps.wStars }},
+    commentProbe: {{ $bento.stats_comment_probe | default 6 }},
+    cacheMinutes: {{ $bento.stats_cache_minutes | default 360 }},
+    fallbackImage: {{ $bento.default_image | default "" | jsonify | safeJS }},
+    labelSubLatest: {{ i18n "hb-sub-latest" | default "共 %d 篇 · 按时间排序" | jsonify | safeJS }},
+    labelSubEarliest: {{ i18n "hb-sub-earliest" | default "共 %d 篇 · 按发布时间从早到晚" | jsonify | safeJS }},
+    labelSubHot: {{ i18n "hb-sub-hot" | default "共 %d 篇 · 按热度排序" | jsonify | safeJS }},
+    labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }}
+  };
+</script>
+{{- $js := resources.Get "js/home-bento.js" | minify | fingerprint -}}
+<script src="{{ $js.RelPermalink }}" defer></script>

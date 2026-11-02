@@ -1,0 +1,18 @@
+{{- /* ============================================================
+  cms/list.html — 取一个列表字段：后台写了非空数组用后台的，否则回落 params
+  ------------------------------------------------------------
+  用法：
+    {{- $items := partial "cms/list.html" (dict "data" $d "keys" (slice "items") "fallback" .Site.Params.works) -}}
+  返回切片（永远可 range，调用方不必再判 nil）。
+
+  空数组按「后台还没填」处理、继续回落 params：后台保存一次就可能写出空数组，
+  而工坊卡片 / 页脚备案号整个消失对访客是事故，不是编辑想要的结果。
+  ============================================================ */ -}}
+{{- $f := partial "cms/value.html" (dict "data" .data "keys" .keys) -}}
+{{- $out := slice -}}
+{{- if and $f.set (reflect.IsSlice $f.value) (gt (len $f.value) 0) -}}
+  {{- $out = $f.value -}}
+{{- else if reflect.IsSlice .fallback -}}
+  {{- $out = .fallback -}}
+{{- end -}}
+{{- return $out -}}

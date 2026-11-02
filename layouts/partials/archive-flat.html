@@ -1,0 +1,19 @@
+{{- /* ============================================================
+  archive-flat.html — 归档列表「不分组」那一档的服务端版本
+  ------------------------------------------------------------
+  与 archive.js 里 !groupByYear 那条分支逐字对齐：一条 .archive-item，
+  日期是完整的 YYYY-MM-DD（分组模式里才只显示 MM-DD）。
+  平铺模式下 wrapper 还要带 is-flat（CSS 靠它退回两栏并藏掉刻度尺）——
+  原来这个类是 JS 加的，首屏那一帧没有，布局会跳一次；这里一并渲出来。
+  ⚠ 改这里同样要对着 assets/js/archive.js 看一遍。
+  ============================================================ */ -}}
+{{- $pages := .pages -}}
+{{- if not $pages -}}
+<div class="archive-empty">没有匹配的文章</div>
+{{- end -}}
+{{- range $pages }}
+<a class="archive-item" href="{{ .RelPermalink }}">
+  <span class="date">{{ .Date.Format "2006-01-02" }}</span>
+  <span class="title">{{ .Title }}</span>
+</a>
+{{- end -}}

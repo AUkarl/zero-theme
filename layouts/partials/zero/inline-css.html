@@ -1,0 +1,22 @@
+{{- /* ============================================================
+  zero/inline-css.html — 把一串主题样式压成内联 <style>
+  ------------------------------------------------------------
+  为什么内联：主题每页要加载 3~5 份样式表，都在 <head> 里同步阻塞 —— 每个文件都是一次
+  往返，移动端实测首屏因此晚 1s 左右（Lighthouse 的 render-blocking 一项）。这些样式
+  加起来压缩后只有十几 KB，内联进 HTML 就能把这几趟往返全省掉，并且不改变任何样式内容。
+
+  用法：{{ partial "zero/inline-css.html" (slice "css/common.css" "css/article.css") }}
+
+  约束：样式里不能用相对 url()（内联后基准路径变成页面地址）。主题现有样式只用绝对路径
+  （/img/…）或 data:，新增样式请保持这一点。
+  ============================================================ */ -}}
+{{- $paths := . -}}
+{{- $parts := slice -}}
+{{- range $paths -}}
+  {{- with resources.Get . -}}
+    {{- $parts = $parts | append (. | minify).Content -}}
+  {{- end -}}
+{{- end -}}
+{{- with $parts -}}
+<style data-zero-css="{{ delimit $paths " " }}">{{ delimit . "\n" | safeCSS }}</style>
+{{- end -}}

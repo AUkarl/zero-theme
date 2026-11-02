@@ -1,0 +1,41 @@
+{{- /* ============================================================
+  footer-icon.html — 页脚图标本体：图片与 Font Awesome 类名二选一
+  ------------------------------------------------------------
+  用法：{{- partial "footer-icon.html" (dict "item" $svc) -}}
+  三组列表（中栏「支持服务」、右栏两排社交链接）共用这一份，条目形状一样
+  （name / icon / img / link / invert / no_invert），以前只有「支持服务」读 img，
+  社交两排只 <i class>，于是后台给社交行填了图片路径也不见图片，看着像坏了。
+
+  图片默认「浅色原样、深色反色」（跟站点 logo 一套）；强制口径：
+    invert = true     始终反色
+    no_invert = true  从不反色（图片本身就是浅色时用）
+  ============================================================ */ -}}
+{{- $it := .item -}}
+{{- $cls := "footer-service-img" -}}
+{{- if $it.invert }}{{ $cls = printf "%s footer-service-img-invert" $cls }}{{ end -}}
+{{- if $it.no_invert }}{{ $cls = printf "%s footer-service-img-noinvert" $cls }}{{ end -}}
+{{- /* 第三方 logo 走构建期代理：这些图挂在每一页的页脚，实测单张最大的 293KB
+       （虫洞那张），全页图片重量里第三方直连占 311KB。抓下来等比收成 2 倍高的 WebP
+       后是 3~8KB，访客不再向对方站点发请求（顺带少一种「对方挂了就破图」）。
+       抓不到就照旧用原地址，SVG/GIF 这类 Hugo 处理不了的也照旧。
+       关掉这一档：params.toml 的 [footer] optimize_images = false（与友链封面同一套思路）。 */ -}}
+{{- $imgSrc := "" -}}
+{{- $h := int (.height | default 60) -}}
+{{- with $it.img -}}
+  {{- $raw := string . -}}
+  {{- $remote := or (hasPrefix $raw "http://") (hasPrefix $raw "https://") (hasPrefix $raw "//") -}}
+  {{- $info := dict "ok" false -}}
+  {{- if and $remote (ne site.Params.footer.optimize_images false) -}}
+    {{- $info = partial "img-src.html" (dict "src" $raw "page" $.page "mode" "height" "height" $h "format" "webp" "quality" 80 "lqip" false "remote" true "timeout" "6s") -}}
+  {{- end -}}
+  {{- if $info.ok -}}
+    {{- $imgSrc = $info.src -}}
+  {{- else if $remote -}}
+    {{- $imgSrc = $raw -}}
+  {{- else -}}
+    {{- $imgSrc = $raw | relURL -}}
+  {{- end -}}
+<img class="{{ $cls }}" src="{{ $imgSrc | safeURL }}" alt="" aria-hidden="true" loading="lazy" decoding="async" fetchpriority="low">
+{{- else -}}
+<i class="{{ $it.icon }}" aria-hidden="true"></i>
+{{- end -}}

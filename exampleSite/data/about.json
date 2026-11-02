@@ -1,0 +1,22 @@
+{
+  "desc": "这一页的内容在后台「前端管理 → 关于页」里改，也可以直接编辑仓库的 data/about.json。",
+  "tagline": "一句话介绍你自己",
+  "bio": [
+    "第一段：你是谁、在做什么。",
+    "第二段：这个站点想留下些什么。"
+  ],
+  "declaration": [
+    "正文原创，转载请注明出处。"
+  ],
+  "site": [
+    "构建：Hugo + zero-theme；写作与管理：zero-cms。"
+  ],
+  "contacts": [
+    {
+      "label": "邮箱",
+      "text": "you@example.com",
+      "url": "mailto:you@example.com",
+      "external": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{{- /* ============================================================
+  zero/post-score.html — 单篇文章的计数与热度分
+  ------------------------------------------------------------
+  用法：{{ partial "zero/post-score.html" (dict "ps" $ps "page" $page) }}
+    ps    zero/poststats.html 的返回值
+    page  要查的那一页
+
+  返回 dict：views / comments / likes / stars / score / pinned
+  热度分 = 阅读×wViews + 评论×wComments + 点赞×wLikes + 收藏×wStars。
+  置顶来自文章 front matter 的 pinned: true，与计数无关，单独返回给调用方排先用。
+  ============================================================ */ -}}
+{{- $ps := .ps -}}
+{{- $page := .page -}}
+{{- $key := $page.RelPermalink -}}
+{{- $st := index $ps.posts $key -}}
+{{- if not $st }}{{ $st = index $ps.posts (printf "%s/" (trim $key "/")) }}{{ end -}}
+{{- $views := 0 -}}
+{{- $comments := 0 -}}
+{{- $likes := 0 -}}
+{{- $stars := 0 -}}
+{{- with $st -}}
+  {{- $views = int (or .views 0) -}}
+  {{- $comments = int (or .comments 0) -}}
+  {{- $likes = int (or .likes 0) -}}
+  {{- $stars = int (or .stars 0) -}}
+{{- end -}}
+{{- $score := add
+  (mul $views $ps.wViews)
+  (add (mul $comments $ps.wComments) (add (mul $likes $ps.wLikes) (mul $stars $ps.wStars))) -}}
+{{- return dict
+  "views" $views
+  "comments" $comments
+  "likes" $likes
+  "stars" $stars
+  "score" $score
+  "pinned" (eq ($page.Params.pinned | default false) true)
+-}}
