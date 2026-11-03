@@ -123,8 +123,16 @@ git submodule update --init --recursive      # 换机器 / clone 之后
 
 ### 方式三：手动复制
 
-把仓库内容复制进 `themes/zero/`。想改主题又不想维护 fork 的话，
-用 zero-stack 的 `pnpm create:site` 生成的仓库结构（submodule + 本地覆盖目录）更省心。
+把主题需要的目录复制进 `themes/zero/`，不要整仓库原样复制：至少排除 `exampleSite`、
+`node_modules` 和 `.git`。Windows 上如果先跑过 `npm run dev` / `link-theme`，
+`exampleSite/themes/zero` 是指回仓库根的 junction，整目录复制会递归进自己。
+
+```bash
+rsync -a --exclude exampleSite --exclude node_modules --exclude .git ./ themes/zero/
+```
+
+想改主题又不想维护 fork 的话，用 zero-stack 的 `pnpm create:site` 生成的仓库结构
+（submodule + 本地覆盖目录）更省心。
 
 ### 只想看主题本身长什么样
 
@@ -135,6 +143,10 @@ npm run build        # hugo --minify 构建示例站
 ```
 
 `link-theme.mjs` 只在 `exampleSite/themes` 里建一个指回主题目录的软链，不复制文件。
+Windows 用的是目录 junction；因为主题根目录本身包含 `exampleSite`，这是一个自引用链接：
+Hugo 构建不受影响，但 `git status --ignored`、递归备份/复制/扫描会进入循环或报
+`Filename too long`。不要对带 junction 的主题目录做递归复制；验证完可以删掉
+`exampleSite/themes/zero`，下次 `npm run dev` 会重建。
 
 ---
 

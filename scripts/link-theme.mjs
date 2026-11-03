@@ -1,6 +1,10 @@
 // 把主题本体挂到 exampleSite/themes/zero，让 Hugo 能按标准方式找到它。
 // 主题仓库本体就是根目录，而 Hugo 只在 <themesDir>/<themeName> 下找主题，
 // 所以示例站必须多这一层链接。可重复执行。
+//
+// Windows 下这里创建的是 junction，而主题根目录又包含 exampleSite，因此它是自引用链接：
+// 构建不受影响，但 git status --ignored、递归复制/备份/扫描会进入循环或报 Filename too long。
+// 不要把 exampleSite/themes/zero 递归复制进发布目录；验证完可以删除它。
 import { lstatSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

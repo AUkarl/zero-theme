@@ -137,8 +137,10 @@
       </div>
     </div>
   </div>
-  <div class="nav-overlay" id="navOverlay"></div>
 </nav>
+{{- /* 遮罩必须放在 .site-nav 外：.site-nav 的 backdrop-filter 会为 fixed 后代建立包含块，
+      放在里面时遮罩只有导航栏那么高，移动端点抽屉外页面不会关闭。 */ -}}
+<div class="nav-overlay" id="navOverlay"></div>
 {{- /* 站点名的可替换文案：common.js 会把 [data-i18n] 节点按语言重写，
        本站只有中文，所以只登记中文一份；值用 jsonify 输出，站点名里带引号也不会弄坏脚本。 */ -}}
 <script>

@@ -565,7 +565,9 @@ a {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
-  z-index: 999;
+  /* 遮罩在 .site-nav 外；移动端把导航抬到 1001，保证抽屉和关闭按钮始终在遮罩之上。
+     页面滚动按钮是 999，打开抽屉时也不会压在遮罩上面。 */
+  z-index: 1000;
 }
 
 .nav-close {
@@ -927,11 +929,11 @@ a {
 }
 
 .footer .footer-right .social-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
-  justify-items: center;
-  width: 100%;
+  width: auto;
 }
 
 .footer .footer-right .social-row a {
@@ -939,7 +941,7 @@ a {
   font-size: 1.1rem;
   transition: color 0.2s, transform 0.2s;
   /* 纯图标链接原本只有字形那么宽（线上实测 16×32=512px²），够不到 WCAG 2.5.8 的 24×24 面积；
-     这一排本来就在 grid 里（repeat(4,1fr) + justify-items:center），钉成 24 不会挤破布局 */
+     这一排是右对齐的 flex，钉成 24 不会挤破布局 */
   min-width: 24px;
   min-height: 24px;
   display: flex;
@@ -1021,6 +1023,8 @@ a {
   .site-nav {
     height: 56px;
     padding: 0 12px;
+    /* 遮罩在 .site-nav 外；导航必须高于遮罩，抽屉关闭按钮才点得到 */
+    z-index: 1001;
   }
 
   .nav-logo {
@@ -1071,7 +1075,7 @@ a {
   }
 
   .footer .footer-right .social-row {
-    grid-template-columns: repeat(4, 1fr);
+    justify-content: center;
   }
 }
 
