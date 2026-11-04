@@ -23,9 +23,12 @@
   var ua = navigator.userAgent || '';
   var isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR|Android|CriOS|FxiOS/i.test(ua);
-  // 小米/MIUI 浏览器会把页面里的 <video> 接管成自家的视频播放层：透明 WebM 的 alpha
-  // 可能被丢掉，画面上就会出现一块不透明视频框。这里直接改用海报图，避免原生播放器。
-  var isXiaomiBrowser = /MiuiBrowser|MiBrowser|MIBrowser|XiaoMi|Xiaomi|MIUI/i.test(ua);
+  // 手机浏览器普遍会把页面里的 <video> 接管成自家播放层：透明 WebM 的 alpha
+  // 可能被丢掉，画面上就会出现一块不透明视频框。手机端统一改用动画 WebP 海报，
+  // 不创建视频播放，桌面端仍保留完整 WebM 动作。
+  var isMobileBrowser = mobile || /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MiuiBrowser|MiBrowser|MIBrowser|XiaoMi|Xiaomi|MIUI/i.test(ua);
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
   // 后台「鲸鱼娘」页写 data/pet.json，Hugo 在页面里注入 window.__WHALE_PET_CONFIG__；
   // 这里保留一份同口径默认值，后台没配或老页面没有注入时也能跑。
@@ -128,7 +131,7 @@
   }
   var greeted = false;
   var booted = false;
-  var usePosterOnly = isIos || isSafari || isXiaomiBrowser || !supportsWebm();
+  var usePosterOnly = isIos || isSafari || isMobileBrowser || !supportsWebm();
   var root = null;
   var stage = null;
   var vA = null;
@@ -384,8 +387,20 @@
 
     setIdentityImage(root.querySelector('.sp-face'));
     setIdentityImage(root.querySelector('.sp-status-face'));
-    poster.src = '/whale-pet/poster.webp?v=3';
+    if (usePosterOnly && isMobileBrowser && !reduceMotion) {
+      poster.classList.add('sp-mobile-anim');
+      poster.dataset.mobileAnim = '1';
+      poster.src = '/whale-pet/idle-mobile.webp?v=1';
+    } else {
+      poster.src = '/whale-pet/poster.webp?v=3';
+    }
     poster.addEventListener('error', function () {
+      if (poster.dataset.mobileAnim === '1') {
+        poster.dataset.mobileAnim = '0';
+        poster.classList.remove('sp-mobile-anim');
+        poster.src = '/whale-pet/poster.webp?v=3';
+        return;
+      }
       if (poster.dataset.pngFallback === '1') { poster.style.display = 'none'; return; }
       poster.dataset.pngFallback = '1';
       poster.src = '/whale-pet/poster.png?v=2';
@@ -2304,12 +2319,14 @@
       'transform:translate(-50%,-50%);pointer-events:none;background:transparent;opacity:0;transition:opacity .22s ease;',
       '-webkit-user-drag:none}',
       '.sp-video.sp-front{opacity:1}',
+      '.sp-stage.sp-poster-only .sp-video{display:none!important}',
       '.sp-video::-webkit-media-controls,.sp-video::-webkit-media-controls-enclosure{display:none!important}',
       '.sp-video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}',
       '.sp-video{-webkit-tap-highlight-color:transparent}',
       '.sp-poster{opacity:1}',
       '.sp-poster.sp-hidden{opacity:0}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
+      '.sp-poster-only .sp-poster.sp-mobile-anim{animation:none}',
       '.sp-bubble{position:absolute;left:0;bottom:calc(100% + 4px);z-index:7;max-width:min(260px,calc(100vw - 24px));',
       'min-width:118px;padding:9px 12px 8px;background:var(--sp-bg);color:var(--sp-fg);border:1px solid var(--sp-line);',
       'border-radius:14px;box-shadow:0 10px 28px rgba(20,35,65,.18);backdrop-filter:blur(12px);',
