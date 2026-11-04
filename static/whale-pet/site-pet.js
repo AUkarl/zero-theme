@@ -23,6 +23,9 @@
   var ua = navigator.userAgent || '';
   var isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR|Android|CriOS|FxiOS/i.test(ua);
+  // 小米/MIUI 浏览器会把页面里的 <video> 接管成自家的视频播放层：透明 WebM 的 alpha
+  // 可能被丢掉，画面上就会出现一块不透明视频框。这里直接改用海报图，避免原生播放器。
+  var isXiaomiBrowser = /MiuiBrowser|MiBrowser|MIBrowser|XiaoMi|Xiaomi|MIUI/i.test(ua);
 
   // 后台「鲸鱼娘」页写 data/pet.json，Hugo 在页面里注入 window.__WHALE_PET_CONFIG__；
   // 这里保留一份同口径默认值，后台没配或老页面没有注入时也能跑。
@@ -125,7 +128,7 @@
   }
   var greeted = false;
   var booted = false;
-  var usePosterOnly = isIos || isSafari || !supportsWebm();
+  var usePosterOnly = isIos || isSafari || isXiaomiBrowser || !supportsWebm();
   var root = null;
   var stage = null;
   var vA = null;
@@ -327,8 +330,8 @@
         '<div class="sp-bubble-foot"></div>' +
       '</div>' +
       '<div class="sp-stage" role="button" tabindex="0" aria-label="摸摸' + identityName() + '">' +
-        '<video class="sp-video sp-video-a" muted playsinline preload="none" disablepictureinpicture></video>' +
-        '<video class="sp-video sp-video-b" muted playsinline preload="none" disablepictureinpicture></video>' +
+        '<video class="sp-video sp-video-a" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
+        '<video class="sp-video sp-video-b" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
         '<img class="sp-poster" alt="" decoding="async">' +
       '</div>' +
       '<div class="sp-dock">' +
@@ -2301,6 +2304,9 @@
       'transform:translate(-50%,-50%);pointer-events:none;background:transparent;opacity:0;transition:opacity .22s ease;',
       '-webkit-user-drag:none}',
       '.sp-video.sp-front{opacity:1}',
+      '.sp-video::-webkit-media-controls,.sp-video::-webkit-media-controls-enclosure{display:none!important}',
+      '.sp-video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}',
+      '.sp-video{-webkit-tap-highlight-color:transparent}',
       '.sp-poster{opacity:1}',
       '.sp-poster.sp-hidden{opacity:0}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
