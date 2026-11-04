@@ -93,6 +93,13 @@
   {{- /* 统计代码 */ -}}
   {{- partial "analytics.html" . -}}
 
+  {{- /* AI PET：首页、登录页/用户中心、分类/标签/作者页不加载；脚本内还有同样的路径守卫 */ -}}
+  {{- $noPet := or (hasPrefix .RelPermalink "/account/") (hasPrefix .RelPermalink "/categories/") (hasPrefix .RelPermalink "/tags/") (hasPrefix .RelPermalink "/author/") -}}
+  {{- if and (not .IsHome) (not $noPet) -}}
+    {{- partial "whale-pet-config.html" . -}}
+    <script src="/whale-pet/site-pet.js?v=31"></script>
+  {{- end -}}
+
   {{- /* 自定义 JS 文件 */ -}}
   {{- range .Site.Params.custom.extra_js }}
   <script src="{{ . | relURL }}"></script>

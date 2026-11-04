@@ -1,0 +1,5 @@
+{{- /* 鲸鱼娘后台设置：data/pet.json 由 CMS 写入；这里只注入原始对象，缺省值由 site-pet.js 补。 */ -}}
+{{- $pet := .Site.Data.pet -}}
+{{- if not $pet -}}{{- $pet = dict -}}{{- end -}}
+<script>window.__WHALE_PET_CONFIG__ = {{ $pet | jsonify | safeJS }};</script>
+<script>window.__WHALE_PET_API_BASE__ = {{ .Site.Params.apiBaseURL | default "" | jsonify | safeJS }};</script>

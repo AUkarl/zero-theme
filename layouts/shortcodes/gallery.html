@@ -22,6 +22,11 @@
   {{- $clean := replaceRE `[^0-9a-zA-Z%]` "" (string .) -}}
   {{- if findRE `^[0-9]+(px|em|rem|%)$` $clean -}}{{- $gap = $clean -}}{{- end -}}
 {{- end -}}
+{{- $inner := .Inner | markdownify -}}
+{{- $inner = replaceRE `loading=eager` `loading=lazy` $inner -}}
+{{- $inner = replaceRE `fetchpriority=high` `fetchpriority=low` $inner -}}
+{{- $sizes := cond (eq $columns 1) "(max-width: 900px) 100vw, 840px" (printf "(max-width: 600px) 50vw, (max-width: 900px) %dvw, %dpx" (div 100 $columns) (div 840 $columns)) -}}
+{{- $inner = replaceRE `sizes="[^"]*"` (printf `sizes="%s"` $sizes) $inner -}}
 <div class="gallery{{ if eq $count 1 }} gallery-single{{ end }}" style="--gallery-columns:{{ $columns }};{{ with $gap }}--gallery-gap:{{ . }};{{ end }}">
-  {{ .Inner | markdownify }}
+  {{ $inner | safeHTML }}
 </div>
