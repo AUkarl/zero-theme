@@ -498,6 +498,8 @@
     opts = opts || {};
     var clip = CLIPS[key];
     if (!clip) return;
+    // 新动作一请求就取消旧动作的回落定时器，避免动作图还在加载时被上一段 idle 抢回。
+    if (mobileAnimTimer) { clearTimeout(mobileAnimTimer); mobileAnimTimer = null; }
     var token = ++mobileAnimReq;
     if (!mobileAnimManifest) {
       mobileAnimPending = { key: key, opts: opts, token: token };
