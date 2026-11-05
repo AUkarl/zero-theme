@@ -12,7 +12,7 @@
 
   var STORE = 'whale-pet-v1';
   // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
-  var SPRITE_VER = '44';
+  var SPRITE_VER = '45';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -131,10 +131,14 @@
   }
   var greeted = false;
   var booted = false;
-  // 手机端不要相信 canPlayType：部分小米/MIUI 浏览器会误报不支持 WebM，
-  // 实际却能解码。先走 Canvas，只有真正播放失败/无法透明时才退回海报。
-  var usePosterOnly = !isMobileBrowser && !supportsWebm();
-  var useMobileCanvas = isMobileBrowser;
+  // 国产内核（小米/UC/夸克/QQ）会把页面里的 <video> 接管成自家播放层：透明通道丢失，
+  // 画面上就是一块不透明的视频框。这些浏览器直接走 Canvas 精灵，其余手机端和桌面端
+  // 仍用完整 24fps 的 WebM；首帧再做一次真实像素的透明校验，校验不过才降级。
+  var takeoverUA = /MiuiBrowser|MiBrowser|MIBrowser|Miui|XiaoMi|Xiaomi|MIUI|UCBrowser|UBrowser|Quark|qqbrowser|MQQBrowser/i.test(ua);
+  var noWebm = !supportsWebm();
+  var useMobileCanvas = isMobileBrowser && (takeoverUA || noWebm);
+  var usePosterOnly = noWebm && !useMobileCanvas;
+  var engineName = useMobileCanvas ? 'canvas' : (noWebm ? 'poster' : 'video');
   var root = null;
   var stage = null;
   var vA = null;
@@ -380,6 +384,7 @@
         '<div class="sp-status-meter"><div class="sp-status-meter-head"><span>饱腹</span><b class="sp-status-satiety-val">0</b></div><div class="sp-status-bar"><i class="sp-status-fill sp-status-satiety"></i></div></div>' +
         '<div class="sp-status-meter"><div class="sp-status-meter-head"><span>无聊</span><b class="sp-status-boredom-val">0</b></div><div class="sp-status-bar"><i class="sp-status-fill sp-status-boredom"></i></div></div>' +
         '<div class="sp-status-stats"><span>互动 <b class="sp-status-interactions">0</b></span><span>被摸 <b class="sp-status-pets">0</b></span><span>上次离开 <b class="sp-status-away">0</b>h</span></div>' +
+        '<div class="sp-status-engine"></div>' +
         '<div class="sp-status-actions"><button type="button" data-status-act="feed">喂饭</button><button type="button" data-status-act="sleep">睡觉</button><button type="button" data-status-act="chat">聊天</button></div>' +
       '</div>';
     document.body.appendChild(root);
@@ -444,107 +449,6 @@
   var spritePending = null;
   var spriteReq = 0;
   var spriteOrder = [];
-
-  var MOBILE_ANIM_VER = '42';
-  var mobileAnimManifest = null;
-  var mobileAnimCache = {};
-  var mobileAnimTimer = null;
-  var mobileAnimReq = 0;
-  var mobileAnimPending = null;
-
-  function initMobileImages() {
-    try {
-      if (vA) vA.pause();
-      if (vB) vB.pause();
-    } catch (e) {}
-    if (vA) vA.style.display = 'none';
-    if (vB) vB.style.display = 'none';
-    if (canvasEl) canvasEl.style.display = 'none';
-    fetch('/whale-pet/mobile-anim/manifest.json?v=' + MOBILE_ANIM_VER, { cache: 'force-cache' })
-      .then(function (r) {
-        if (!r.ok) throw new Error('manifest');
-        return r.json();
-      })
-      .then(function (m) {
-        mobileAnimManifest = m || {};
-        return loadMobileAnimImage('idle');
-      })
-      .then(function () {
-        var q = mobileAnimPending;
-        mobileAnimPending = null;
-        if (q) playMobileImage(q.key, q.opts);
-        else applyMobileAnim('idle', { loop: true });
-      })
-      .catch(function () { fallbackPosterOnly(); });
-  }
-
-  function loadMobileAnimImage(key) {
-    if (mobileAnimCache[key]) return Promise.resolve(mobileAnimCache[key]);
-    var info = mobileAnimManifest && mobileAnimManifest[key];
-    if (!info) return Promise.reject(new Error('no anim ' + key));
-    return new Promise(function (resolve, reject) {
-      var img = new Image();
-      img.decoding = 'async';
-      img.onload = function () {
-        mobileAnimCache[key] = img;
-        resolve(img);
-      };
-      img.onerror = function () { reject(new Error('anim ' + key)); };
-      img.src = '/whale-pet/mobile-anim/' + info.file + '?v=' + MOBILE_ANIM_VER;
-    });
-  }
-
-  function playMobileImage(key, opts) {
-    opts = opts || {};
-    var clip = CLIPS[key];
-    if (!clip) return;
-    // 新动作一请求就取消旧动作的回落定时器，避免动作图还在加载时被上一段 idle 抢回。
-    if (mobileAnimTimer) { clearTimeout(mobileAnimTimer); mobileAnimTimer = null; }
-    var token = ++mobileAnimReq;
-    if (!mobileAnimManifest) {
-      mobileAnimPending = { key: key, opts: opts, token: token };
-      return;
-    }
-    var start = function () {
-      if (token !== mobileAnimReq) return;
-      applyMobileAnim(key, opts);
-    };
-    if (mobileAnimCache[key]) { start(); return; }
-    mobileAnimPending = { key: key, opts: opts, token: token };
-    loadMobileAnimImage(key).then(function () {
-      if (!mobileAnimPending || mobileAnimPending.token !== token) return;
-      var q = mobileAnimPending;
-      mobileAnimPending = null;
-      applyMobileAnim(q.key, q.opts);
-    }).catch(function () {
-      if (key === 'idle') fallbackPosterOnly();
-      else if (token === mobileAnimReq) playMobileImage('idle', { loop: true });
-    });
-  }
-
-  function applyMobileAnim(key, opts) {
-    var info = mobileAnimManifest && mobileAnimManifest[key];
-    var clip = CLIPS[key];
-    if (!info || !clip) { fallbackPosterOnly(); return; }
-    if (mobileAnimTimer) { clearTimeout(mobileAnimTimer); mobileAnimTimer = null; }
-    var loop = !!(clip.loop || opts.loop);
-    var url = '/whale-pet/mobile-anim/' + info.file + '?v=' + MOBILE_ANIM_VER;
-    poster.classList.remove('sp-hidden');
-    poster.classList.add('sp-mobile-anim');
-    poster.src = url;
-    hasPlayed = true;
-    if (opts.onStart) opts.onStart();
-    if (!loop) {
-      var dur = clip.max ? Math.min(info.dur, clip.max / 1000) : info.dur;
-      var timerToken = mobileAnimReq;
-      mobileAnimTimer = setTimeout(function () {
-        mobileAnimTimer = null;
-        if (timerToken !== mobileAnimReq) return;
-        if (opts.onEnd) opts.onEnd();
-        else resumeIdle();
-      }, Math.max(600, dur * 1000));
-    }
-  }
 
   function initMobileSprites() {
     if (!useMobileCanvas || !canvasEl || !canvasCtx) { fallbackPosterOnly(); return; }
@@ -638,10 +542,28 @@
       last: -1, done: false, endAt: 0, opts: opts,
     };
     hasPlayed = true;
+    active = { key: key, clip: clip };
+    syncSpriteCanvasSize();
     drawSpriteFrame(0);
     canvasEl.classList.add('sp-on');
     poster.classList.add('sp-hidden');
     if (opts.onStart) opts.onStart();
+  }
+
+  // 画布内部分辨率要跟屏幕物理像素对齐：固定 1280×720 时浏览器要先做一层大幅缩小，
+  // 手机端会走低质量 mipmap 采样，人物就糊了。
+  function syncSpriteCanvasSize() {
+    if (!canvasEl || !canvasCtx) return;
+    var dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    var cssH = canvasEl.getBoundingClientRect().height || 240;
+    var h = Math.max(96, Math.min(1080, Math.round(cssH * dpr)));
+    var w = Math.round(h * 16 / 9);
+    if (canvasEl.width !== w || canvasEl.height !== h) {
+      canvasEl.width = w;
+      canvasEl.height = h;
+    }
+    canvasCtx.imageSmoothingEnabled = true;
+    canvasCtx.imageSmoothingQuality = 'high';
   }
 
   function drawSpriteFrame(idx) {
@@ -680,7 +602,7 @@
         a.done = 'called';
         spriteAnim = null;
         if (endOpts.onEnd) endOpts.onEnd();
-        else resumeIdle();
+        else { active = null; resumeIdle(); }
       }
     };
     spriteRaf = requestAnimationFrame(tick);
@@ -689,6 +611,7 @@
   function fallbackPosterOnly() {
     usePosterOnly = true;
     useMobileCanvas = false;
+    engineName = 'poster';
     spriteAnim = null;
     spritePending = null;
     if (spriteRaf) cancelAnimationFrame(spriteRaf);
@@ -941,13 +864,13 @@
     if (key !== 'idle') cancelIdleStart();
     var clip = CLIPS[key];
     if (!clip) return;
+    if (!opts.force && active && active.key === key && (clip.loop || opts.loop)) {
+      if (opts.onStart) opts.onStart();
+      return;
+    }
     if (useMobileCanvas) { playMobileSprite(key, opts); return; }
     if (usePosterOnly) {
       active = { key: key, clip: clip };
-      return;
-    }
-    if (!opts.force && active && active.key === key && (clip.loop || opts.loop)) {
-      if (opts.onStart) opts.onStart();
       return;
     }
     pauseChain();
@@ -994,6 +917,7 @@
         if (old && old !== front) old.pause();
       }, 280);
       if (opts.onStart) opts.onStart();
+      scheduleAlphaCheck(el);
       var maxMs = opts.max != null ? opts.max : clip.max;
       if (!el.loop && maxMs) {
         cutTimer = setTimeout(finish, Math.min(maxMs, 12000));
@@ -1052,6 +976,63 @@
     document.addEventListener('pointerdown', fn, true);
   }
 
+  // WebM 到底有没有透明通道，只能把首帧画进 canvas 取像素才知道：安卓硬件解码器
+  // 丢掉 alpha 时画面会变成一块不透明底，国产内核接管视频层也是同样表现。
+  // 取到「角透明 / 中心不透明」才判定通过；判不过就换 Canvas 精灵引擎。
+  var alphaChecked = false;
+  var alphaTries = 0;
+
+  function scheduleAlphaCheck(video) {
+    if (alphaChecked || useMobileCanvas || alphaTries >= 4) return;
+    alphaTries++;
+    setTimeout(function () { verifyVideoAlpha(video); }, 200 * alphaTries);
+  }
+
+  function verifyVideoAlpha(video) {
+    if (alphaChecked || !video || !video.videoWidth || video.readyState < 2) return;
+    var corner, center;
+    try {
+      var c = document.createElement('canvas');
+      c.width = 24;
+      c.height = 24;
+      var x = c.getContext('2d', { willReadFrequently: true });
+      if (!x) return;
+      x.drawImage(video, 0, 0, 24, 24);
+      var d = x.getImageData(0, 0, 24, 24).data;
+      corner = d[3];
+      center = d[(12 * 24 + 12) * 4 + 3];
+    } catch (e) {
+      // 取不到像素（画布被污染等）就不改播放策略。
+      alphaChecked = true;
+      return;
+    }
+    if (corner >= 100) { degradeToSprites(); return; }
+    if (center > 100) { alphaChecked = true; return; }
+    scheduleAlphaCheck(video);
+  }
+
+  function degradeToSprites() {
+    if (useMobileCanvas) return;
+    alphaChecked = true;
+    useMobileCanvas = true;
+    usePosterOnly = false;
+    engineName = 'canvas';
+    playSeq++;
+    active = null;
+    if (cutTimer) { clearTimeout(cutTimer); cutTimer = null; }
+    [vA, vB].forEach(function (v) {
+      if (!v) return;
+      try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {}
+      v.style.display = 'none';
+    });
+    if (stage) {
+      stage.classList.remove('sp-poster-only');
+      stage.classList.add('sp-canvas-mode');
+    }
+    if (poster) poster.classList.add('sp-hidden');
+    initMobileSprites();
+  }
+
   function videoError(key) {
     console.warn('[鱼鱼] 动画加载失败：' + key);
     if (key === 'idle') videoFailed();
@@ -1064,21 +1045,14 @@
       fallbackPosterOnly();
       return;
     }
-    usePosterOnly = true;
-    try {
-      vA.pause();
-      vB.pause();
-    } catch (e) {}
-    stage.classList.add('sp-poster-only');
-    vA.style.display = 'none';
-    vB.style.display = 'none';
-    poster.classList.remove('sp-hidden');
+    // 视频播不出来先换 Canvas 精灵，精灵也拿不到再由 initMobileSprites 退回海报。
     active = null;
     if (chainTimer) {
       clearTimeout(chainTimer);
       chainTimer = null;
     }
-    console.warn('[鱼鱼] 透明动画不可用，已退回静态全身立绘');
+    degradeToSprites();
+    console.warn('[鱼鱼] 透明动画不可用，已改用静态帧精灵');
   }
 
   function resumeIdle() {
@@ -1142,6 +1116,7 @@
     window.addEventListener('resize', function () {
       place();
       if (bubbleEl.classList.contains('sp-on')) positionBubble();
+      if (useMobileCanvas && spriteAnim) { syncSpriteCanvasSize(); drawSpriteFrame(Math.max(0, spriteAnim.last)); }
     });
 
     dock.addEventListener('click', function (e) {
@@ -1930,6 +1905,21 @@
       sleepBtn.hidden = !CFG.sleepEnabled;
       sleepBtn.textContent = state.asleep ? '起床' : '睡觉';
     }
+    var engEl = statusPanel.querySelector('.sp-status-engine');
+    if (engEl) engEl.textContent = engineInfo();
+  }
+
+  // 手机上「动画没了 / 很糊」这类反馈很难远程判断，状态面板里留一行引擎自述，
+  // 一眼就能看出当前走的是 WebM、Canvas 精灵还是海报，以及素材分辨率。
+  function engineInfo() {
+    var dpr = Math.round((window.devicePixelRatio || 1) * 10) / 10;
+    var txt = '渲染 v' + SPRITE_VER + '：' + engineName + (isMobileBrowser ? '（手机）' : '（桌面）') + ' · 屏幕 dpr ' + dpr;
+    if (engineName === 'canvas') {
+      var m = spriteManifest && spriteManifest.idle;
+      txt += m ? (' · 帧 ' + m.fw + '×' + m.fh + ' · ' + (Math.round(m.frames / m.dur * 10) / 10) + 'fps') : ' · 精灵表未就绪';
+      if (canvasEl) txt += ' · 画布 ' + canvasEl.width + '×' + canvasEl.height;
+    }
+    return txt;
   }
 
   function closePanels() {
@@ -2602,7 +2592,6 @@
       'transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .18s ease;z-index:1}',
       '.sp-canvas.sp-on{opacity:1}',
       '.sp-stage.sp-canvas-mode .sp-video{display:none!important}',
-      '.sp-stage.sp-mobile-anim .sp-video,.sp-stage.sp-mobile-anim .sp-canvas{display:none!important}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
       '.sp-bubble{position:absolute;left:0;bottom:calc(100% + 4px);z-index:7;max-width:min(260px,calc(100vw - 24px));',
       'min-width:118px;padding:9px 12px 8px;background:var(--sp-bg);color:var(--sp-fg);border:1px solid var(--sp-line);',
@@ -2674,6 +2663,7 @@
       '.sp-status-fill.sp-status-boredom{background:#8b7cf6}',
       '.sp-status-fill.is-low,.sp-status-fill.is-high{background:#d97706}',
       '.sp-status-stats{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--sp-muted);margin-top:9px}',
+      '.sp-status-engine{font-size:10px;line-height:1.5;color:var(--sp-muted);margin-top:7px;word-break:break-all}',
       '.sp-status-stats b{color:var(--sp-fg);font-variant-numeric:tabular-nums}',
       '.sp-status-actions{display:flex;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid var(--sp-line)}',
       '.sp-status-actions button{flex:1;border:1px solid var(--sp-line);background:transparent;color:var(--sp-fg);font:inherit;font-size:11px;padding:4px 6px;border-radius:7px;cursor:pointer}',
@@ -2746,5 +2736,9 @@
     posterOnly: function () { return usePosterOnly; },
     spriteMode: function () { return useMobileCanvas; },
     imageMode: function () { return isMobileBrowser; },
+    engine: function () { return engineName; },
+    engineInfo: engineInfo,
+    alphaChecked: function () { return alphaChecked; },
+    canvasSize: function () { return canvasEl ? canvasEl.width + 'x' + canvasEl.height : 'none'; },
   };
 })();
