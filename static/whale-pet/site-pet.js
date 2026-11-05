@@ -13,8 +13,8 @@
   var STORE = 'whale-pet-v1';
   // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
   // SPRITE_VER 只跟着精灵素材走（素材没变就不该让用户重下 26MB）；PET_VER 是脚本自身版本。
-  var SPRITE_VER = '45';
-  var PET_VER = '46';
+  var SPRITE_VER = '47';
+  var PET_VER = '47';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -625,7 +625,16 @@
       var t0 = window.performance && performance.now ? performance.now() : 0;
       var cw = canvasEl.width || 1280, ch = canvasEl.height || 720;
       canvasCtx.clearRect(0, 0, cw, ch);
-      canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, 0, 0, cw, ch);
+      // 裁过空白边的精灵表要贴回它在 16:9 画布里的原位，人物才不会左右飘；
+      // 没带 ref 的旧表仍整格铺满。
+      var dx = 0, dy = 0, dw = cw, dh = ch;
+      if (info.ref && info.ref[0] && info.ref[1]) {
+        dx = (info.ox || 0) / info.ref[0] * cw;
+        dy = (info.oy || 0) / info.ref[1] * ch;
+        dw = info.fw / info.ref[0] * cw;
+        dh = info.fh / info.ref[1] * ch;
+      }
+      canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, dx, dy, dw, dh);
       if (t0) tuneSpriteScale(performance.now() - t0);
     } catch (e) { fallbackPosterOnly(); }
   }
@@ -1983,7 +1992,7 @@
     var txt = '渲染 v' + PET_VER + '：' + engineName + (isMobileBrowser ? '（手机）' : '（桌面）') + ' · 屏幕 dpr ' + dpr;
     if (engineName === 'canvas') {
       var m = spriteManifest && spriteManifest.idle;
-      txt += m ? (' · 帧 ' + m.fw + '×' + m.fh + ' · ' + (Math.round(m.frames / m.dur * 10) / 10) + 'fps') : ' · 精灵表未就绪';
+      txt += m ? (' · 帧 ' + m.fw + '×' + m.fh + (m.ref ? '(裁切自' + m.ref[0] + '×' + m.ref[1] + ')' : '(整幅)') + ' · ' + (Math.round(m.frames / m.dur * 10) / 10) + 'fps') : ' · 精灵表未就绪';
       if (canvasEl) txt += ' · 画布 ' + canvasEl.width + '×' + canvasEl.height;
     }
     return txt;
