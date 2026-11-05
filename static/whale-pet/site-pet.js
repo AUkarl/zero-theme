@@ -346,7 +346,7 @@
         '<video class="sp-video sp-video-a" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
         '<video class="sp-video sp-video-b" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
         '<img class="sp-poster" alt="" decoding="async">' +
-        '<canvas class="sp-canvas" width="480" height="270" aria-hidden="true"></canvas>' +
+        '<canvas class="sp-canvas" width="1280" height="720" aria-hidden="true"></canvas>' +
       '</div>' +
       '<div class="sp-dock">' +
         '<button type="button" data-act="chat">聊天</button>' +
@@ -476,7 +476,7 @@
         spriteImages[key] = img;
         spriteOrder = spriteOrder.filter(function (k) { return k !== key; });
         spriteOrder.push(key);
-        while (spriteOrder.length > 3) {
+        while (spriteOrder.length > 2) {
           var old = spriteOrder.shift();
           if (old === 'idle' || (spriteAnim && old === spriteAnim.key)) { spriteOrder.push(old); break; }
           delete spriteImages[old];
@@ -547,8 +547,9 @@
     var gx = idx % info.cols;
     var gy = Math.floor(idx / info.cols);
     try {
-      canvasCtx.clearRect(0, 0, 480, 270);
-      canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, 0, 0, 480, 270);
+      var cw = canvasEl.width || 1280, ch = canvasEl.height || 720;
+      canvasCtx.clearRect(0, 0, cw, ch);
+      canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, 0, 0, cw, ch);
     } catch (e) { fallbackPosterOnly(); }
   }
 
