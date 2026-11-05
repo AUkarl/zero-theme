@@ -12,7 +12,7 @@
 
   var STORE = 'whale-pet-v1';
   // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
-  var SPRITE_VER = '41';
+  var SPRITE_VER = '44';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -430,9 +430,9 @@
       stage.classList.add('sp-poster-only');
       vA.style.display = 'none';
       vB.style.display = 'none';
-    } else if (isMobileBrowser) {
-      stage.classList.add('sp-mobile-anim');
-      initMobileImages();
+    } else if (useMobileCanvas) {
+      stage.classList.add('sp-canvas-mode');
+      initMobileSprites();
     }
   }
 
@@ -941,7 +941,7 @@
     if (key !== 'idle') cancelIdleStart();
     var clip = CLIPS[key];
     if (!clip) return;
-    if (isMobileBrowser) { playMobileImage(key, opts); return; }
+    if (useMobileCanvas) { playMobileSprite(key, opts); return; }
     if (usePosterOnly) {
       active = { key: key, clip: clip };
       return;
