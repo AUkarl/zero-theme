@@ -11,10 +11,11 @@
   window.__SITE_PET_BOOTED__ = true;
 
   var STORE = 'whale-pet-v1';
-  // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
-  // SPRITE_VER 只跟着精灵素材走（素材没变就不该让用户重下 26MB）；PET_VER 是脚本自身版本。
+  // SPRITE_VER 跟着精灵素材走（素材没变就不该让用户重下 31MB）；PET_VER 是脚本自身版本，
+  // 也用来给 WebM 素材定址。_headers 里 /whale-pet/* 是 immutable 一年：换素材必须同时升这两个号，
+  // 否则老访客一直拿旧文件（float.webm 当年就是这么被 ?v=1 钉住的）。
   var SPRITE_VER = '47';
-  var PET_VER = '47';
+  var PET_VER = '48';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -217,7 +218,7 @@
     img.onerror = function () {
       if (img.dataset.identityFallback === '1') return;
       img.dataset.identityFallback = '1';
-      img.src = '/whale-pet/avatar.webp?v=2';
+      img.src = '/whale-pet/avatar.webp?v=' + PET_VER;
     };
     if (identity.image) {
       img.dataset.identityFallback = '0';
@@ -228,7 +229,7 @@
       img.src = src;
     } else {
       img.dataset.identityFallback = '1';
-      img.src = '/whale-pet/avatar.webp?v=2';
+      img.src = '/whale-pet/avatar.webp?v=' + PET_VER;
     }
   }
 
@@ -416,11 +417,11 @@
 
     setIdentityImage(root.querySelector('.sp-face'));
     setIdentityImage(root.querySelector('.sp-status-face'));
-    poster.src = '/whale-pet/poster.webp?v=3';
+    poster.src = '/whale-pet/poster.webp?v=' + PET_VER;
     poster.addEventListener('error', function () {
       if (poster.dataset.pngFallback === '1') { poster.style.display = 'none'; return; }
       poster.dataset.pngFallback = '1';
-      poster.src = '/whale-pet/poster.png?v=2';
+      poster.src = '/whale-pet/poster.png?v=' + PET_VER;
     });
 
     if (!CFG.dockEnabled) dock.style.display = 'none';
@@ -682,7 +683,7 @@
     if (vA) vA.style.display = 'none';
     if (vB) vB.style.display = 'none';
     if (stage) { stage.classList.remove('sp-canvas-mode'); stage.classList.add('sp-poster-only'); }
-    if (poster) { poster.classList.remove('sp-hidden'); poster.src = '/whale-pet/poster.webp?v=3'; }
+    if (poster) { poster.classList.remove('sp-hidden'); poster.src = '/whale-pet/poster.webp?v=' + PET_VER; }
   }
 
   function buildMenu() {
@@ -953,7 +954,7 @@
     el.onplaying = null;
     el.onended = null;
     el.onerror = null;
-    el.src = ANIM_BASE + clip.f + '?v=1';
+    el.src = ANIM_BASE + clip.f + '?v=' + PET_VER;
     el.load();
 
     var finish = function () {
