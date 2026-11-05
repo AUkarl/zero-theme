@@ -11,6 +11,8 @@
   window.__SITE_PET_BOOTED__ = true;
 
   var STORE = 'whale-pet-v1';
+  // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
+  var SPRITE_VER = '41';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -446,7 +448,7 @@
   function initMobileSprites() {
     if (!useMobileCanvas || !canvasEl || !canvasCtx) { fallbackPosterOnly(); return; }
     if (!spriteRaf) startSpriteLoop();
-    fetch('/whale-pet/mobile/manifest.json?v=1', { cache: 'force-cache' })
+    fetch('/whale-pet/mobile/manifest.json?v=' + SPRITE_VER, { cache: 'force-cache' })
       .then(function (r) {
         if (!r.ok) throw new Error('manifest');
         return r.json();
@@ -488,7 +490,7 @@
         delete spriteLoads[key];
         reject(new Error('sprite ' + key));
       };
-      img.src = '/whale-pet/mobile/' + info.file + '?v=1';
+      img.src = '/whale-pet/mobile/' + info.file + '?v=' + SPRITE_VER;
     });
     spriteLoads[key] = p;
     return p;
