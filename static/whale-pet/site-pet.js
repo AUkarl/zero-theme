@@ -15,7 +15,7 @@
   // 也用来给 WebM 素材定址。_headers 里 /whale-pet/* 是 immutable 一年：换素材必须同时升这两个号，
   // 否则老访客一直拿旧文件（float.webm 当年就是这么被 ?v=1 钉住的）。
   var SPRITE_VER = '47';
-  var PET_VER = '48';
+  var PET_VER = '52';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -179,6 +179,8 @@
   var menuOpen = false;
   var chatOpen = false;
   var statusOpen = false;
+  // 面板一旦被气泡顶上去，本次打开期间就不要再回落，免得每条回复都跳一下。
+  var bubbleHoldSticky = 0;
   var statusPanel = null;
   var statusTimer = null;
 
@@ -378,8 +380,10 @@
       '</div>' +
       '<form class="sp-panel sp-chat">' +
         '<div class="sp-panel-head"><b>跟' + identityName() + '说点什么</b><button type="button" class="sp-x" data-close="chat" aria-label="关闭">×</button></div>' +
-        '<textarea rows="2" placeholder="问问' + identityName() + '…（Enter 发送 / Shift+Enter 换行）"></textarea>' +
-        '<div class="sp-chat-row"><button type="button" class="sp-cancel">取消</button><button type="submit" class="sp-send">发送</button></div>' +
+        '<div class="sp-chat-input">' +
+          '<textarea rows="2" placeholder="问问' + identityName() + '…（Enter 发送 / Shift+Enter 换行）"></textarea>' +
+          '<button type="submit" class="sp-send" aria-label="发送">发送</button>' +
+        '</div>' +
       '</form>' +
       '<div class="sp-panel sp-status" aria-label="状态面板">' +
         '<div class="sp-panel-head"><b>' + identityName() + '的状态</b><button type="button" class="sp-x" data-close="status" aria-label="关闭">×</button></div>' +
@@ -478,6 +482,9 @@
         spritePending = null;
         if (p) playMobileSprite(p.key, p.opts);
         else playMobileSprite('idle', { loop: true });
+        // 精灵模式下 startIdle 的开场常被 hasPlayed 提前挡掉，自动动作的链路要在这里接上，
+        // 否则第一张预取的表永远排不上。
+        if (booted && !chainTimer) scheduleNext();
       })
       .catch(function () { fallbackPosterOnly(); });
   }
@@ -760,21 +767,6 @@
     var arrow = (sr.left + sr.width / 2) - left;
     bubbleEl.style.setProperty('--sp-arrow-x', Math.max(14, Math.min(br.width - 14, arrow)) + 'px');
 
-    // 窄屏下聊天面板只能放在宠物上方：气泡继续往上叠，避免两层面板互相盖住。
-    if (chatOpen && chat && chat.classList.contains('is-on') && !chat.classList.contains('sp-side')) {
-      var cr = chat.getBoundingClientRect();
-      if (cr.top < sr.top && cr.top > margin + 40) {
-        bubbleEl.style.bottom = Math.round(rr.bottom - cr.top + 10) + 'px';
-        bubbleEl.style.top = 'auto';
-        var brChat = bubbleEl.getBoundingClientRect();
-        if (brChat.top < margin) {
-          bubbleEl.style.top = Math.round(margin - rr.top) + 'px';
-          bubbleEl.style.bottom = 'auto';
-        }
-        return;
-      }
-    }
-
     // 宠物被拖到屏幕上边缘时，默认在头顶的气泡会被裁掉；有空间就翻到脚下。
     if (br.top < margin) {
       var dockVisible = dock && getComputedStyle(dock).display !== 'none';
@@ -854,7 +846,13 @@
     var maxCap = Math.max(180, Math.min(480, vh - margin * 2));
     var dockVisible = dock && getComputedStyle(dock).display !== 'none';
     var dockRect = dockVisible ? dock.getBoundingClientRect() : null;
-    var above = sr.top - gap - margin;
+    // 气泡永远留在头顶，面板往上让位 —— 不是把气泡顶到输入框上面去。
+    var bubbleHold = 0;
+    if (bubbleEl && bubbleEl.classList.contains('sp-on') && !bubbleEl.classList.contains('sp-below')) {
+      bubbleHoldSticky = bubbleEl.getBoundingClientRect().height + 6;
+    }
+    bubbleHold = bubbleHoldSticky;
+    var above = sr.top - gap - margin - bubbleHold;
     var belowStart = (dockRect ? dockRect.bottom : sr.bottom) + gap;
     var below = vh - belowStart - margin;
     var useBelow = natural > above && below > above;
@@ -867,7 +865,7 @@
       el.classList.add('is-below');
     } else {
       el.style.top = 'auto';
-      el.style.bottom = Math.round(rr.bottom - sr.top + gap) + 'px';
+      el.style.bottom = Math.round(rr.bottom - sr.top + gap + bubbleHold) + 'px';
       el.classList.remove('is-below');
     }
   }
@@ -977,6 +975,7 @@
       back = old;
       active = { key: key, clip: clip, el: el };
       hasPlayed = true;
+      videoErrStrikes = 0;
       if (!useMobileCanvas) poster.classList.add('sp-hidden');
       setTimeout(function () {
         if (old && old !== front) old.pause();
@@ -1046,11 +1045,17 @@
   // 取到「角透明 / 中心不透明」才判定通过；判不过就换 Canvas 精灵引擎。
   var alphaChecked = false;
   var alphaTries = 0;
+  var alphaOpaque = 0;
+  var videoErrStrikes = 0;
 
   function scheduleAlphaCheck(video) {
-    if (alphaChecked || useMobileCanvas || alphaTries >= 4) return;
+    if (alphaChecked || useMobileCanvas || alphaTries >= 6) return;
     alphaTries++;
-    setTimeout(function () { verifyVideoAlpha(video); }, 200 * alphaTries);
+    setTimeout(function () {
+      // 等到真的呈现了一帧再取样，避免读到「只有颜色没有 alpha」的中间态。
+      if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(function () { verifyVideoAlpha(video); });
+      else setTimeout(function () { verifyVideoAlpha(video); }, 120);
+    }, 180 * alphaTries);
   }
 
   function verifyVideoAlpha(video) {
@@ -1071,8 +1076,13 @@
       alphaChecked = true;
       return;
     }
-    if (corner >= 100) { degradeToSprites(); return; }
-    if (center > 100) { alphaChecked = true; return; }
+    if (corner < 100 && center > 100) { alphaChecked = true; return; }
+    if (corner >= 100 && center > 100) {
+      // 连读两次「整幅不透明」才认定丢了 alpha：第一次可能只是解码还没走完，
+      // 误判会把好浏览器踢进 10fps 的精灵模式。
+      alphaOpaque++;
+      if (alphaOpaque >= 2) { degradeToSprites(); return; }
+    }
     scheduleAlphaCheck(video);
   }
 
@@ -1100,8 +1110,17 @@
 
   function videoError(key) {
     console.warn('[鱼鱼] 动画加载失败：' + key);
-    if (key === 'idle') videoFailed();
-    else resumeIdle();
+    if (key !== 'idle') { resumeIdle(); return; }
+    // 刚导航时上一次加载被打断，会让 idle 报一次假错；先重试一次再考虑降级，
+    // 否则好好的 WebM 会被永久换成 10fps 的精灵。
+    videoErrStrikes++;
+    if (videoErrStrikes < 2) {
+      setTimeout(function () {
+        if (booted && !useMobileCanvas && !usePosterOnly && !state.asleep) play('idle', { loop: true, force: true });
+      }, 1200);
+      return;
+    }
+    videoFailed();
   }
 
   function videoFailed() {
@@ -2001,6 +2020,7 @@
 
   function closePanels() {
     var was = panelsOpen();
+    bubbleHoldSticky = 0;
     menuOpen = false;
     chatOpen = false;
     statusOpen = false;
@@ -2298,7 +2318,17 @@
         hideBubble();
       }, ttl);
     }
-    requestAnimationFrame(positionBubble);
+    requestAnimationFrame(function () {
+      positionBubble();
+      repositionPanels();
+    });
+  }
+
+  // 气泡钉在头顶不动，所以让位的是面板：气泡出现后把打开的面板重排一次。
+  function repositionPanels() {
+    if (chatOpen && chat) positionPanel(chat);
+    if (menuOpen && menu) positionPanel(menu);
+    if (statusOpen && statusPanel) positionPanel(statusPanel);
   }
 
   function thinking(foot) {
@@ -2757,14 +2787,13 @@
       '.sp-status-actions{display:flex;gap:6px;margin-top:9px;padding-top:8px;border-top:1px solid var(--sp-line)}',
       '.sp-status-actions button{flex:1;border:1px solid var(--sp-line);background:transparent;color:var(--sp-fg);font:inherit;font-size:11px;padding:4px 6px;border-radius:7px;cursor:pointer}',
       '.sp-status-actions button:hover{background:var(--sp-accent);color:#fff;border-color:transparent}',
+      '.sp-chat-input{position:relative}',
       '.sp-chat textarea{width:100%;box-sizing:border-box;resize:none;min-height:58px;font:inherit;font-size:12px;',
       'color:var(--sp-fg);background:transparent;border:1px solid var(--sp-line);border-radius:9px;',
-      'padding:7px 9px;outline:none;line-height:1.5}',
+      'padding:7px 60px 26px 9px;outline:none;line-height:1.5}',
       '.sp-chat textarea:focus{border-color:var(--sp-accent)}',
-      '.sp-chat-row{display:flex;justify-content:flex-end;gap:6px;margin-top:7px}',
-      '.sp-chat-row button{border:1px solid var(--sp-line);background:transparent;color:var(--sp-fg);',
-      'font:inherit;font-size:11.5px;padding:4px 10px;border-radius:7px;cursor:pointer}',
-      '.sp-chat-row .sp-send{background:var(--sp-accent);color:#fff;border-color:transparent}',
+      '.sp-chat .sp-send{position:absolute;right:5px;bottom:5px;border:1px solid transparent;background:var(--sp-accent);',
+      'color:#fff;font:inherit;font-size:11.5px;padding:4px 10px;border-radius:7px;cursor:pointer}',
       '.site-pet-mini{position:fixed;left:10px;bottom:12px;z-index:951;display:flex;align-items:center;gap:7px;',
       'border:1px solid rgba(59,98,246,.18);border-radius:999px;background:rgba(255,255,255,.92);',
       'padding:4px 11px 4px 4px;box-shadow:0 8px 22px rgba(28,44,80,.18);cursor:pointer;',
