@@ -12,7 +12,9 @@
 
   var STORE = 'whale-pet-v1';
   // 精灵资源必须跟着版本走，否则浏览器/CDN 会一直用旧缓存图。
+  // SPRITE_VER 只跟着精灵素材走（素材没变就不该让用户重下 26MB）；PET_VER 是脚本自身版本。
   var SPRITE_VER = '45';
+  var PET_VER = '46';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -28,7 +30,9 @@
   // 手机浏览器普遍会把页面里的 <video> 接管成自家播放层：透明 WebM 的 alpha
   // 可能被丢掉，画面上就会出现一块不透明视频框。手机端统一改用动画 WebP 海报，
   // 不创建视频播放，桌面端仍保留完整 WebM 动作。
-  var isMobileBrowser = mobile || /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MiuiBrowser|MiBrowser|MIBrowser|XiaoMi|Xiaomi|MIUI/i.test(ua);
+  // 手机判定只认真正的触屏/手机环境：窄窗口的桌面浏览器不该被当成手机降级。
+  var phoneUA = /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MiuiBrowser|VivoBrowser|HeyTapBrowser|HuaweiBrowser|HonorBrowser|UCBrowser|Quark|qqbrowser|MQQBrowser|baidubrowser|SogouMobileBrowser|SamsungBrowser/i.test(ua);
+  var isMobileBrowser = phoneUA || (mobile && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window));
 
   // 后台「鲸鱼娘」页写 data/pet.json，Hugo 在页面里注入 window.__WHALE_PET_CONFIG__；
   // 这里保留一份同口径默认值，后台没配或老页面没有注入时也能跑。
@@ -131,12 +135,15 @@
   }
   var greeted = false;
   var booted = false;
-  // 国产内核（小米/UC/夸克/QQ）会把页面里的 <video> 接管成自家播放层：透明通道丢失，
-  // 画面上就是一块不透明的视频框。这些浏览器直接走 Canvas 精灵，其余手机端和桌面端
-  // 仍用完整 24fps 的 WebM；首帧再做一次真实像素的透明校验，校验不过才降级。
-  var takeoverUA = /MiuiBrowser|MiBrowser|MIBrowser|Miui|XiaoMi|Xiaomi|MIUI|UCBrowser|UBrowser|Quark|qqbrowser|MQQBrowser/i.test(ua);
+  // 手机自带内核基本都会把页面里的 <video> 接管成自家播放层，或者硬件解码直接丢掉
+  // 透明通道（小米、vivo、OPPO、华为/荣耀、360、百度、QQ/微信、UC、夸克、搜狗都实测过）。
+  // 与其继续加长黑名单，反过来定规则：手机端只给明确的现代内核留 WebM，
+  // 其余一律 Canvas 精灵；桌面端仍走 WebM，并在首帧做一次真实像素的透明校验。
+  var stockKernel = /MiuiBrowser|MiBrowser|MIBrowser|Miui|VivoBrowser|BBKBrowser|HeyTapBrowser|OppoBrowser|HuaweiBrowser|HonorBrowser|MagicBrowser|HarmonyOS|ArkWeb|UCBrowser|UBrowser|Quark|qqbrowser|MQQBrowser|MicroMessenger|TencentTraveler|baidubrowser|BaiduBrowser|BDAPP|QihooBrowser|360Browser|360AISE|SogouMobileBrowser|CheetahBrowser|KuaiYa|LenovoBrowser|ZTEBrowser|MeizuBrowser|NubiaBrowser/i;
+  var modernMobile = /(Chrome|CriOS)\/\d+|EdgA\/|Edg\/|Firefox\/|SamsungBrowser|OPR\//i;
   var noWebm = !supportsWebm();
-  var useMobileCanvas = isMobileBrowser && (takeoverUA || noWebm);
+  var videoOnPhone = isMobileBrowser && modernMobile.test(ua) && !stockKernel.test(ua) && !noWebm;
+  var useMobileCanvas = isMobileBrowser && !videoOnPhone;
   var usePosterOnly = noWebm && !useMobileCanvas;
   var engineName = useMobileCanvas ? 'canvas' : (noWebm ? 'poster' : 'video');
   var root = null;
@@ -179,6 +186,7 @@
   }
   var lastPokeAsk = 0;
   var lastRandom = '';
+  var clickIdx = 0;
   var hasPlayed = false;
   var lastPageLine = 0;
   var lastCommentReaction = 0;
@@ -449,6 +457,8 @@
   var spritePending = null;
   var spriteReq = 0;
   var spriteOrder = [];
+  // 除待机外常驻几张精灵表：1 张约 54MB 位图，deviceMemory 小的机器只留 1 张。
+  var spriteKeep = (navigator.deviceMemory && navigator.deviceMemory >= 4) ? 2 : 1;
 
   function initMobileSprites() {
     if (!useMobileCanvas || !canvasEl || !canvasCtx) { fallbackPosterOnly(); return; }
@@ -480,16 +490,26 @@
       var img = new Image();
       img.decoding = 'async';
       img.onload = function () {
-        spriteImages[key] = img;
-        spriteOrder = spriteOrder.filter(function (k) { return k !== key; });
-        spriteOrder.push(key);
-        while (spriteOrder.length > 2) {
-          var old = spriteOrder.shift();
-          if (old === 'idle' || (spriteAnim && old === spriteAnim.key)) { spriteOrder.push(old); break; }
-          delete spriteImages[old];
-          delete spriteLoads[old];
-        }
-        resolve(img);
+        // onload 只代表字节到位，位图可能还没解码；这时 drawImage 会画空一帧，
+        // 表现就是动作切换瞬间「闪一下」。先 decode() 再进缓存。
+        var store = function () {
+          spriteImages[key] = img;
+          spriteOrder = spriteOrder.filter(function (k) { return k !== key; });
+          spriteOrder.push(key);
+          // 常驻上限：待机那张永远留着，其余按内存大小决定留几张。
+          // 一张 13MP 位图约 54MB，内存小的手机留三张就卡成慢动作。
+          var playing = spriteAnim ? spriteAnim.key : null;
+          var keep = 1 + spriteKeep + (playing && playing !== 'idle' ? 1 : 0);
+          while (spriteOrder.length > keep) {
+            var old = spriteOrder.shift();
+            if (old === 'idle' || old === playing) { spriteOrder.push(old); continue; }
+            delete spriteImages[old];
+            delete spriteLoads[old];
+          }
+          resolve(img);
+        };
+        if (img.decode) img.decode().then(store, store);
+        else store();
       };
       img.onerror = function () {
         delete spriteLoads[key];
@@ -499,6 +519,14 @@
     });
     spriteLoads[key] = p;
     return p;
+  }
+
+  // 一张精灵表约 1MB，等用户点了再下载就是「点了没反应」。空闲时先把下一个要演的取好，
+  // 常驻仍只有待机 + 一张，省内存也省流量；省流量模式不预取。
+  function warmSprite(key) {
+    if (!useMobileCanvas || !spriteManifest || lowData || !key || key === 'idle') return;
+    if (spriteImages[key] || spriteLoads[key]) return;
+    loadSpriteImage(key).catch(function () {});
   }
 
   function playMobileSprite(key, opts) {
@@ -551,30 +579,54 @@
   }
 
   // 画布内部分辨率要跟屏幕物理像素对齐：固定 1280×720 时浏览器要先做一层大幅缩小，
-  // 手机端会走低质量 mipmap 采样，人物就糊了。
+  // 手机端会走低质量 mipmap 采样，人物就糊了。低端机绘制一帧太贵时再自适应降一档，
+  // 免得帧率被绘制拖成「慢动作」。
+  var spriteScale = 1;
+  var spriteDrawAvg = 0;
+  var spriteScaleAt = 0;
+
   function syncSpriteCanvasSize() {
     if (!canvasEl || !canvasCtx) return;
     var dpr = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
     var cssH = canvasEl.getBoundingClientRect().height || 240;
-    var h = Math.max(96, Math.min(1080, Math.round(cssH * dpr)));
+    var h = Math.max(96, Math.min(Math.round(1080 * spriteScale), Math.round(cssH * dpr)));
     var w = Math.round(h * 16 / 9);
     if (canvasEl.width !== w || canvasEl.height !== h) {
       canvasEl.width = w;
       canvasEl.height = h;
     }
     canvasCtx.imageSmoothingEnabled = true;
-    canvasCtx.imageSmoothingQuality = 'high';
+    canvasCtx.imageSmoothingQuality = spriteScale < 1 ? 'medium' : 'high';
+  }
+
+  // 一帧绘制耗时中位数超过 42ms（≈24fps 都追不上）就降分辨率，回到 14ms 以下再升回去。
+  function tuneSpriteScale(ms) {
+    spriteDrawAvg = spriteDrawAvg ? spriteDrawAvg * 0.7 + ms * 0.3 : ms;
+    var now = Date.now();
+    if (now - spriteScaleAt < 1500) return;
+    if (spriteDrawAvg > 42 && spriteScale > 0.5) {
+      spriteScale = Math.max(0.5, spriteScale * 0.75);
+      spriteScaleAt = now;
+      syncSpriteCanvasSize();
+    } else if (spriteDrawAvg < 14 && spriteScale < 1) {
+      spriteScale = Math.min(1, spriteScale * 1.25);
+      spriteScaleAt = now;
+      syncSpriteCanvasSize();
+    }
   }
 
   function drawSpriteFrame(idx) {
     if (!canvasCtx || !spriteAnim) return;
     var a = spriteAnim, info = a.info;
+    if (!a.img || !a.img.complete || !a.img.naturalWidth) return;
     var gx = idx % info.cols;
     var gy = Math.floor(idx / info.cols);
     try {
+      var t0 = window.performance && performance.now ? performance.now() : 0;
       var cw = canvasEl.width || 1280, ch = canvasEl.height || 720;
       canvasCtx.clearRect(0, 0, cw, ch);
       canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, 0, 0, cw, ch);
+      if (t0) tuneSpriteScale(performance.now() - t0);
     } catch (e) { fallbackPosterOnly(); }
   }
 
@@ -646,6 +698,9 @@
           if (menuOpen) closePanels();
           play(key, { onEnd: resumeIdle });
         });
+        // 手指按下/鼠标划过就先把这张表取好，点下去立刻有动作。
+        b.addEventListener('pointerenter', function () { warmSprite(key); });
+        b.addEventListener('pointerdown', function () { warmSprite(key); });
         grid.appendChild(b);
       });
       body.appendChild(grid);
@@ -1068,18 +1123,21 @@
       chainTimer = null;
     }
     if (!booted || state.asleep || drag || panelsOpen()) return;
+    var delay = CFG.idleMin * 1000 + Math.random() * Math.max(0, CFG.idleMax - CFG.idleMin) * 1000;
+    var nextKey = pickRandom();
+    warmSprite(nextKey);
     chainTimer = setTimeout(function () {
       chainTimer = null;
       if (state.asleep || drag || panelsOpen() || document.hidden) {
         scheduleNext();
         return;
       }
-      play(pickRandom(), {
+      play(nextKey, {
         onEnd: function () {
           resumeIdle();
         },
       });
-    }, CFG.idleMin * 1000 + Math.random() * Math.max(0, CFG.idleMax - CFG.idleMin) * 1000);
+    }, delay);
   }
 
   function pauseChain() {
@@ -1113,6 +1171,11 @@
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp);
     window.addEventListener('pointercancel', onPointerUp);
+    // 指针抬起丢了（切标签、被系统手势打断）时，drag 会一直挂着，之后所有
+    // 「回到待机」都会被挡住，看起来就是宠物再也不动了。
+    var dropStuckDrag = function () { if (drag) onPointerUp({ pointerId: drag.id }); };
+    window.addEventListener('blur', dropStuckDrag);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) dropStuckDrag(); });
     window.addEventListener('resize', function () {
       place();
       if (bubbleEl.classList.contains('sp-on')) positionBubble();
@@ -1782,8 +1845,9 @@
       e.preventDefault();
       return;
     }
+    // 被拎起来的动画要等真的移动了再演：一按下去就切动作，手机上等于先卡在
+    // 这张表的下载里，用户会觉得「点了没反应」。
     try { stage.setPointerCapture(e.pointerId); } catch (err) {}
-    play('drag', { loop: true });
     e.preventDefault();
   }
 
@@ -1791,7 +1855,10 @@
     if (!drag || drag.noDrag || e.pointerId !== drag.id) return;
     var dx = e.clientX - drag.sx;
     var dy = e.clientY - drag.sy;
-    if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 4) {
+      drag.moved = true;
+      play('drag', { loop: true });
+    }
     if (!drag.moved) return;
     var w = root.offsetWidth;
     var h = root.offsetHeight;
@@ -1913,7 +1980,7 @@
   // 一眼就能看出当前走的是 WebM、Canvas 精灵还是海报，以及素材分辨率。
   function engineInfo() {
     var dpr = Math.round((window.devicePixelRatio || 1) * 10) / 10;
-    var txt = '渲染 v' + SPRITE_VER + '：' + engineName + (isMobileBrowser ? '（手机）' : '（桌面）') + ' · 屏幕 dpr ' + dpr;
+    var txt = '渲染 v' + PET_VER + '：' + engineName + (isMobileBrowser ? '（手机）' : '（桌面）') + ' · 屏幕 dpr ' + dpr;
     if (engineName === 'canvas') {
       var m = spriteManifest && spriteManifest.idle;
       txt += m ? (' · 帧 ' + m.fw + '×' + m.fh + ' · ' + (Math.round(m.frames / m.dur * 10) / 10) + 'fps') : ' · 精灵表未就绪';
@@ -2043,10 +2110,20 @@
     saveState(state);
     updateDock();
 
-    var clickKey = CLICK_CLIPS[Math.floor(Math.random() * CLICK_CLIPS.length)];
+    // 轮着来而不是纯随机：这样能提前把「下一次要点的那个动作」的精灵表取好，
+    // 手机上点下去就不必先等 1MB 下载。
+    var clickKey = CLICK_CLIPS[clickIdx % CLICK_CLIPS.length];
+    clickIdx++;
+    if (useMobileCanvas && stage) {
+      stage.classList.remove('sp-tapped');
+      void stage.offsetWidth;
+      stage.classList.add('sp-tapped');
+      setTimeout(function () { stage.classList.remove('sp-tapped'); }, 380);
+    }
     play(clickKey, {
       force: true,
       onEnd: function () {
+        warmSprite(CLICK_CLIPS[clickIdx % CLICK_CLIPS.length]);
         resumeIdle();
       },
     });
@@ -2577,6 +2654,8 @@
       '.sp-stage{position:relative;width:100%;height:100%;pointer-events:auto;cursor:grab;touch-action:none;',
       'outline:none;filter:drop-shadow(0 14px 20px rgba(25,40,75,.2))}',
       '.sp-stage:active{cursor:grabbing}',
+      '@keyframes sp-tap-nudge{0%{transform:scale(1)}34%{transform:scale(1.055) translateY(-3px)}100%{transform:scale(1)}}',
+      '.sp-stage.sp-tapped{animation:sp-tap-nudge .34s ease-out}',
       '.sp-stage:focus-visible{outline:2px solid var(--sp-accent);outline-offset:5px;border-radius:14px}',
       '.sp-video,.sp-poster{position:absolute;left:50%;top:50%;height:var(--sp-vh);width:auto;max-width:none;',
       'transform:translate(-50%,-50%);pointer-events:none;background:transparent;opacity:0;transition:opacity .22s ease;',
@@ -2707,7 +2786,7 @@
       '.site-pet-mini{left:8px;bottom:12px}.site-pet-restore{right:12px;bottom:14px;font-size:11px;padding:7px 12px}}',
       '@media (hover:none){.sp-dock{opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}}',
       '@media (prefers-reduced-motion:reduce){.sp-bubble,.sp-video,.sp-poster,.sp-dock{transition:none}',
-      '.site-pet-mini,.sp-poster-only .sp-poster{animation:none}}',
+      '.site-pet-mini,.sp-poster-only .sp-poster,.sp-stage.sp-tapped{animation:none}}',
       '@media print{#site-pet,.site-pet-mini,.site-pet-restore{display:none!important}}',
     ].join('');
     var style = document.createElement('style');
@@ -2740,5 +2819,11 @@
     engineInfo: engineInfo,
     alphaChecked: function () { return alphaChecked; },
     canvasSize: function () { return canvasEl ? canvasEl.width + 'x' + canvasEl.height : 'none'; },
+    spriteCache: function () { return Object.keys(spriteImages); },
+    spriteScale: function () { return spriteScale; },
+    spriteDrawAvg: function () { return Math.round(spriteDrawAvg * 10) / 10; },
+    frameIndex: function () { return spriteAnim ? spriteAnim.last : -1; },
+    dragging: function () { return !!drag; },
+    spriteKeep: function () { return spriteKeep; },
   };
 })();
