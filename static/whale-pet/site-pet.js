@@ -27,8 +27,6 @@
   // 可能被丢掉，画面上就会出现一块不透明视频框。手机端统一改用动画 WebP 海报，
   // 不创建视频播放，桌面端仍保留完整 WebM 动作。
   var isMobileBrowser = mobile || /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MiuiBrowser|MiBrowser|MIBrowser|XiaoMi|Xiaomi|MIUI/i.test(ua);
-  var reduceMotion = false;
-  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
 
   // 后台「鲸鱼娘」页写 data/pet.json，Hugo 在页面里注入 window.__WHALE_PET_CONFIG__；
   // 这里保留一份同口径默认值，后台没配或老页面没有注入时也能跑。
@@ -131,12 +129,20 @@
   }
   var greeted = false;
   var booted = false;
-  var usePosterOnly = isIos || isSafari || isMobileBrowser || !supportsWebm();
+  var usePosterOnly = !supportsWebm();
+  var useMobileCanvas = isMobileBrowser && !usePosterOnly;
   var root = null;
   var stage = null;
   var vA = null;
   var vB = null;
   var poster = null;
+  var canvasEl = null;
+  var canvasCtx = null;
+  var canvasRaf = 0;
+  var canvasOn = false;
+  var canvasDrew = false;
+  var canvasProbeTimer = null;
+  var canvasProbeTries = 0;
   var bubbleEl = null;
   var bubbleBody = null;
   var bubbleFoot = null;
@@ -336,6 +342,7 @@
         '<video class="sp-video sp-video-a" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
         '<video class="sp-video sp-video-b" muted playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5-page" x5-video-player-fullscreen="false" controlslist="nodownload nofullscreen noremoteplayback" disableremoteplayback disablepictureinpicture tabindex="-1" preload="none"></video>' +
         '<img class="sp-poster" alt="" decoding="async">' +
+        '<canvas class="sp-canvas" width="480" height="270" aria-hidden="true"></canvas>' +
       '</div>' +
       '<div class="sp-dock">' +
         '<button type="button" data-act="chat">聊天</button>' +
@@ -375,6 +382,9 @@
     vA = root.querySelector('.sp-video-a');
     vB = root.querySelector('.sp-video-b');
     poster = root.querySelector('.sp-poster');
+    canvasEl = root.querySelector('.sp-canvas');
+    canvasCtx = canvasEl ? canvasEl.getContext('2d') : null;
+    if (useMobileCanvas && !canvasCtx) { useMobileCanvas = false; usePosterOnly = true; }
     bubbleEl = root.querySelector('.sp-bubble');
     bubbleBody = root.querySelector('.sp-bubble-body');
     bubbleFoot = root.querySelector('.sp-bubble-foot');
@@ -387,20 +397,8 @@
 
     setIdentityImage(root.querySelector('.sp-face'));
     setIdentityImage(root.querySelector('.sp-status-face'));
-    if (usePosterOnly && isMobileBrowser && !reduceMotion) {
-      poster.classList.add('sp-mobile-anim');
-      poster.dataset.mobileAnim = '1';
-      poster.src = '/whale-pet/idle-mobile.webp?v=1';
-    } else {
-      poster.src = '/whale-pet/poster.webp?v=3';
-    }
+    poster.src = '/whale-pet/poster.webp?v=3';
     poster.addEventListener('error', function () {
-      if (poster.dataset.mobileAnim === '1') {
-        poster.dataset.mobileAnim = '0';
-        poster.classList.remove('sp-mobile-anim');
-        poster.src = '/whale-pet/poster.webp?v=3';
-        return;
-      }
       if (poster.dataset.pngFallback === '1') { poster.style.display = 'none'; return; }
       poster.dataset.pngFallback = '1';
       poster.src = '/whale-pet/poster.png?v=2';
@@ -426,7 +424,73 @@
       stage.classList.add('sp-poster-only');
       vA.style.display = 'none';
       vB.style.display = 'none';
+    } else if (useMobileCanvas) {
+      stage.classList.add('sp-canvas-mode');
+      startMobileCanvasLoop();
     }
+  }
+
+  function startMobileCanvasLoop() {
+    if (!useMobileCanvas || !canvasEl || !canvasCtx || canvasRaf) return;
+    var tick = function () {
+      canvasRaf = requestAnimationFrame(tick);
+      if (!canvasCtx || !front || front.readyState < 2) return;
+      if (!root || root.style.display === 'none') return;
+      try {
+        if (canvasEl.width !== 480 || canvasEl.height !== 270) {
+          canvasEl.width = 480;
+          canvasEl.height = 270;
+        }
+        canvasCtx.clearRect(0, 0, 480, 270);
+        canvasCtx.drawImage(front, 0, 0, 480, 270);
+        canvasDrew = true;
+      } catch (e) {}
+    };
+    canvasRaf = requestAnimationFrame(tick);
+  }
+
+  function canvasAlphaOk() {
+    if (!canvasCtx || !canvasDrew) return false;
+    try {
+      var d = canvasCtx.getImageData(2, 2, 1, 1).data;
+      return d[3] < 200;
+    } catch (e) { return false; }
+  }
+
+  function scheduleCanvasProbe() {
+    if (!useMobileCanvas || canvasOn || canvasProbeTimer) return;
+    canvasProbeTimer = setTimeout(function () {
+      canvasProbeTimer = null;
+      if (!useMobileCanvas || canvasOn) return;
+      if (!canvasDrew || !front || front.readyState < 2) {
+        canvasProbeTries++;
+        if (canvasProbeTries < 10) scheduleCanvasProbe();
+        return;
+      }
+      if (canvasAlphaOk()) {
+        canvasOn = true;
+        canvasEl.classList.add('sp-on');
+        poster.classList.add('sp-hidden');
+      } else {
+        fallbackPosterOnly();
+      }
+    }, 200);
+  }
+
+  function fallbackPosterOnly() {
+    usePosterOnly = true;
+    useMobileCanvas = false;
+    canvasOn = false;
+    canvasProbeTries = 0;
+    if (canvasRaf) cancelAnimationFrame(canvasRaf);
+    canvasRaf = 0;
+    if (canvasProbeTimer) { clearTimeout(canvasProbeTimer); canvasProbeTimer = null; }
+    if (canvasEl) canvasEl.style.display = 'none';
+    try { if (vA) vA.pause(); if (vB) vB.pause(); } catch (e) {}
+    if (vA) vA.style.display = 'none';
+    if (vB) vB.style.display = 'none';
+    if (stage) { stage.classList.remove('sp-canvas-mode'); stage.classList.add('sp-poster-only'); }
+    if (poster) poster.classList.remove('sp-hidden');
   }
 
   function buildMenu() {
@@ -448,12 +512,8 @@
         b.title = CLIPS[key].label;
         b.addEventListener('click', function () {
           hideBubble();
-          play(key, {
-            onEnd: function () {
-              if (menuOpen) play('idle', { loop: true });
-              else resumeIdle();
-            },
-          });
+          if (menuOpen) closePanels();
+          play(key, { onEnd: resumeIdle });
         });
         grid.appendChild(b);
       });
@@ -720,7 +780,8 @@
       back = old;
       active = { key: key, clip: clip, el: el };
       hasPlayed = true;
-      poster.classList.add('sp-hidden');
+      if (!useMobileCanvas) poster.classList.add('sp-hidden');
+      else scheduleCanvasProbe();
       setTimeout(function () {
         if (old && old !== front) old.pause();
       }, 280);
@@ -791,6 +852,10 @@
 
   function videoFailed() {
     if (usePosterOnly) return;
+    if (useMobileCanvas) {
+      fallbackPosterOnly();
+      return;
+    }
     usePosterOnly = true;
     try {
       vA.pause();
@@ -2325,8 +2390,13 @@
       '.sp-video{-webkit-tap-highlight-color:transparent}',
       '.sp-poster{opacity:1}',
       '.sp-poster.sp-hidden{opacity:0}',
+      '.sp-canvas{position:absolute;left:50%;top:50%;height:var(--sp-vh);width:auto;max-width:none;',
+      'transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .18s ease;z-index:1}',
+      '.sp-canvas.sp-on{opacity:1}',
+      '.sp-stage.sp-canvas-mode .sp-video{position:absolute!important;left:50%!important;top:50%!important;',
+      'width:1px!important;height:1px!important;opacity:.01!important;transform:translate(-50%,-50%)!important;',
+      'z-index:-1!important;pointer-events:none!important;filter:none!important}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
-      '.sp-poster-only .sp-poster.sp-mobile-anim{animation:none}',
       '.sp-bubble{position:absolute;left:0;bottom:calc(100% + 4px);z-index:7;max-width:min(260px,calc(100vw - 24px));',
       'min-width:118px;padding:9px 12px 8px;background:var(--sp-bg);color:var(--sp-fg);border:1px solid var(--sp-line);',
       'border-radius:14px;box-shadow:0 10px 28px rgba(20,35,65,.18);backdrop-filter:blur(12px);',
@@ -2432,6 +2502,8 @@
       '@media (max-width:760px){#site-pet{--sp-w:200px;--sp-h:200px;--sp-vh:240px}',
       '#site-pet[data-size="s"]{--sp-w:170px;--sp-h:170px;--sp-vh:204px}',
       '#site-pet[data-size="l"]{--sp-w:230px;--sp-h:230px;--sp-vh:276px}',
+      '.sp-stage{filter:none}',
+      '.sp-dock button,.sp-panel button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}',
       '.sp-dock{gap:3px;padding:3px;opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}',
       '.sp-dock button{font-size:10.5px;padding:3px 5px}',
       '.sp-bubble{max-width:78vw;font-size:12px}.sp-panel{max-height:min(330px,50vh)}',
