@@ -430,95 +430,165 @@
       vB.style.display = 'none';
     } else if (useMobileCanvas) {
       stage.classList.add('sp-canvas-mode');
-      startMobileCanvasLoop();
+      initMobileSprites();
     }
   }
 
-  function startMobileCanvasLoop() {
-    if (!useMobileCanvas || !canvasEl || !canvasCtx || canvasRaf) return;
-    var tick = function () {
-      canvasRaf = requestAnimationFrame(tick);
-      if (!canvasCtx || !front || front.readyState < 2) return;
-      if (!root || root.style.display === 'none') return;
-      var now = Date.now();
-      if (now - canvasLast < 33) return;
-      canvasLast = now;
-      try {
-        if (canvasEl.width !== 480 || canvasEl.height !== 270) {
-          canvasEl.width = 480;
-          canvasEl.height = 270;
+  var spriteManifest = null;
+  var spriteImages = {};
+  var spriteLoads = {};
+  var spriteAnim = null;
+  var spriteRaf = 0;
+  var spritePending = null;
+  var spriteReq = 0;
+  var spriteOrder = [];
+
+  function initMobileSprites() {
+    if (!useMobileCanvas || !canvasEl || !canvasCtx) { fallbackPosterOnly(); return; }
+    if (!spriteRaf) startSpriteLoop();
+    fetch('/whale-pet/mobile/manifest.json?v=1', { cache: 'force-cache' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('manifest');
+        return r.json();
+      })
+      .then(function (m) {
+        spriteManifest = m || {};
+        return loadSpriteImage('idle');
+      })
+      .then(function () {
+        var p = spritePending;
+        spritePending = null;
+        if (p) playMobileSprite(p.key, p.opts);
+        else playMobileSprite('idle', { loop: true });
+      })
+      .catch(function () { fallbackPosterOnly(); });
+  }
+
+  function loadSpriteImage(key) {
+    if (spriteImages[key]) return Promise.resolve(spriteImages[key]);
+    if (spriteLoads[key]) return spriteLoads[key];
+    var info = spriteManifest && spriteManifest[key];
+    if (!info) return Promise.reject(new Error('no sprite ' + key));
+    var p = new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        spriteImages[key] = img;
+        spriteOrder = spriteOrder.filter(function (k) { return k !== key; });
+        spriteOrder.push(key);
+        while (spriteOrder.length > 3) {
+          var old = spriteOrder.shift();
+          if (old === 'idle' || (spriteAnim && old === spriteAnim.key)) { spriteOrder.push(old); break; }
+          delete spriteImages[old];
+          delete spriteLoads[old];
         }
-        canvasCtx.clearRect(0, 0, 480, 270);
-        canvasCtx.drawImage(front, 0, 0, 480, 270);
-        if (canvasKey) removeKeyedBackground();
-        canvasDrew = true;
-      } catch (e) {}
+        resolve(img);
+      };
+      img.onerror = function () {
+        delete spriteLoads[key];
+        reject(new Error('sprite ' + key));
+      };
+      img.src = '/whale-pet/mobile/' + info.file + '?v=1';
+    });
+    spriteLoads[key] = p;
+    return p;
+  }
+
+  function playMobileSprite(key, opts) {
+    opts = opts || {};
+    var clip = CLIPS[key];
+    if (!clip) return;
+    var token = ++spriteReq;
+    if (!spriteManifest) {
+      spritePending = { key: key, opts: opts, token: token };
+      return;
+    }
+    var start = function () {
+      if (token !== spriteReq) return;
+      startSprite(key, opts);
     };
-    canvasRaf = requestAnimationFrame(tick);
+    if (spriteImages[key]) { start(); return; }
+    spritePending = { key: key, opts: opts, token: token };
+    loadSpriteImage(key).then(function () {
+      if (!spritePending || spritePending.token !== token) return;
+      var q = spritePending;
+      spritePending = null;
+      startSprite(q.key, q.opts);
+    }).catch(function () {
+      if (key === 'idle') fallbackPosterOnly();
+      else if (token === spriteReq) playMobileSprite('idle', { loop: true });
+    });
   }
 
-  function removeKeyedBackground() {
-    if (!canvasCtx || !canvasKey) return;
-    var w = canvasEl.width, h = canvasEl.height;
-    var img = canvasCtx.getImageData(0, 0, w, h);
-    var d = img.data;
-    var kr = canvasKey[0], kg = canvasKey[1], kb = canvasKey[2];
-    for (var i = 0; i < d.length; i += 4) {
-      var dr = d[i] - kr, dg = d[i + 1] - kg, db = d[i + 2] - kb;
-      var dist = dr * dr + dg * dg + db * db;
-      if (dist < 250) d[i + 3] = 0;
-      else if (dist < 900) d[i + 3] = Math.round(d[i + 3] * (dist - 250) / 650);
-    }
-    canvasCtx.putImageData(img, 0, 0);
+  function startSprite(key, opts) {
+    var info = spriteManifest && spriteManifest[key];
+    var img = spriteImages[key];
+    var clip = CLIPS[key];
+    if (!info || !img || !clip) { fallbackPosterOnly(); return; }
+    var loop = !!(clip.loop || opts.loop);
+    var dur = loop ? info.dur : (clip.max ? Math.min(info.dur, clip.max / 1000) : info.dur);
+    if (!(dur > 0)) dur = info.dur;
+    var frames = loop ? info.frames : Math.max(1, Math.min(info.frames, Math.round(info.frames * dur / info.dur)));
+    spriteAnim = {
+      key: key, info: info, img: img, loop: loop, frames: frames, dur: dur,
+      start: (window.performance && performance.now ? performance.now() : Date.now()),
+      last: -1, done: false, endAt: 0, opts: opts,
+    };
+    hasPlayed = true;
+    drawSpriteFrame(0);
+    canvasEl.classList.add('sp-on');
+    poster.classList.add('sp-hidden');
+    if (opts.onStart) opts.onStart();
   }
 
-  function canvasAlphaOk() {
-    if (!canvasCtx || !canvasDrew) return false;
+  function drawSpriteFrame(idx) {
+    if (!canvasCtx || !spriteAnim) return;
+    var a = spriteAnim, info = a.info;
+    var gx = idx % info.cols;
+    var gy = Math.floor(idx / info.cols);
     try {
-      var d = canvasCtx.getImageData(2, 2, 1, 1).data;
-      return d[3] < 200;
-    } catch (e) { return false; }
+      canvasCtx.clearRect(0, 0, 480, 270);
+      canvasCtx.drawImage(a.img, gx * info.fw, gy * info.fh, info.fw, info.fh, 0, 0, 480, 270);
+    } catch (e) { fallbackPosterOnly(); }
   }
 
-  function scheduleCanvasProbe() {
-    if (!useMobileCanvas || canvasOn || canvasProbeTimer) return;
-    canvasProbeTimer = setTimeout(function () {
-      canvasProbeTimer = null;
-      if (!useMobileCanvas || canvasOn) return;
-      if (!canvasDrew || !front || front.readyState < 2) {
-        canvasProbeTries++;
-        if (canvasProbeTries < 10) scheduleCanvasProbe();
-        return;
+  function startSpriteLoop() {
+    if (!useMobileCanvas || spriteRaf) return;
+    var tick = function (now) {
+      spriteRaf = requestAnimationFrame(tick);
+      if (!spriteAnim || !root || root.style.display === 'none') return;
+      var a = spriteAnim;
+      var elapsed = (now - a.start) / 1000;
+      var idx = a.loop
+        ? Math.floor(elapsed / a.info.dur * a.info.frames) % a.info.frames
+        : Math.floor(elapsed / a.dur * a.frames);
+      if (!a.loop) idx = Math.min(a.frames - 1, Math.max(0, idx));
+      if (idx !== a.last) {
+        a.last = idx;
+        drawSpriteFrame(idx);
       }
-      if (canvasAlphaOk()) {
-        canvasOn = true;
-        canvasEl.classList.add('sp-on');
-        poster.classList.add('sp-hidden');
-      } else {
-        var c = null;
-        try { c = canvasCtx.getImageData(2, 2, 1, 1).data; } catch (e) {}
-        // 极少数小米浏览器解码时丢掉 alpha，但背景是纯黑：把黑底抠掉继续播放，
-        // 不退回静态图。若背景不是黑色（比如白色），白裙子会被误抠，宁可用海报。
-        if (c && c[0] < 45 && c[1] < 45 && c[2] < 45) {
-          canvasKey = [c[0], c[1], c[2]];
-          canvasOn = true;
-          canvasEl.classList.add('sp-on');
-          poster.classList.add('sp-hidden');
-        } else {
-          fallbackPosterOnly();
-        }
+      if (!a.loop && idx >= a.frames - 1 && !a.done) {
+        a.done = true;
+        a.endAt = now;
       }
-    }, 200);
+      if (a.done && typeof a.done === 'boolean' && now - a.endAt > 160) {
+        var endOpts = a.opts;
+        a.done = 'called';
+        spriteAnim = null;
+        if (endOpts.onEnd) endOpts.onEnd();
+        else resumeIdle();
+      }
+    };
+    spriteRaf = requestAnimationFrame(tick);
   }
 
   function fallbackPosterOnly() {
     usePosterOnly = true;
     useMobileCanvas = false;
-    canvasOn = false;
-    canvasProbeTries = 0;
-    if (canvasRaf) cancelAnimationFrame(canvasRaf);
-    canvasRaf = 0;
-    if (canvasProbeTimer) { clearTimeout(canvasProbeTimer); canvasProbeTimer = null; }
+    spriteAnim = null;
+    spritePending = null;
+    if (spriteRaf) cancelAnimationFrame(spriteRaf);
+    spriteRaf = 0;
     if (canvasEl) canvasEl.style.display = 'none';
     try { if (vA) vA.pause(); if (vB) vB.pause(); } catch (e) {}
     if (vA) vA.style.display = 'none';
@@ -767,6 +837,7 @@
     if (key !== 'idle') cancelIdleStart();
     var clip = CLIPS[key];
     if (!clip) return;
+    if (useMobileCanvas) { playMobileSprite(key, opts); return; }
     if (usePosterOnly) {
       active = { key: key, clip: clip };
       return;
@@ -815,7 +886,6 @@
       active = { key: key, clip: clip, el: el };
       hasPlayed = true;
       if (!useMobileCanvas) poster.classList.add('sp-hidden');
-      else scheduleCanvasProbe();
       setTimeout(function () {
         if (old && old !== front) old.pause();
       }, 280);
@@ -2427,9 +2497,7 @@
       '.sp-canvas{position:absolute;left:50%;top:50%;height:var(--sp-vh);width:auto;max-width:none;',
       'transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .18s ease;z-index:1}',
       '.sp-canvas.sp-on{opacity:1}',
-      '.sp-stage.sp-canvas-mode .sp-video{position:absolute!important;left:50%!important;top:50%!important;',
-      'width:1px!important;height:1px!important;opacity:.01!important;transform:translate(-50%,-50%)!important;',
-      'z-index:-1!important;pointer-events:none!important;filter:none!important}',
+      '.sp-stage.sp-canvas-mode .sp-video{display:none!important}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
       '.sp-bubble{position:absolute;left:0;bottom:calc(100% + 4px);z-index:7;max-width:min(260px,calc(100vw - 24px));',
       'min-width:118px;padding:9px 12px 8px;background:var(--sp-bg);color:var(--sp-fg);border:1px solid var(--sp-line);',
@@ -2571,6 +2639,6 @@
     context: function () { return context; },
     anim: function () { return active ? active.key : null; },
     posterOnly: function () { return usePosterOnly; },
-    canvasKeyed: function () { return !!canvasKey; },
+    spriteMode: function () { return useMobileCanvas; },
   };
 })();
