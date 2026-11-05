@@ -129,8 +129,10 @@
   }
   var greeted = false;
   var booted = false;
-  var usePosterOnly = !supportsWebm();
-  var useMobileCanvas = isMobileBrowser && !usePosterOnly;
+  // 手机端不要相信 canPlayType：部分小米/MIUI 浏览器会误报不支持 WebM，
+  // 实际却能解码。先走 Canvas，只有真正播放失败/无法透明时才退回海报。
+  var usePosterOnly = !isMobileBrowser && !supportsWebm();
+  var useMobileCanvas = isMobileBrowser;
   var root = null;
   var stage = null;
   var vA = null;
@@ -143,6 +145,8 @@
   var canvasDrew = false;
   var canvasProbeTimer = null;
   var canvasProbeTries = 0;
+  var canvasKey = null;
+  var canvasLast = 0;
   var bubbleEl = null;
   var bubbleBody = null;
   var bubbleFoot = null;
@@ -436,6 +440,9 @@
       canvasRaf = requestAnimationFrame(tick);
       if (!canvasCtx || !front || front.readyState < 2) return;
       if (!root || root.style.display === 'none') return;
+      var now = Date.now();
+      if (now - canvasLast < 33) return;
+      canvasLast = now;
       try {
         if (canvasEl.width !== 480 || canvasEl.height !== 270) {
           canvasEl.width = 480;
@@ -443,10 +450,26 @@
         }
         canvasCtx.clearRect(0, 0, 480, 270);
         canvasCtx.drawImage(front, 0, 0, 480, 270);
+        if (canvasKey) removeKeyedBackground();
         canvasDrew = true;
       } catch (e) {}
     };
     canvasRaf = requestAnimationFrame(tick);
+  }
+
+  function removeKeyedBackground() {
+    if (!canvasCtx || !canvasKey) return;
+    var w = canvasEl.width, h = canvasEl.height;
+    var img = canvasCtx.getImageData(0, 0, w, h);
+    var d = img.data;
+    var kr = canvasKey[0], kg = canvasKey[1], kb = canvasKey[2];
+    for (var i = 0; i < d.length; i += 4) {
+      var dr = d[i] - kr, dg = d[i + 1] - kg, db = d[i + 2] - kb;
+      var dist = dr * dr + dg * dg + db * db;
+      if (dist < 250) d[i + 3] = 0;
+      else if (dist < 900) d[i + 3] = Math.round(d[i + 3] * (dist - 250) / 650);
+    }
+    canvasCtx.putImageData(img, 0, 0);
   }
 
   function canvasAlphaOk() {
@@ -472,7 +495,18 @@
         canvasEl.classList.add('sp-on');
         poster.classList.add('sp-hidden');
       } else {
-        fallbackPosterOnly();
+        var c = null;
+        try { c = canvasCtx.getImageData(2, 2, 1, 1).data; } catch (e) {}
+        // 极少数小米浏览器解码时丢掉 alpha，但背景是纯黑：把黑底抠掉继续播放，
+        // 不退回静态图。若背景不是黑色（比如白色），白裙子会被误抠，宁可用海报。
+        if (c && c[0] < 45 && c[1] < 45 && c[2] < 45) {
+          canvasKey = [c[0], c[1], c[2]];
+          canvasOn = true;
+          canvasEl.classList.add('sp-on');
+          poster.classList.add('sp-hidden');
+        } else {
+          fallbackPosterOnly();
+        }
       }
     }, 200);
   }
@@ -2537,5 +2571,6 @@
     context: function () { return context; },
     anim: function () { return active ? active.key : null; },
     posterOnly: function () { return usePosterOnly; },
+    canvasKeyed: function () { return !!canvasKey; },
   };
 })();
