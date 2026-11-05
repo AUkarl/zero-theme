@@ -430,9 +430,9 @@
       stage.classList.add('sp-poster-only');
       vA.style.display = 'none';
       vB.style.display = 'none';
-    } else if (useMobileCanvas) {
-      stage.classList.add('sp-canvas-mode');
-      initMobileSprites();
+    } else if (isMobileBrowser) {
+      stage.classList.add('sp-mobile-anim');
+      initMobileImages();
     }
   }
 
@@ -444,6 +444,105 @@
   var spritePending = null;
   var spriteReq = 0;
   var spriteOrder = [];
+
+  var MOBILE_ANIM_VER = '42';
+  var mobileAnimManifest = null;
+  var mobileAnimCache = {};
+  var mobileAnimTimer = null;
+  var mobileAnimReq = 0;
+  var mobileAnimPending = null;
+
+  function initMobileImages() {
+    try {
+      if (vA) vA.pause();
+      if (vB) vB.pause();
+    } catch (e) {}
+    if (vA) vA.style.display = 'none';
+    if (vB) vB.style.display = 'none';
+    if (canvasEl) canvasEl.style.display = 'none';
+    fetch('/whale-pet/mobile-anim/manifest.json?v=' + MOBILE_ANIM_VER, { cache: 'force-cache' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('manifest');
+        return r.json();
+      })
+      .then(function (m) {
+        mobileAnimManifest = m || {};
+        return loadMobileAnimImage('idle');
+      })
+      .then(function () {
+        var q = mobileAnimPending;
+        mobileAnimPending = null;
+        if (q) playMobileImage(q.key, q.opts);
+        else applyMobileAnim('idle', { loop: true });
+      })
+      .catch(function () { fallbackPosterOnly(); });
+  }
+
+  function loadMobileAnimImage(key) {
+    if (mobileAnimCache[key]) return Promise.resolve(mobileAnimCache[key]);
+    var info = mobileAnimManifest && mobileAnimManifest[key];
+    if (!info) return Promise.reject(new Error('no anim ' + key));
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.decoding = 'async';
+      img.onload = function () {
+        mobileAnimCache[key] = img;
+        resolve(img);
+      };
+      img.onerror = function () { reject(new Error('anim ' + key)); };
+      img.src = '/whale-pet/mobile-anim/' + info.file + '?v=' + MOBILE_ANIM_VER;
+    });
+  }
+
+  function playMobileImage(key, opts) {
+    opts = opts || {};
+    var clip = CLIPS[key];
+    if (!clip) return;
+    var token = ++mobileAnimReq;
+    if (!mobileAnimManifest) {
+      mobileAnimPending = { key: key, opts: opts, token: token };
+      return;
+    }
+    var start = function () {
+      if (token !== mobileAnimReq) return;
+      applyMobileAnim(key, opts);
+    };
+    if (mobileAnimCache[key]) { start(); return; }
+    mobileAnimPending = { key: key, opts: opts, token: token };
+    loadMobileAnimImage(key).then(function () {
+      if (!mobileAnimPending || mobileAnimPending.token !== token) return;
+      var q = mobileAnimPending;
+      mobileAnimPending = null;
+      applyMobileAnim(q.key, q.opts);
+    }).catch(function () {
+      if (key === 'idle') fallbackPosterOnly();
+      else if (token === mobileAnimReq) playMobileImage('idle', { loop: true });
+    });
+  }
+
+  function applyMobileAnim(key, opts) {
+    var info = mobileAnimManifest && mobileAnimManifest[key];
+    var clip = CLIPS[key];
+    if (!info || !clip) { fallbackPosterOnly(); return; }
+    if (mobileAnimTimer) { clearTimeout(mobileAnimTimer); mobileAnimTimer = null; }
+    var loop = !!(clip.loop || opts.loop);
+    var url = '/whale-pet/mobile-anim/' + info.file + '?v=' + MOBILE_ANIM_VER;
+    poster.classList.remove('sp-hidden');
+    poster.classList.add('sp-mobile-anim');
+    poster.src = url;
+    hasPlayed = true;
+    if (opts.onStart) opts.onStart();
+    if (!loop) {
+      var dur = clip.max ? Math.min(info.dur, clip.max / 1000) : info.dur;
+      var timerToken = mobileAnimReq;
+      mobileAnimTimer = setTimeout(function () {
+        mobileAnimTimer = null;
+        if (timerToken !== mobileAnimReq) return;
+        if (opts.onEnd) opts.onEnd();
+        else resumeIdle();
+      }, Math.max(600, dur * 1000));
+    }
+  }
 
   function initMobileSprites() {
     if (!useMobileCanvas || !canvasEl || !canvasCtx) { fallbackPosterOnly(); return; }
@@ -597,7 +696,7 @@
     if (vA) vA.style.display = 'none';
     if (vB) vB.style.display = 'none';
     if (stage) { stage.classList.remove('sp-canvas-mode'); stage.classList.add('sp-poster-only'); }
-    if (poster) poster.classList.remove('sp-hidden');
+    if (poster) { poster.classList.remove('sp-hidden'); poster.src = '/whale-pet/poster.webp?v=3'; }
   }
 
   function buildMenu() {
@@ -840,7 +939,7 @@
     if (key !== 'idle') cancelIdleStart();
     var clip = CLIPS[key];
     if (!clip) return;
-    if (useMobileCanvas) { playMobileSprite(key, opts); return; }
+    if (isMobileBrowser) { playMobileImage(key, opts); return; }
     if (usePosterOnly) {
       active = { key: key, clip: clip };
       return;
@@ -2501,6 +2600,7 @@
       'transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .18s ease;z-index:1}',
       '.sp-canvas.sp-on{opacity:1}',
       '.sp-stage.sp-canvas-mode .sp-video{display:none!important}',
+      '.sp-stage.sp-mobile-anim .sp-video,.sp-stage.sp-mobile-anim .sp-canvas{display:none!important}',
       '.sp-poster-only .sp-poster{animation:sp-post-float 3.4s ease-in-out infinite}',
       '.sp-bubble{position:absolute;left:0;bottom:calc(100% + 4px);z-index:7;max-width:min(260px,calc(100vw - 24px));',
       'min-width:118px;padding:9px 12px 8px;background:var(--sp-bg);color:var(--sp-fg);border:1px solid var(--sp-line);',
@@ -2643,5 +2743,6 @@
     anim: function () { return active ? active.key : null; },
     posterOnly: function () { return usePosterOnly; },
     spriteMode: function () { return useMobileCanvas; },
+    imageMode: function () { return isMobileBrowser; },
   };
 })();
