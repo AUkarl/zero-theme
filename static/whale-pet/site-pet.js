@@ -15,7 +15,7 @@
   // 也用来给 WebM 素材定址。_headers 里 /whale-pet/* 是 immutable 一年：换素材必须同时升这两个号，
   // 否则老访客一直拿旧文件（float.webm 当年就是这么被 ?v=1 钉住的）。
   var SPRITE_VER = '47';
-  var PET_VER = '53';
+  var PET_VER = '54';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -177,6 +177,7 @@
     return menuOpen || chatOpen || statusOpen;
   }
   var lastPokeAsk = 0;
+  var sharedStateTimer = 0;
   var lastRandom = '';
   var clickIdx = 0;
   var hasPlayed = false;
@@ -323,11 +324,19 @@
     bindPageLinks();
     applyTheme();
     watchTheme();
-    state.lastInteraction = Date.now();
-    saveState(state);
+    // 打开页面不算一次互动：接了后端就以服务端为准；纯静态站没有后端时，
+    // 才在本地把互动时间顶到现在，免得一进页面就被判成「早就睡着了」。
+    if (!apiBaseUrl()) {
+      state.lastInteraction = Date.now();
+      saveState(state);
+    }
     place();
     updateDock();
     startIdle();
+    pullSharedState();
+    sharedStateTimer = setInterval(function () {
+      if (!document.hidden) pullSharedState();
+    }, 60000);
     sleepTimer = setInterval(sleepWatch, 15000);
     bindLifecycle();
   }
@@ -471,6 +480,7 @@
         var p = spritePending;
         spritePending = null;
         if (p) playMobileSprite(p.key, p.opts);
+        else if (state.asleep) playMobileSprite('sleep-loop', { loop: true });
         else playMobileSprite('idle', { loop: true });
         // 精灵模式下 startIdle 的开场常被 hasPlayed 提前挡掉，自动动作的链路要在这里接上，
         // 否则第一张预取的表永远排不上。
@@ -2114,6 +2124,7 @@
     state.lastSeen = now;
     saveState(state);
     updateDock();
+    pushPetAction('poke');
 
     // 轮着来而不是纯随机：这样能提前把「下一次要点的那个动作」的精灵表取好，
     // 手机上点下去就不必先等 1MB 下载。
@@ -2165,6 +2176,7 @@
     state.lastSeen = Date.now();
     saveState(state);
     updateDock();
+    pushPetAction('feed');
     play('eat-rice', {
       force: true,
       onEnd: function () {
@@ -2229,8 +2241,9 @@
     });
   }
 
-  function goSleep() {
+  function goSleep(localOnly) {
     if (!booted || !CFG.sleepEnabled || state.asleep) return;
+    if (!localOnly) pushPetAction('sleep');
     closePanels();
     state.asleep = true;
     state.lastInteraction = Date.now();
@@ -2246,11 +2259,12 @@
     showBubble('Zzz…', { ttl: 4200 });
   }
 
-  function wake(cb) {
+  function wake(cb, localOnly) {
     if (!state.asleep) {
       if (cb) cb();
       return;
     }
+    if (!localOnly) pushPetAction('wake');
     state.asleep = false;
     state.lastInteraction = Date.now();
     saveState(state);
@@ -2268,7 +2282,8 @@
 
   function sleepWatch() {
     if (!booted || !CFG.sleepEnabled || state.asleep || drag || panelsOpen()) return;
-    if (Date.now() - state.lastInteraction > SLEEP_AFTER) goSleep();
+    // 只是「这一屏」看着睡着了，不能把全站共用的状态也改掉
+    if (Date.now() - state.lastInteraction > SLEEP_AFTER) goSleep(true);
   }
 
   function updateDock() {
@@ -2317,6 +2332,59 @@
     bubbleEl.classList.remove('sp-on');
   }
 
+  function apiBaseUrl() {
+    try {
+      return String(window.__WHALE_PET_API_BASE__ || (window.ZeroStack && window.ZeroStack.base) || '').replace(/\/+$/, '');
+    } catch (e) { return ''; }
+  }
+
+  // 全站共用一份状态：服务端是准，localStorage 只当首屏缓存。
+  // 打开/切换页面只读、不回写，所以「每次打开都接着上次」；只有真实互动才 POST。
+  function applySharedState(raw) {
+    if (!raw || typeof raw !== 'object') return;
+    var nums = ['energy', 'satiety', 'boredom', 'interactions', 'pets', 'awayHours', 'lastInteraction', 'lastSeen'];
+    for (var i = 0; i < nums.length; i++) {
+      var v = Number(raw[nums[i]]);
+      if (Number.isFinite(v)) state[nums[i]] = v;
+    }
+    if (typeof raw.mood === 'string' && raw.mood) state.mood = raw.mood;
+    var wasAsleep = !!state.asleep;
+    state.asleep = !!raw.asleep;
+    saveState(state);
+    updateDock();
+    if (statusOpen) renderStatus();
+    if (!booted) return;
+    if (state.asleep) {
+      var key = active ? active.key : '';
+      if (key !== 'sleep-loop') play('sleep-loop', { loop: true, force: true });
+    } else if (wasAsleep && !drag && !panelsOpen()) {
+      play('idle', { loop: true, force: true });
+    }
+  }
+
+  function pullSharedState() {
+    var base = apiBaseUrl();
+    if (!base) return;
+    fetch(base + '/api/pet/state', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.data) applySharedState(j.data.state); })
+      .catch(function () {});
+  }
+
+  function pushPetAction(action) {
+    var base = apiBaseUrl();
+    if (!base) return;
+    fetch(base + '/api/pet/state', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: action }),
+      cache: 'no-store',
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.data) applySharedState(j.data.state); })
+      .catch(function () {});
+  }
+
   function requestLine(trigger, extra) {
     if (!CFG.aiEnabled) return Promise.reject(new Error('ai-off'));
     var ctrl = new AbortController();
@@ -2343,10 +2411,7 @@
     };
     if (extra && extra.question) body.question = String(extra.question).slice(0, 100);
     if (extra && extra.history && extra.history.length) body.history = extra.history;
-    var apiBase = '';
-    try {
-      apiBase = String(window.__WHALE_PET_API_BASE__ || (window.ZeroStack && window.ZeroStack.base) || '').replace(/\/+$/, '');
-    } catch (e) {}
+    var apiBase = apiBaseUrl();
     var url = apiBase ? apiBase + '/api/ai/pet-line' : '/api/whale-line';
     return fetch(url, {
       method: 'POST',
@@ -2553,19 +2618,22 @@
       s[k] = Number.isFinite(v) ? v : defaultState()[k];
     }
     s.mood = typeof s.mood === 'string' ? s.mood : '平静';
+    s.asleep = !!s.asleep;
     var now = Date.now();
-    var awayMs = s.lastSeen ? Math.max(0, now - s.lastSeen) : 0;
-    s.awayHours = Math.min(240, Math.round((awayMs / 3600000) * 10) / 10);
-    if (s.awayHours > 3) {
-      s.energy = Math.max(18, s.energy - Math.min(46, s.awayHours * 1.8));
-      s.satiety = Math.max(12, s.satiety - Math.min(50, s.awayHours * 2.2));
-      s.boredom = Math.min(96, s.boredom + Math.min(60, s.awayHours * 1.6));
-      s.mood = s.awayHours > 12 ? '有点想你' : s.boredom > 70 ? '无聊' : '平静';
+    // 接了后端时状态以服务端为准：本地这份只用于首屏，打开页面不做衰减、不重置
+    // 睡觉/上次互动，否则每跳一页宠物就被叫醒一次。
+    if (!apiBaseUrl()) {
+      var awayMs = s.lastSeen ? Math.max(0, now - s.lastSeen) : 0;
+      s.awayHours = Math.min(240, Math.round((awayMs / 3600000) * 10) / 10);
+      if (s.awayHours > 3) {
+        s.energy = Math.max(18, s.energy - Math.min(46, s.awayHours * 1.8));
+        s.satiety = Math.max(12, s.satiety - Math.min(50, s.awayHours * 2.2));
+        s.boredom = Math.min(96, s.boredom + Math.min(60, s.awayHours * 1.6));
+        s.mood = s.awayHours > 12 ? '有点想你' : s.boredom > 70 ? '无聊' : '平静';
+      }
+      s.lastSeen = now;
+      saveState(s);
     }
-    s.lastSeen = now;
-    s.lastInteraction = now;
-    s.asleep = false;
-    saveState(s);
     return s;
   }
 
@@ -2789,7 +2857,10 @@
       '.sp-dock{gap:3px;padding:3px;opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}',
       '.sp-dock button{font-size:10.5px;padding:3px 5px}',
       '.sp-bubble{max-width:78vw;font-size:12px}.sp-panel{max-height:min(330px,50vh)}',
-      '.site-pet-chip{right:12px;bottom:14px}}',
+      // 手机上缩小一号，和「回到顶部/到底部」两颗圆钮留出间距
+      '.site-pet-chip{right:12px;bottom:14px;padding:3px 9px 3px 3px;gap:6px}',
+      '.site-pet-chip img{width:36px;height:36px}',
+      '.site-pet-chip span{font-size:11px}}',
       '@media (hover:none){.sp-dock{opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}}',
       '@media (prefers-reduced-motion:reduce){.sp-bubble,.sp-video,.sp-poster,.sp-dock{transition:none}',
       '.site-pet-chip,.sp-poster-only .sp-poster,.sp-stage.sp-tapped{animation:none}}',
