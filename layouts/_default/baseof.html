@@ -97,7 +97,7 @@
   {{- $noPet := or (hasPrefix .RelPermalink "/account/") (hasPrefix .RelPermalink "/categories/") (hasPrefix .RelPermalink "/tags/") (hasPrefix .RelPermalink "/author/") -}}
   {{- if and (not .IsHome) (not $noPet) -}}
     {{- partial "whale-pet-config.html" . -}}
-    <script src="/whale-pet/site-pet.js?v=52"></script>
+    <script src="/whale-pet/site-pet.js?v=53"></script>
   {{- end -}}
 
   {{- /* 自定义 JS 文件 */ -}}

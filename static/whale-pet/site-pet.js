@@ -15,7 +15,7 @@
   // 也用来给 WebM 素材定址。_headers 里 /whale-pet/* 是 immutable 一年：换素材必须同时升这两个号，
   // 否则老访客一直拿旧文件（float.webm 当年就是这么被 ?v=1 钉住的）。
   var SPRITE_VER = '47';
-  var PET_VER = '52';
+  var PET_VER = '53';
   var LAYOUT_KEY = 'whale-pet-layout-v2';
   var GREET_KEY = 'whale-pet-greeted';
   var EXPAND_KEY = 'whale-pet-expanded';
@@ -26,12 +26,8 @@
   var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   var lowData = !!(conn && (conn.saveData || /2g/.test(String(conn.effectiveType || ''))));
   var ua = navigator.userAgent || '';
-  var isIos = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  var isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR|Android|CriOS|FxiOS/i.test(ua);
-  // 手机浏览器普遍会把页面里的 <video> 接管成自家播放层：透明 WebM 的 alpha
-  // 可能被丢掉，画面上就会出现一块不透明视频框。手机端统一改用动画 WebP 海报，
-  // 不创建视频播放，桌面端仍保留完整 WebM 动作。
   // 手机判定只认真正的触屏/手机环境：窄窗口的桌面浏览器不该被当成手机降级。
+  // 具体走 WebM 还是 Canvas 精灵，见下面 stockKernel / videoOnPhone 那段。
   var phoneUA = /Android|iPhone|iPad|iPod|Mobile|HarmonyOS|MiuiBrowser|VivoBrowser|HeyTapBrowser|HuaweiBrowser|HonorBrowser|UCBrowser|Quark|qqbrowser|MQQBrowser|baidubrowser|SogouMobileBrowser|SamsungBrowser/i.test(ua);
   var isMobileBrowser = phoneUA || (mobile && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window));
 
@@ -154,13 +150,6 @@
   var poster = null;
   var canvasEl = null;
   var canvasCtx = null;
-  var canvasRaf = 0;
-  var canvasOn = false;
-  var canvasDrew = false;
-  var canvasProbeTimer = null;
-  var canvasProbeTries = 0;
-  var canvasKey = null;
-  var canvasLast = 0;
   var bubbleEl = null;
   var bubbleBody = null;
   var bubbleFoot = null;
@@ -215,6 +204,12 @@
     return String(text == null ? '' : text).replace(/鱼鱼|爱吃白饭的大肥鱼/g, identityName());
   }
 
+  // 页面上的文案一律现读现用：站长改了签名/栏目名，气泡跟着变，模板用户也不会看到别人的句子。
+  function shortText(el, max) {
+    var text = String(el && el.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length > max ? text.slice(0, max) + '…' : text;
+  }
+
   function setIdentityImage(img) {
     if (!img) return;
     img.onerror = function () {
@@ -260,19 +255,14 @@
     if (ta) ta.placeholder = '问问' + name + '…';
     if (stage) stage.setAttribute('aria-label', '摸摸' + name);
     root.setAttribute('aria-label', name + '桌宠');
-    var mini = document.querySelector('.site-pet-mini');
-    if (mini) {
-      var span = mini.querySelector('span');
-      if (span) span.textContent = name;
-      setIdentityImage(mini.querySelector('img'));
-      mini.title = '叫出' + name;
-      mini.setAttribute('aria-label', '叫出' + name);
-    }
-    var restore = document.querySelector('.site-pet-restore');
-    if (restore) {
-      restore.textContent = name + ' · 桌宠';
-      restore.title = '把' + name + '叫回来';
-      restore.setAttribute('aria-label', '把' + name + '叫回来');
+    var chip = document.querySelector('.site-pet-chip');
+    if (chip) {
+      var chipLabel = chip.querySelector('span');
+      if (chipLabel) chipLabel.textContent = name;
+      setIdentityImage(chip.querySelector('img'));
+      var chipTitle = chip.getAttribute('data-mode') === 'restore' ? '把' + name + '叫回来' : '叫出' + name;
+      chip.title = chipTitle;
+      chip.setAttribute('aria-label', chipTitle);
     }
   }
 
@@ -312,11 +302,11 @@
   injectCss();
   if (mobile && CFG.mobileMode === 'hidden') return;
   if (layout.hidden) {
-    showRestoreTab();
+    showPetChip('restore');
   } else if (mobile && CFG.mobileMode === 'full') {
     boot();
   } else if ((mobile || lowData) && CFG.mobileMode !== 'full' && !expandedThisSession()) {
-    showMiniPet();
+    showPetChip('mini');
   } else {
     boot();
   }
@@ -1417,12 +1407,7 @@
     }, 5000);
   }
 
-  function onPageFocus(e) {
-    var path = e.composedPath ? e.composedPath() : [];
-    var isSearch = path.some(function (n) { return n && n.id === 'searchInput'; });
-    if (isSearch && !pageLinked.search) {
-      if (localReaction('look', pickLine(['你在找什么呀？我帮你盯着。', '找吧，我在这儿。', '想找什么，我陪你翻。']))) pageLinked.search = true;
-    }
+  function fieldHint(path) {
     if (!pageLinked.applyEmail) {
       var applyEmail = path.some(function (n) { return n && n.name === 'email' && n.closest && n.closest('#zeroApplyForm'); });
       if (applyEmail && localReaction('look', pickLine(['邮箱写常用的，审核结果会发到这里。', '联系方式别留错，站长要回你。']))) pageLinked.applyEmail = true;
@@ -1435,6 +1420,15 @@
       var subEmail = path.some(function (n) { return n && n.name === 'email' && n.closest && n.closest('.zero-subscribe-form'); });
       if (subEmail && localReaction('look', pickLine(['邮箱写对哦，确认信会发到这里。', '填常用邮箱，确认链接别漏看。']))) pageLinked.subscribeFocus = true;
     }
+  }
+
+  function onPageFocus(e) {
+    var path = e.composedPath ? e.composedPath() : [];
+    var isSearch = path.some(function (n) { return n && n.id === 'searchInput'; });
+    if (isSearch && !pageLinked.search) {
+      if (localReaction('look', pickLine(['你在找什么呀？我帮你盯着。', '找吧，我在这儿。', '想找什么，我陪你翻。']))) pageLinked.search = true;
+    }
+    fieldHint(path);
     var inComment = path.some(function (n) {
       return n && n.tagName && String(n.tagName).toLowerCase().indexOf('zero-comment') !== -1;
     });
@@ -1460,18 +1454,7 @@
   function onCommentKey(e) {
     if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
     var path = e.composedPath ? e.composedPath() : [];
-    if (!pageLinked.applyEmail) {
-      var applyEmail = path.some(function (n) { return n && n.name === 'email' && n.closest && n.closest('#zeroApplyForm'); });
-      if (applyEmail && localReaction('look', pickLine(['邮箱写常用的，审核结果会发到这里。', '联系方式别留错，站长要回你。']))) pageLinked.applyEmail = true;
-    }
-    if (!pageLinked.applyUrl) {
-      var applyUrl = path.some(function (n) { return n && n.name === 'url' && n.closest && n.closest('#zeroApplyForm'); });
-      if (applyUrl && localReaction('look', pickLine(['站点地址记得带 https://。', '地址写完整，我替站长看看。']))) pageLinked.applyUrl = true;
-    }
-    if (!pageLinked.subscribeFocus) {
-      var subEmail = path.some(function (n) { return n && n.name === 'email' && n.closest && n.closest('.zero-subscribe-form'); });
-      if (subEmail && localReaction('look', pickLine(['邮箱写对哦，确认信会发到这里。', '填常用邮箱，确认链接别漏看。']))) pageLinked.subscribeFocus = true;
-    }
+    fieldHint(path);
     var inComment = path.some(function (n) {
       return n && n.tagName && String(n.tagName).toLowerCase().indexOf('zero-comment') !== -1;
     });
@@ -1561,17 +1544,17 @@
       localReaction('click-wave', pickLine(['去文章堆里翻翻。', '下面都是文章，我陪你。']), true);
       return;
     }
-    var aboutAvatar = false;
-    var aboutName = false;
-    var aboutTagline = false;
+    var aboutAvatar = null;
+    var aboutName = null;
+    var aboutTagline = null;
     var aboutBlock = null;
     var aboutFind = false;
     for (var bi = 0; bi < path.length; bi++) {
       var bn = path[bi];
       if (!bn || !bn.classList) continue;
-      if (!aboutAvatar && bn.classList.contains('about-avatar')) aboutAvatar = true;
-      if (!aboutName && bn.classList.contains('about-name')) aboutName = true;
-      if (!aboutTagline && bn.classList.contains('about-tagline')) aboutTagline = true;
+      if (!aboutAvatar && bn.classList.contains('about-avatar')) aboutAvatar = bn;
+      if (!aboutName && bn.classList.contains('about-name')) aboutName = bn;
+      if (!aboutTagline && bn.classList.contains('about-tagline')) aboutTagline = bn;
       if (!aboutBlock && bn.classList.contains('about-block-title')) aboutBlock = bn;
       if (!aboutFind && bn.classList.contains('find-me-link')) aboutFind = true;
     }
@@ -1580,19 +1563,18 @@
       return;
     }
     if (aboutName) {
-      localReaction('celebrate', pickLine(['知止，也可以叫他杜衡。', '站长就在这儿站着。']), true);
+      var who = shortText(aboutName, 24);
+      localReaction('celebrate', who ? '「' + who + '」就是他本人。' : '站长就在这儿站着。', true);
       return;
     }
     if (aboutTagline) {
-      localReaction('look', pickLine(['这句挺配他，日上三竿我独眠。', '好句子，我记下了。']), true);
+      var motto = shortText(aboutTagline, 30);
+      localReaction('look', motto ? '「' + motto + '」这句挺配。' : '好句子，我记下了。', true);
       return;
     }
     if (aboutBlock) {
-      var blockText = String(aboutBlock.textContent || '').replace(/\s+/g, ' ').trim();
-      if (blockText.indexOf('找到我') >= 0) localReaction('click-wave', '想找站长，就从这几扇门进。', true);
-      else if (blockText.indexOf('本站') >= 0) localReaction('look', '这里写的是这个站。', true);
-      else if (blockText.indexOf('声明') >= 0) localReaction('look', '声明在这儿，认真看看。', true);
-      else localReaction('look', '这一段讲讲站长。', true);
+      var blockTitle = shortText(aboutBlock, 20);
+      localReaction('look', blockTitle ? '「' + blockTitle + '」这一段。' : '这一段讲讲站长。', true);
       return;
     }
     if (aboutFind) {
@@ -2046,7 +2028,7 @@
         if (vB) vB.pause();
       } catch (e) {}
     }
-    showRestoreTab();
+    showPetChip('restore');
   }
 
   function showPet() {
@@ -2073,13 +2055,17 @@
     try { sessionStorage.setItem(EXPAND_KEY, '1'); } catch (e) {}
   }
 
-  function showMiniPet() {
-    if (document.querySelector('.site-pet-mini')) return;
+  // 迷你入口和「隐藏后叫回来」用同一个带头像的胶囊，位置固定在右下角。
+  function showPetChip(mode) {
+    if (document.querySelector('.site-pet-chip')) return;
+    var restore = mode === 'restore';
+    var name = identityName();
     var btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'site-pet-mini';
-    btn.title = '叫出' + identityName();
-    btn.setAttribute('aria-label', '叫出' + identityName());
+    btn.className = 'site-pet-chip';
+    btn.setAttribute('data-mode', restore ? 'restore' : 'mini');
+    btn.title = restore ? '把' + name + '叫回来' : '叫出' + name;
+    btn.setAttribute('aria-label', btn.title);
     var img = document.createElement('img');
     img.alt = '';
     img.width = 48;
@@ -2087,29 +2073,18 @@
     img.loading = 'lazy';
     setIdentityImage(img);
     var label = document.createElement('span');
-    label.textContent = identityName();
+    label.textContent = name;
     btn.append(img, label);
     btn.addEventListener('click', function () {
       btn.remove();
-      markExpanded();
-      boot();
-    });
-    document.body.appendChild(btn);
-  }
-
-  function showRestoreTab() {
-    if (document.querySelector('.site-pet-restore')) return;
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'site-pet-restore';
-    btn.textContent = identityName() + ' · 桌宠';
-    btn.title = '把' + identityName() + '叫回来';
-    btn.setAttribute('aria-label', '把' + identityName() + '叫回来');
-    btn.addEventListener('click', function () {
-      btn.remove();
-      saveLayout({ hidden: false });
-      if (!booted) boot();
-      else showPet();
+      if (restore) {
+        saveLayout({ hidden: false });
+        if (!booted) boot();
+        else showPet();
+      } else {
+        markExpanded();
+        boot();
+      }
     });
     document.body.appendChild(btn);
   }
@@ -2489,7 +2464,7 @@
     if (trigger === 'greeting') {
       if (away > 8) {
         return {
-          line: pickLine(['你终于回来了，我等到水洼都凉了。', '你走了好久，我数了好多泡泡。', '阿鱼刚刚都快睡着了，你回来了。']),
+          line: pickLine(['你终于回来了，我等到水洼都凉了。', '你走了好久，我数了好多泡泡。', identityName() + '刚刚都快睡着了，你回来了。']),
           mood: 'happy',
         };
       }
@@ -2500,7 +2475,7 @@
         return { line: pickLine(['你终于来了，我刚在发呆。', '刚刚水洼里只有我，现在好了。']), mood: 'curious' };
       }
       return {
-        line: pickLine(['阿鱼在这里，陪你慢慢看。', '今天也来啦，白米饭先欠着。', '你来啦，水洼刚刚晃了一下。', '我在这儿，慢慢看就好。']),
+        line: pickLine([identityName() + '在这里，陪你慢慢看。', '今天也来啦，白米饭先欠着。', '你来啦，水洼刚刚晃了一下。', '我在这儿，慢慢看就好。']),
         mood: 'happy',
       };
     }
@@ -2725,7 +2700,6 @@
       'border-left:1px solid var(--sp-line);border-top:1px solid var(--sp-line);border-radius:3px 0 0 0}',
       '.sp-bubble-head{display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:10.5px;',
       'letter-spacing:.04em;color:var(--sp-accent);font-weight:600}',
-      '.sp-dot{width:6px;height:6px;border-radius:50%;background:var(--sp-accent);flex:none}',
       '.sp-face{width:16px;height:16px;border-radius:50%;object-fit:cover;flex:none;background:#2b3550}',
       '.sp-bubble-body{max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}',
       '.sp-bubble-foot{margin-top:4px;font-size:10px;color:var(--sp-muted);min-height:0}',
@@ -2794,25 +2768,18 @@
       '.sp-chat textarea:focus{border-color:var(--sp-accent)}',
       '.sp-chat .sp-send{position:absolute;right:5px;bottom:5px;border:1px solid transparent;background:var(--sp-accent);',
       'color:#fff;font:inherit;font-size:11.5px;padding:4px 10px;border-radius:7px;cursor:pointer}',
-      '.site-pet-mini{position:fixed;left:10px;bottom:12px;z-index:951;display:flex;align-items:center;gap:7px;',
+      '.site-pet-chip{position:fixed;right:18px;bottom:18px;z-index:951;display:flex;align-items:center;gap:7px;',
       'border:1px solid rgba(59,98,246,.18);border-radius:999px;background:rgba(255,255,255,.92);',
       'padding:4px 11px 4px 4px;box-shadow:0 8px 22px rgba(28,44,80,.18);cursor:pointer;',
       '-webkit-tap-highlight-color:transparent;backdrop-filter:blur(10px);',
-      'animation:site-pet-mini-float 3.4s ease-in-out infinite}',
-      '.site-pet-mini img{display:block;width:48px;height:48px;border-radius:50%;object-fit:cover;border:1.5px solid #fff;background:#2b3550}',
-      '.site-pet-mini span{font:600 12px/1 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#24418f}',
-      '[data-theme="dark"] .site-pet-mini{background:rgba(18,26,48,.9);border-color:rgba(140,175,255,.2)}',
-      '[data-theme="dark"] .site-pet-mini span{color:#eaf0ff}',
-      '@media (prefers-color-scheme:dark){[data-theme="auto"] .site-pet-mini{background:rgba(18,26,48,.9);border-color:rgba(140,175,255,.2)}',
-      '[data-theme="auto"] .site-pet-mini span{color:#eaf0ff}}',
-      '.site-pet-restore{position:fixed;right:18px;bottom:18px;z-index:951;border:1px solid rgba(59,98,246,.22);',
-      'border-radius:999px;background:rgba(255,255,255,.94);color:#24418f;',
-      'font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;',
-      'padding:8px 14px;box-shadow:0 8px 22px rgba(28,44,80,.18);cursor:pointer;',
-      '-webkit-tap-highlight-color:transparent;backdrop-filter:blur(10px)}',
-      '[data-theme="dark"] .site-pet-restore{background:rgba(18,26,48,.9);color:#eaf0ff;border-color:rgba(140,175,255,.2)}',
-      '@media (prefers-color-scheme:dark){[data-theme="auto"] .site-pet-restore{background:rgba(18,26,48,.9);color:#eaf0ff;border-color:rgba(140,175,255,.2)}}',
-      '@keyframes site-pet-mini-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}',
+      'animation:site-pet-chip-float 3.4s ease-in-out infinite}',
+      '.site-pet-chip img{display:block;width:48px;height:48px;border-radius:50%;object-fit:cover;border:1.5px solid #fff;background:#2b3550}',
+      '.site-pet-chip span{font:600 12px/1 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#24418f}',
+      '[data-theme="dark"] .site-pet-chip{background:rgba(18,26,48,.9);border-color:rgba(140,175,255,.2)}',
+      '[data-theme="dark"] .site-pet-chip span{color:#eaf0ff}',
+      '@media (prefers-color-scheme:dark){[data-theme="auto"] .site-pet-chip{background:rgba(18,26,48,.9);border-color:rgba(140,175,255,.2)}',
+      '[data-theme="auto"] .site-pet-chip span{color:#eaf0ff}}',
+      '@keyframes site-pet-chip-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}',
       '@keyframes sp-post-float{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-4px)}}',
       '@media (max-width:760px){#site-pet{--sp-w:200px;--sp-h:200px;--sp-vh:240px}',
       '#site-pet[data-size="s"]{--sp-w:170px;--sp-h:170px;--sp-vh:204px}',
@@ -2822,11 +2789,11 @@
       '.sp-dock{gap:3px;padding:3px;opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}',
       '.sp-dock button{font-size:10.5px;padding:3px 5px}',
       '.sp-bubble{max-width:78vw;font-size:12px}.sp-panel{max-height:min(330px,50vh)}',
-      '.site-pet-mini{left:8px;bottom:12px}.site-pet-restore{right:12px;bottom:14px;font-size:11px;padding:7px 12px}}',
+      '.site-pet-chip{right:12px;bottom:14px}}',
       '@media (hover:none){.sp-dock{opacity:.9;visibility:visible;pointer-events:auto;transform:translateX(-50%)}}',
       '@media (prefers-reduced-motion:reduce){.sp-bubble,.sp-video,.sp-poster,.sp-dock{transition:none}',
-      '.site-pet-mini,.sp-poster-only .sp-poster,.sp-stage.sp-tapped{animation:none}}',
-      '@media print{#site-pet,.site-pet-mini,.site-pet-restore{display:none!important}}',
+      '.site-pet-chip,.sp-poster-only .sp-poster,.sp-stage.sp-tapped{animation:none}}',
+      '@media print{#site-pet,.site-pet-chip{display:none!important}}',
     ].join('');
     var style = document.createElement('style');
     style.id = 'site-pet-style';
