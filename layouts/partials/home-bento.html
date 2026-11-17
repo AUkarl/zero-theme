@@ -20,9 +20,8 @@
 
 {{- /* 文案：后台「前端管理」写的 data/home.json 优先，其次 [home.bento] 的 params，留空用默认 */ -}}
 {{- $cfg := partial "home-config.html" . -}}
-{{- $site := partial "site-config.html" . -}}
 {{- $introEyebrow := $bento.intro_eyebrow | default "" -}}
-{{- $introTitle := $cfg.title | default ($bento.intro_title | default $site.name | default (i18n "home-title" | default "主页")) -}}
+{{- $introTitle := $cfg.title | default ($bento.intro_title | default (i18n "home-title" | default "主页")) -}}
 {{- $showTitle := $cfg.showTitle -}}
 {{- $introDesc := $bento.intro_desc | default $bento.intro_desc_zh -}}
 {{- with $cfg.desc }}{{ $introDesc = . }}{{ end -}}

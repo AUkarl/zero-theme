@@ -91,7 +91,7 @@
 {{- $totalPages := cond (gt (len $data) 0) (int (math.Ceil (div (float (len $data)) (float $paginate)))) 0 -}}
 <main class="main" id="main">
   <section class="section">
-    {{- $homeTitle := $cfg.title | default ((partial "site-config.html" .).name) -}}
+    {{- $homeTitle := $cfg.title | default (i18n "home-title" | default "主页") -}}
     {{- if $cfg.showTitle -}}
     <h1 class="section-title">{{ $homeTitle }}</h1>
     {{- else -}}

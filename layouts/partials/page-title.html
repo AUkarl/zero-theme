@@ -33,11 +33,10 @@
 {{- if eq .Kind "term" -}}
   {{- if eq $sing "tag" }}{{ $t = printf "%s · 标签" $t }}{{ else if eq $sing "category" }}{{ $t = printf "%s · 分类" $t }}{{ end -}}
 {{- end -}}
-{{- /* 首页的 <title> 跟可见大标题走同一份配置：后台填了就用，没填用站点名。
-       content 里的 title 只当占位，不再把「主页」顶到浏览器标签上。 */ -}}
+{{- /* 首页的 <title> 跟可见大标题走同一份配置：后台填了就用，没填用默认「主页」。 */ -}}
 {{- if or .IsHome (eq .Section "home") -}}
   {{- $homeCfg := partial "home-config.html" . -}}
-  {{- $t = $homeCfg.title | default $fallback -}}
+  {{- $t = $homeCfg.title | default (i18n "home-title" | default "主页") -}}
 {{- end -}}
 {{- if or (reflect.IsSlice $t) (reflect.IsMap $t) }}{{ $t = "" }}{{ end -}}
 {{- if not $t }}{{ $t = printf "%s" (.Plain | plainify | replaceRE `\s+` " " | strings.TrimSpace | truncate 24 "…") }}{{ end -}}

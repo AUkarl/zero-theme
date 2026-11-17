@@ -42,6 +42,10 @@
     var ua = navigator.userAgent;
     var inWeChat = /MicroMessenger/i.test(ua);
     var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    var shareUrl = url;
+    try {
+      if (new URL(url).origin !== location.origin) shareUrl = location.origin + location.pathname + location.search;
+    } catch (e) {}
 
     function flash(btn, label) {
       if (!btn) return;
@@ -74,8 +78,8 @@
       nativeBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
         if (typeof navigator.share === 'function') {
-          var payload = { title: title, url: url };
-          if (text) payload.text = text;
+          /* 只给标题和同源地址：部分安卓定制浏览器（含 MIUI）带 text/跨域 URL 时会静默失败 */
+          var payload = { title: title, url: shareUrl };
           try {
             navigator.share(payload).catch(function (err) {
               if (err && err.name === 'AbortError') return;
