@@ -21,7 +21,7 @@
      data-share-text="{{ $desc }}"
      data-share-url="{{ $url }}"
      aria-label="{{ i18n "article-share-label" | default "分享" }}">
-  <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" data-share-app="sinaweibo://sendweibo?content={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
+  <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
   <button type="button" class="share-btn" data-share-wechat title="分享到微信" aria-label="分享到微信"><i class="fab fa-weixin" aria-hidden="true"></i><span>微信</span></button>
   <a class="share-btn" href="https://connect.qq.com/widget/shareqq/index.html?url={{ $url | urlquery }}&title={{ $title | urlquery }}&summary={{ $desc | urlquery }}&pics={{ $img | urlquery }}&site={{ $site.name | urlquery }}" target="_blank" rel="noopener noreferrer" data-share-qq title="分享到 QQ" aria-label="分享到 QQ"><i class="fab fa-qq" aria-hidden="true"></i><span>QQ</span></a>
   <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" data-share-app="twitter://post?message={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
@@ -189,7 +189,12 @@
         + ';end';
       debugLog('intent: ' + intent);
       try {
-        window.location.href = intent;
+        var a = document.createElement('a');
+        a.href = intent;
+        a.style.cssText = 'display:none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 600);
       } catch (e) {
         if (onFail) onFail();
         return;
@@ -240,7 +245,7 @@
           });
         }
         if (isAndroid) {
-          androidIntent('com.tencent.mobileqq/com.tencent.mobileqq.activity.JumpActivity', fallback);
+          androidIntent('com.tencent.mobileqq/.activity.JumpActivity', fallback);
           return;
         }
         systemShare().then(function (ok) { if (!ok) fallback(); });
@@ -280,7 +285,7 @@
           return;
         }
         if (isAndroid) {
-          androidIntent('com.tencent.mm/com.tencent.mm.ui.tools.ShareImgUI', fallback);
+          androidIntent('com.tencent.mm/.ui.tools.ShareImgUI', fallback);
           return;
         }
         systemShare().then(function (ok) { if (!ok) fallback(); });
