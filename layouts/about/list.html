@@ -20,10 +20,8 @@
   <section class="section"{{ $swAbout.attrs | safeHTMLAttr }}>
     {{- $aboutDesc := "" -}}
     {{- if $a.show_desc -}}
-      {{- $aboutDesc = $a.desc -}}
-      {{- if and (not $aboutDesc) (not (isset (hugo.Data.about | default dict) "desc")) -}}
-        {{- $aboutDesc = i18n "about-desc" | default "一个在数字世界里种花的人。" -}}
-      {{- end -}}
+      {{- $aboutDesc = $a.desc | default ((.Site.Params.about | default dict).desc) -}}
+      {{- if not $aboutDesc }}{{ $aboutDesc = i18n "about-desc" | default "一个在数字世界里种花的人。" }}{{ end -}}
     {{- end -}}
     {{- partial "zero/page-header.html" (dict
       "showTitle" $a.show_title

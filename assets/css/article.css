@@ -534,11 +534,10 @@
 .donate-modal {
   display: flex;
   position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 1100;
+  inset: 0;
+  box-sizing: border-box;
+  padding: 16px;
   background-color: rgba(0, 0, 0, 0);
   justify-content: center;
   align-items: center;
@@ -558,10 +557,10 @@
   border-radius: var(--radius);
   padding: 32px 28px;
   max-width: 700px;
-  width: 90%;
+  width: 100%;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   position: relative;
-  max-height: 90vh;
+  max-height: 100%;
   overflow-y: auto;
   transform: scale(0.85) translateY(20px);
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -668,6 +667,26 @@
 }
 
 @media (max-width: 600px) {
+  /* 弹窗从导航栏下方开始：top 不再被 56px 的固定导航遮住，关闭按钮始终点得到 */
+  .donate-modal {
+    align-items: flex-start;
+    padding: calc(var(--nav-height) + 12px) 12px 12px;
+  }
+  .donate-modal-content {
+    max-height: calc(100dvh - var(--nav-height) - 24px);
+    padding: 24px 18px;
+  }
+  .donate-modal-content .close-btn {
+    position: sticky;
+    top: 0;
+    float: right;
+    width: 40px;
+    height: 40px;
+    margin: -8px -6px 0 0;
+    background: var(--card-bg);
+    border-radius: 50%;
+    z-index: 2;
+  }
   .article-content {
     padding: 20px 16px;
   }

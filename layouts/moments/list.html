@@ -93,15 +93,17 @@
 {{- if lt $ssrCount 1 -}}{{- $ssrCount = 10 -}}{{- end -}}
 {{- if gt $ssrCount (len $items) -}}{{- $ssrCount = len $items -}}{{- end -}}
 
+{{- $momentsDesc := $mc.desc -}}
+{{- if not $momentsDesc }}{{ $momentsDesc = i18n "moments-desc" | default "分享生活点滴，记录瞬间感悟。" }}{{ end -}}
 <main class="main" id="main">
   {{- if $mc.showTitle -}}
   {{- partial "zero/page-header.html" (dict
     "showTitle" true
     "title" ($mc.title | default (i18n "nav-moments" | default "时刻"))
-    "desc" $mc.desc) }}
+    "desc" (cond $mc.showDesc $momentsDesc "")) }}
   {{- else -}}
   <h1 class="zero-sr-only">{{ .Title | default (i18n "nav-moments" | default "时刻") }}</h1>
-  {{- if and $mc.showDesc $mc.desc }}<p class="section-desc">{{ partial "zero/md-text.html" (dict "text" $mc.desc) }}</p>{{ end -}}
+  {{- if $mc.showDesc }}<p class="section-desc">{{ partial "zero/md-text.html" (dict "text" $momentsDesc) }}</p>{{ end -}}
   {{- end -}}
   {{- /* ====== 顶部横幅 ======
         后台「前端管理 → 时刻页」关掉横幅背景时：

@@ -23,10 +23,8 @@
   <section class="section"{{ $swWork.attrs | safeHTMLAttr }}>
     {{- $workDesc := "" -}}
     {{- if $w.show_desc -}}
-      {{- $workDesc = $w.desc -}}
-      {{- if and (not $workDesc) (not (isset (hugo.Data.works | default dict) "desc")) -}}
-        {{- $workDesc = i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。" -}}
-      {{- end -}}
+      {{- $workDesc = $w.desc | default ((.Site.Params.work | default dict).desc) -}}
+      {{- if not $workDesc }}{{ $workDesc = i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。" }}{{ end -}}
     {{- end -}}
     {{- partial "zero/page-header.html" (dict
       "showTitle" $w.show_title
