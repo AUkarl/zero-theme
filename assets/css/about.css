@@ -45,6 +45,11 @@
   gap: 2px;
 }
 
+/* 关闭头像后不保留 24px 的图片位，昵称 / 个签直接和下方正文左对齐 */
+.about-me-header.no-avatar {
+  gap: 0;
+}
+
 /* ===== 分隔线 ===== */
 .about-divider {
   border: none;

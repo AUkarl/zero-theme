@@ -31,23 +31,24 @@
     <div class="about-container">
       {{- /* 关于我（含头像昵称） */ -}}
       <div class="about-section">
-        <div class="about-me-header">
-          {{- if (ne .Site.Params.about.show_avatar false) }}
+        {{- /* 头像 / 昵称 / 个签都没有时整块不渲染，别留下一条空白的 header 间距 */ -}}
+        {{- if or $a.show_avatar $a.show_name $a.tagline }}
+        <div class="about-me-header{{ if not $a.show_avatar }} no-avatar{{ end }}">
+          {{- if $a.show_avatar }}
           <img class="about-avatar" src="{{ $a.avatar | default "img/avatar.png" | relURL }}" alt="Avatar">
           {{- end }}
+          {{- if or $a.show_name $a.tagline }}
           <div class="about-me-info">
-            {{- if (ne .Site.Params.about.show_name false) }}
+            {{- if $a.show_name }}
             <div class="about-name">{{ $a.name | default (partial "site-config.html" .).name }}</div>
             {{- end }}
-            {{- if $a.show_bio }}
             {{- if $a.tagline }}
             <p class="about-tagline" data-i18n="about-tagline">{{ partial "zero/md-text.html" (dict "text" $a.tagline) }}</p>
-            {{- else }}
-            <p class="about-tagline" data-i18n="about-tagline">{{ i18n "about-tagline" | default "独立创作者 · 极简主义践行者 · 数字花园园丁" }}</p>
-            {{- end }}
             {{- end }}
           </div>
+          {{- end }}
         </div>
+        {{- end }}
         {{- if $a.show_bio }}
           {{- range $i, $p := $a.bio }}
         <p data-i18n="about-bio-{{ $i }}">{{ partial "zero/md-text.html" (dict "text" $p) }}</p>
@@ -139,7 +140,7 @@
     'zh': {
       'about-title': {{ i18n "about-title-zh" | default "关于" | jsonify | safeJS }},
       'about-desc': {{ $a.desc | default (i18n "about-desc-zh" | default "一个在数字世界里种花的人。") | jsonify | safeJS }},
-      'about-tagline': {{ $a.tagline | default (i18n "about-tagline-zh" | default "独立创作者 · 极简主义践行者 · 数字花园园丁") | jsonify | safeJS }},
+      'about-tagline': {{ $a.tagline | jsonify | safeJS }},
       'about-site-title': {{ i18n "about-site-title-zh" | default "关于本站" | jsonify | safeJS }},
       'about-findme-title': {{ i18n "about-findme-title-zh" | default "找到我" | jsonify | safeJS }},
       'about-declaration-title': {{ i18n "about-declaration-title-zh" | default "站点声明" | jsonify | safeJS }}

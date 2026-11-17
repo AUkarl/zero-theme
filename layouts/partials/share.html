@@ -1,4 +1,4 @@
-{{- /* 文章分享栏：微信走 JS-SDK 自定义卡片，手机 QQ 唤起 App，移动端末位按钮调系统分享。
+{{- /* 文章分享栏：微信走全站 JS-SDK 自定义卡片，手机 QQ 唤起 App 的分享面板，移动端末位按钮调系统分享。
        分享链接只带公开文章地址，不带任何登录态/统计参数。 */ -}}
 {{- $url := .Permalink -}}
 {{- $site := partial "site-config.html" . -}}
@@ -35,6 +35,19 @@
   <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享"><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
 <div class="wx-share-tip" data-share-wx-tip hidden><i class="fas fa-arrow-up" aria-hidden="true"></i><span>点击右上角 ··· 分享</span></div>
+{{- /* 微信外没有「直接打开微信分享面板」的接口；这个面板把话说清楚，并把复制 / 打开做成一次点击。 */ -}}
+<div class="share-sheet" data-share-sheet hidden>
+  <div class="share-sheet-mask" data-share-close></div>
+  <div class="share-sheet-card" role="dialog" aria-modal="true" aria-labelledby="share-sheet-title">
+    <h3 id="share-sheet-title" data-share-sheet-title>分享</h3>
+    <p data-share-sheet-text></p>
+    <div class="share-sheet-actions">
+      <button type="button" class="share-btn" data-share-copy>复制链接</button>
+      <button type="button" class="share-btn primary" data-share-open hidden>打开应用</button>
+      <button type="button" class="share-btn" data-share-close>关闭</button>
+    </div>
+  </div>
+</div>
 <script>
   (function () {
     var box = document.querySelector('[data-share]');
@@ -43,14 +56,20 @@
     var text = box.dataset.shareText || '';
     var url = box.dataset.shareUrl || location.href;
     var image = box.dataset.shareImage || '';
-    var api = (box.dataset.shareApi || '').replace(/\/+$/, '');
     var nativeBtn = box.querySelector('[data-share-native]');
     var wxBtn = box.querySelector('[data-share-wechat]');
     var qqBtn = box.querySelector('[data-share-qq]');
     var wxTip = document.querySelector('[data-share-wx-tip]');
+    var sheet = document.querySelector('[data-share-sheet]');
+    var sheetTitle = sheet && sheet.querySelector('[data-share-sheet-title]');
+    var sheetText = sheet && sheet.querySelector('[data-share-sheet-text]');
+    var sheetCopy = sheet && sheet.querySelector('[data-share-copy]');
+    var sheetOpen = sheet && sheet.querySelector('[data-share-open]');
     var ua = navigator.userAgent;
     var inWeChat = /MicroMessenger/i.test(ua);
-    var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isAndroid = /Android/i.test(ua);
+    var isMobile = isIOS || isAndroid || /Mobile/i.test(ua);
     var shareUrl = url;
     try {
       if (new URL(url).origin !== location.origin) shareUrl = location.origin + location.pathname + location.search;
@@ -70,6 +89,7 @@
       wxTip.hidden = false;
       setTimeout(function () { wxTip.hidden = true; }, 2600);
     }
+
     function toast(msg) {
       var el = document.createElement('div');
       el.className = 'share-toast';
@@ -77,30 +97,99 @@
       document.body.appendChild(el);
       setTimeout(function () { el.remove(); }, 2600);
     }
-    function fallbackCopy(btn) {
+
+    function fallbackCopy(cb) {
       var ta = document.createElement('textarea');
-      ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); if (btn) flash(btn, '已复制'); } catch (e) {}
+      ta.value = shareUrl;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
       document.body.removeChild(ta);
+      if (cb) cb(ok);
     }
-    function copyLink(btn) {
+
+    function copyLink(done) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(url).then(function () { flash(btn, '已复制'); }).catch(function () { fallbackCopy(btn); });
-      } else fallbackCopy(btn);
+        navigator.clipboard.writeText(shareUrl).then(function () { done && done(true); }).catch(function () { fallbackCopy(done); });
+      } else fallbackCopy(done);
     }
-    function copySilent() {
-      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(url).catch(function () { fallbackCopy(null); });
-      fallbackCopy(null);
-      return Promise.resolve();
+
+    function closeSheet() {
+      if (sheet) sheet.hidden = true;
+      document.documentElement.style.removeProperty('overflow');
     }
-    /* 先试 App 的 URL Scheme，没装 App 时再落到网页。页面隐藏（App 打开成功）就取消回退。 */
-    function openApp(scheme, fallback) {
-      var timer = setTimeout(function () { window.location.href = fallback; }, 2200);
-      document.addEventListener('visibilitychange', function () {
-        if (document.hidden) clearTimeout(timer);
-      }, { once: true });
-      try { window.location.href = scheme; } catch (e) { window.location.href = fallback; }
+
+    function openSheet(opts) {
+      if (!sheet) {
+        if (opts.text) toast(opts.text);
+        if (opts.onOpen) opts.onOpen();
+        return;
+      }
+      sheetTitle.textContent = opts.title || '分享';
+      sheetText.textContent = opts.text || '';
+      sheetCopy.hidden = !!opts.hideCopy;
+      sheetCopy.onclick = function () {
+        copyLink(function (ok) {
+          toast(ok ? '链接已复制' : '复制失败，请长按地址栏复制');
+          if (opts.onCopy) opts.onCopy(ok);
+        });
+      };
+      if (sheetOpen) {
+        if (opts.openLabel && opts.onOpen) {
+          sheetOpen.hidden = false;
+          sheetOpen.textContent = opts.openLabel;
+          sheetOpen.onclick = function () { closeSheet(); opts.onOpen(); };
+        } else {
+          sheetOpen.hidden = true;
+          sheetOpen.onclick = null;
+        }
+      }
+      sheet.hidden = false;
+      document.documentElement.style.overflow = 'hidden';
+    }
+
+    if (sheet) {
+      Array.prototype.forEach.call(sheet.querySelectorAll('[data-share-close]'), function (el) {
+        el.addEventListener('click', closeSheet);
+      });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
+    }
+
+    /**
+     * 唤起 App：不再在 2 秒后自动把页面跳到网页版。
+     * 以前那句 window.location.href = fallback 是「QQ 打开后秒退」的元凶：
+     * 页面在后台被改成网页分享页，用户从 QQ 回来时看到的是另一个页面。
+     * 现在只在确认页面仍在前台时给一个可点的兜底，不替用户做跳转。
+     */
+    function launchApp(scheme, opts) {
+      opts = opts || {};
+      var left = false;
+      function markLeft() { left = true; }
+      document.addEventListener('visibilitychange', markLeft, { once: true });
+      window.addEventListener('blur', markLeft, { once: true });
+      window.addEventListener('pagehide', markLeft, { once: true });
+      try {
+        if (isAndroid) {
+          /* Android 的 Chrome / 各家定制浏览器对直接改 location 唤起未知协议越来越严，
+             隐藏 iframe 兼容性更好，也不会把当前页留在「打不开」的错误页。 */
+          var iframe = document.createElement('iframe');
+          iframe.style.cssText = 'display:none;width:0;height:0;border:0';
+          iframe.src = scheme;
+          document.body.appendChild(iframe);
+          setTimeout(function () { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 1800);
+        } else {
+          window.location.href = scheme;
+        }
+      } catch (e) {
+        if (opts.onFail) opts.onFail();
+      }
+      setTimeout(function () {
+        if (left || document.visibilityState === 'hidden' || !document.hasFocus()) return;
+        if (opts.onFail) opts.onFail();
+      }, 1800);
     }
 
     if (nativeBtn) {
@@ -112,97 +201,103 @@
           try {
             navigator.share(payload).catch(function (err) {
               if (err && err.name === 'AbortError') return;
-              copyLink(nativeBtn);
+              copyLink(function (ok) { toast(ok ? '系统分享不可用，链接已复制' : '系统分享不可用'); });
             });
           } catch (e) {
-            copyLink(nativeBtn);
+            copyLink(function (ok) { toast(ok ? '系统分享不可用，链接已复制' : '系统分享不可用'); });
           }
           return;
         }
-        if (isMobile) { toast('当前浏览器不支持系统分享，请用浏览器菜单'); return; }
-        copyLink(nativeBtn);
+        if (isMobile) {
+          openSheet({
+            title: '分享',
+            text: '当前浏览器不支持系统分享。可以复制链接后粘贴到任意聊天窗口。',
+          });
+          return;
+        }
+        copyLink(function (ok) { flash(nativeBtn, ok ? '已复制' : '复制失败'); });
       });
     }
 
-    if (qqBtn && isMobile) {
+    if (qqBtn) {
       qqBtn.addEventListener('click', function (e) {
+        if (!isMobile) return; /* 电脑端保留 <a> 的网页分享页 */
         e.preventDefault();
+        if (inWeChat) { showWxTip(); return; }
+        /* 完整参数比只带 title/url 成功率高：previewimageUrl / generalpastboard / callback_type
+           是手机 QQ 分享面板认的字段，缺了会在部分版本上「打开一下又退回」。 */
         var scheme = 'mqqapi://share/to_fri?src_type=web&version=1&file_type=news'
+          + '&generalpastboard=1'
+          + '&callback_type=scheme'
+          + '&shareType=0'
+          + '&cflag=0'
           + '&title=' + encodeURIComponent(title)
           + '&description=' + encodeURIComponent(text)
           + '&url=' + encodeURIComponent(shareUrl)
-          + (image ? '&image_url=' + encodeURIComponent(image) : '');
-        openApp(scheme, qqBtn.href);
+          + (image ? '&image_url=' + encodeURIComponent(image) + '&previewimageUrl=' + encodeURIComponent(image) : '');
+        launchApp(scheme, {
+          onFail: function () {
+            openSheet({
+              title: '分享到 QQ',
+              text: '没有直接唤起 QQ 的分享面板。可以复制链接，或打开 QQ 的网页分享页。',
+              openLabel: '打开网页版分享',
+              onOpen: function () { window.open(qqBtn.href, '_blank', 'noopener'); },
+            });
+          },
+        });
       });
     }
 
-    if (isMobile) {
+    if (isMobile && !inWeChat) {
       Array.prototype.slice.call(box.querySelectorAll('[data-share-app]')).forEach(function (link) {
         link.addEventListener('click', function (e) {
           var scheme = link.getAttribute('data-share-app');
           if (!scheme) return;
           e.preventDefault();
-          openApp(scheme, link.href);
+          launchApp(scheme, {
+            onFail: function () {
+              openSheet({
+                title: link.getAttribute('title') || '分享',
+                text: '没有唤起对应 App。可以复制链接，或打开网页版分享。',
+                openLabel: '打开网页版分享',
+                onOpen: function () { window.open(link.href, '_blank', 'noopener'); },
+              });
+            },
+          });
         });
       });
     }
-
-    function loadSdk() {
-      return new Promise(function (resolve, reject) {
-        if (window.wx) return resolve(window.wx);
-        var s = document.createElement('script');
-        s.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
-        s.onload = function () { window.wx ? resolve(window.wx) : reject(); };
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-
-    function initWeChat() {
-      if (!inWeChat || !api) return;
-      loadSdk()
-        .then(function () {
-          return fetch(api + '/api/share/wechat?url=' + encodeURIComponent(location.href.split('#')[0]), { credentials: 'omit' });
-        })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (body) {
-          var d = body && body.data;
-          if (!d) return;
-          window.wx.config({
-            debug: false,
-            appId: d.appId,
-            timestamp: d.timestamp,
-            nonceStr: d.nonceStr,
-            signature: d.signature,
-            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData', 'onMenuShareAppMessage', 'onMenuShareTimeline'],
-          });
-          window.wx.ready(function () {
-            var payload = { title: title, desc: text, link: url };
-            if (image) payload.imgUrl = image;
-            window.wx.updateAppMessageShareData(payload);
-            window.wx.updateTimelineShareData(payload);
-            /* 老版本微信客户端只认这两套接口，保留一份兼容调用 */
-            if (window.wx.onMenuShareAppMessage) window.wx.onMenuShareAppMessage(payload);
-            if (window.wx.onMenuShareTimeline) window.wx.onMenuShareTimeline(payload);
-          });
-        })
-        .catch(function () {});
-    }
-
-    if (inWeChat) initWeChat();
 
     if (wxBtn) {
       wxBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
         if (isMobile) {
-          /* 外部浏览器没有“直接分享给微信好友”的接口：复制链接后拉起微信，用户粘贴即可 */
-          copySilent().then(function () {
-            toast('链接已复制，正在打开微信');
-            openApp('weixin://', 'https://weixin.qq.com/');
+          /* 微信没有「从外部网页直接打开分享面板」的 URL Scheme。
+             能做到的最顺路径：先复制链接，再一键切到微信，用户粘贴即可。 */
+          copyLink(function () {
+            openSheet({
+              title: '分享到微信',
+              text: '微信不支持网页直接打开分享面板。链接已经复制，进入微信后粘贴给好友即可。',
+              openLabel: '打开微信',
+              onOpen: function () {
+                if (isAndroid) launchApp('weixin://', {});
+                else window.location.href = 'weixin://';
+              },
+            });
           });
           return;
         }
-        flash(wxBtn, '请用微信打开');
+        /* 电脑端微信同理；复制链接后发到「文件传输助手」最稳 */
+        copyLink(function (ok) {
+          openSheet({
+            title: '分享到微信',
+            text: ok
+              ? '微信电脑版不支持网页直接调起分享。链接已经复制，粘贴到「文件传输助手」或好友聊天里即可。'
+              : '微信电脑版不支持网页直接调起分享。请手动复制地址栏链接，发到微信里。',
+            openLabel: /Windows|Macintosh/i.test(ua) ? '尝试打开微信' : '',
+            onOpen: function () { window.location.href = 'weixin://'; },
+          });
+        });
       });
     }
   })();

@@ -1,0 +1,114 @@
+{{- /* ============================================================
+  wechat-share.html — 全站微信 JS-SDK 分享卡片初始化
+
+  为什么单独做一个 partial：以前只有文章页的 share.html 里才初始化 JS-SDK，
+  首页、关于页、归档页、时刻页从微信里分享出去时永远是一张默认卡片。
+  现在由 seo.html 在 <head> 里统一调用，标题 / 描述 / 分享图沿用同一份 SEO 值。
+
+  参数：context / title / desc / image
+  失败时把原因写进 window.__zeroWxShare，文章页的分享按钮会据此给出提示；
+  在地址栏加 ?wxdebug=1 会在页面上直接显示 wx.config 的报错。
+  ============================================================ */ -}}
+{{- $ctx := .context -}}
+{{- $api := (partial "zero/api.html" $ctx).base -}}
+{{- if $api -}}
+{{- $title := .title | default $ctx.Title -}}
+{{- $desc := .desc | default "" -}}
+{{- $image := .image | default "" -}}
+{{- /* 微信缩略图按 600×600 JPEG 给最稳：WebP / 超宽图在部分客户端上会被裁得很怪 */ -}}
+{{- if $image -}}
+  {{- $info := partial "img-src.html" (dict "src" $image "page" $ctx "variant" "cover" "widths" (slice 600) "height" 600 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+  {{- if and $info.ok $info.variant -}}
+    {{- $info = partial "img-src.html" (dict "src" $info.src "page" $ctx "widths" (slice 600) "height" 600 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+  {{- end -}}
+  {{- if $info.ok }}{{ $image = $info.src }}{{ end -}}
+{{- end -}}
+{{- if and $image (not (or (hasPrefix $image "http://") (hasPrefix $image "https://"))) }}{{ $image = $image | absURL }}{{ end -}}
+<script>
+  (function () {
+    var ua = navigator.userAgent;
+    if (!/MicroMessenger/i.test(ua)) return;
+    var api = {{ $api | jsonify | safeJS }};
+    var title = {{ $title | plainify | htmlUnescape | jsonify | safeJS }};
+    var desc = {{ $desc | plainify | htmlUnescape | jsonify | safeJS }};
+    var image = {{ $image | jsonify | safeJS }};
+    var state = window.__zeroWxShare = { status: 'loading', error: '', updatedAt: 0 };
+    var debug = /[?&]wxdebug=1(?:&|$)/.test(location.search);
+
+    function badge(text, bad) {
+      if (!debug) return;
+      var el = document.getElementById('wx-share-debug');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'wx-share-debug';
+        el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;padding:8px 10px;border-radius:8px;font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:pre-wrap;word-break:break-all;color:#fff;background:' + (bad ? 'rgba(170,30,30,.92)' : 'rgba(20,110,70,.92)');
+        document.body.appendChild(el);
+      }
+      el.textContent = text;
+    }
+
+    function fail(reason) {
+      state.status = 'fail';
+      state.error = String(reason || '未知错误');
+      badge('微信分享初始化失败：' + state.error + '\n把这一行截图给站长即可定位。', true);
+    }
+
+    function loadSdk() {
+      return new Promise(function (resolve, reject) {
+        if (window.wx) return resolve(window.wx);
+        var s = document.createElement('script');
+        s.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
+        s.onload = function () { window.wx ? resolve(window.wx) : reject(new Error('JS-SDK 加载后没有 wx 对象')); };
+        s.onerror = function () { reject(new Error('JS-SDK 加载失败（网络或 CSP）')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    function setCard() {
+      var payload = { title: title, desc: desc, link: location.href.split('#')[0] };
+      if (image) payload.imgUrl = image;
+      try { window.wx.updateAppMessageShareData(payload); } catch (e) {}
+      try { window.wx.updateTimelineShareData(payload); } catch (e) {}
+      /* 老版本微信只认这两套接口 */
+      try { window.wx.onMenuShareAppMessage && window.wx.onMenuShareAppMessage(payload); } catch (e) {}
+      try { window.wx.onMenuShareTimeline && window.wx.onMenuShareTimeline(payload); } catch (e) {}
+    }
+
+    function init() {
+      var pageUrl = location.href.split('#')[0];
+      loadSdk()
+        .then(function () {
+          return fetch(api + '/api/share/wechat?url=' + encodeURIComponent(pageUrl), { credentials: 'omit' });
+        })
+        .then(function (r) { return r.ok ? r.json() : r.json().catch(function () { return null; }).then(function (b) { throw new Error((b && b.message) || ('签名接口 HTTP ' + r.status)); }); })
+        .then(function (body) {
+          var d = body && body.data;
+          if (!d || !d.appId || !d.signature) throw new Error('签名接口没有返回 appId/signature');
+          window.wx.config({
+            debug: debug,
+            appId: d.appId,
+            timestamp: d.timestamp,
+            nonceStr: d.nonceStr,
+            signature: d.signature,
+            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData', 'onMenuShareAppMessage', 'onMenuShareTimeline', 'checkJsApi']
+          });
+          window.wx.error(function (res) {
+            fail((res && (res.errMsg || res.err_msg)) || JSON.stringify(res || {}));
+          });
+          window.wx.ready(function () {
+            setCard();
+            state.status = 'ok';
+            state.updatedAt = Date.now();
+            badge('微信分享卡片已就绪', false);
+            /* iOS 微信偶发在 ready 之后才真正拿到分享菜单，再补一次不花钱 */
+            setTimeout(setCard, 600);
+          });
+        })
+        .catch(function (e) { fail(e && e.message ? e.message : e); });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+    else init();
+  })();
+</script>
+{{- end -}}

@@ -29,6 +29,9 @@
 {{- $o := hugo.Data.owner -}}
 {{- $name := partial "cms/text.html" (dict "data" $o "keys" (slice "name" "nickname") "fallback" .Site.Params.aboutName) -}}
 {{- $avatar := partial "cms/text.html" (dict "data" $o "keys" (slice "avatar" "image") "fallback" .Site.Params.aboutAvatar) -}}
+{{- /* 头像 / 昵称开关：后台 about.json 优先，老站点仍认 params 的 show_avatar / show_name */ -}}
+{{- $showAvatarDefault := partial "cms/flag.html" (dict "data" $cfg "keys" (slice "show_avatar") "default" true) -}}
+{{- $showNameDefault := partial "cms/flag.html" (dict "data" $cfg "keys" (slice "show_name") "default" true) -}}
 {{- $bio := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "bio") "fallback" $cfg.bio))) -}}
 {{- $site := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "site") "fallback" $cfg.site))) -}}
 {{- $decl := partial "cms/paras.html" (dict "list" (partial "cms/list.html" (dict "data" $d "keys" (slice "declaration" "declarations") "fallback" $cfg.declaration))) -}}
@@ -70,6 +73,8 @@
   "tagline" $tagline
   "name" $name
   "avatar" $avatar
+  "show_avatar" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showAvatar" "show_avatar") "default" $showAvatarDefault))
+  "show_name" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showName" "show_name") "default" $showNameDefault))
   "bio" $bio
   "site" $site
   "declaration" $decl

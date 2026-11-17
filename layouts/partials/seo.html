@@ -191,6 +191,9 @@
 {{- end }}
 {{- end }}
 
+{{- /* ---------- 微信分享卡片：和 SEO 用同一份标题 / 描述 / 分享图 ---------- */ -}}
+{{- partial "wechat-share.html" (dict "context" . "title" $pageTitle "desc" $desc "image" $image) -}}
+
 {{- /* ---------- 结构化数据 ---------- */ -}}
 {{- if (ne $seo.enable_jsonld false) -}}
   {{- $publisherLogo := $seo.publisher_logo | default (partial "site-config.html" .).logo | default "img/logo-nav.png" -}}
