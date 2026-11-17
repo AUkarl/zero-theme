@@ -741,7 +741,23 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 }
 .wx-share-tip[hidden] { display: none; }
+.share-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  z-index: 1300;
+  max-width: calc(100vw - 32px);
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .78);
+  color: #fff;
+  font-size: .82rem;
+  line-height: 1.5;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
 .share-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-bg); color: var(--text-secondary); font: inherit; font-size: .78rem; line-height: 1.2; text-decoration: none; cursor: pointer; transition: border-color .18s ease, color .18s ease; }
 .share-btn:hover { border-color: var(--logo-accent-text, #0d8368); color: var(--logo-accent-text, #0d8368); }
 .share-btn i { font-size: .9rem; }
-@media (max-width: 480px) { .article-share { gap: 6px; } .share-btn { padding: 5px 8px; } .share-btn span { display: none; } }
+@media (max-width: 480px) { .article-share { gap: 6px; } .share-btn { padding: 5px 8px; } .share-btn span { display: none; } .share-btn[data-share-native] span { display: inline; } }

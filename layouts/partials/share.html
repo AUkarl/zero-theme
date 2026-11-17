@@ -61,6 +61,13 @@
       wxTip.hidden = false;
       setTimeout(function () { wxTip.hidden = true; }, 2600);
     }
+    function toast(msg) {
+      var el = document.createElement('div');
+      el.className = 'share-toast';
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(function () { el.remove(); }, 2600);
+    }
     function fallbackCopy(btn) {
       var ta = document.createElement('textarea');
       ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px';
@@ -90,7 +97,7 @@
           }
           return;
         }
-        if (isMobile) { flash(nativeBtn, '请用浏览器菜单'); return; }
+        if (isMobile) { toast('当前浏览器不支持系统分享，请用浏览器菜单'); return; }
         copyLink(nativeBtn);
       });
     }
