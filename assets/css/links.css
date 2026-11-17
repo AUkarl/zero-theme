@@ -134,7 +134,10 @@
   position: relative;
   flex: 0 0 132px;
   width: 132px;
-  height: 99px;
+  /* 高度跟整张动态卡走：图片完整铺满内容框，不再固定 99px 留一截空底 */
+  align-self: stretch;
+  height: auto;
+  min-height: 99px;
   border-radius: calc(var(--radius) + 2px);
   overflow: hidden;
   background: var(--tag-bg);
@@ -467,6 +470,11 @@
   .alliance-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@media (max-width: 480px) {
+  .links-tabs { gap: 2px; margin: 14px 0 18px; }
+  .links-tab { padding: 8px 9px; font-size: 0.9rem; }
+}
+
 @media (max-width: 768px) {
   /* 同样要带上 .is-active：上面那条 .links-apply.is-active 权重相同，
      不带的话窄屏还是两栏，文字会被挤成一列一条 */
@@ -478,7 +486,7 @@
   .feed-grid { grid-template-columns: minmax(0, 1fr); }
   .alliance-list { grid-template-columns: 1fr; }
   /* 窄屏封面窄一点，正文留够宽度；比例与桌面一致（96×72 = 4:3） */
-  .feed-cover { flex: 0 0 96px; width: 96px; height: 72px; }
+  .feed-cover { flex: 0 0 108px; width: 108px; height: auto; min-height: 96px; }
   /* 窄屏格子改成"图标在上、信息在下"，避免左 3 右 7 太挤 */
   .neighbor { grid-template-columns: 56px minmax(0, 1fr); }
   .neighbor-icon { max-width: 56px; }

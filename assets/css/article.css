@@ -723,7 +723,8 @@
 
 
 /* 文章分享栏：与底部操作条同宽，图标 + 短文字；不改正文与目录布局 */
-.article-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 4px; padding-top: 16px; border-top: 1px dashed var(--border); }
+.article-share { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin: 18px 0 4px; padding-top: 16px; border-top: 1px dashed var(--border); overflow-x: auto; scrollbar-width: none; }
+.article-share::-webkit-scrollbar { display: none; }
 /* 微信内点分享时指向右上角菜单；不需要时 hidden，无额外占位 */
 .wx-share-tip {
   position: fixed;
@@ -757,7 +758,13 @@
   transform: translateX(-50%);
   pointer-events: none;
 }
-.share-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-bg); color: var(--text-secondary); font: inherit; font-size: .78rem; line-height: 1.2; text-decoration: none; cursor: pointer; transition: border-color .18s ease, color .18s ease; }
+.share-btn { display: inline-flex; flex: 0 0 auto; white-space: nowrap; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-bg); color: var(--text-secondary); font: inherit; font-size: .78rem; line-height: 1.2; text-decoration: none; cursor: pointer; transition: border-color .18s ease, color .18s ease; }
 .share-btn:hover { border-color: var(--logo-accent-text, #0d8368); color: var(--logo-accent-text, #0d8368); }
 .share-btn i { font-size: .9rem; }
-@media (max-width: 480px) { .article-share { gap: 6px; } .share-btn { padding: 5px 8px; } .share-btn span { display: none; } .share-btn[data-share-native] span { display: inline; } }
+@media (max-width: 480px) {
+  .article-share { gap: 4px; }
+  .share-btn { padding: 5px 6px; }
+  .share-btn i { font-size: .82rem; }
+  .share-btn span { display: none; }
+  .share-btn[data-share-native] span { display: inline; }
+}

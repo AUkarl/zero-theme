@@ -7,6 +7,15 @@
 {{- $img := partial "one-string.html" (.Params.image | default .Params.img) -}}
 {{- if not $img }}{{ $img = partial "one-string.html" $site.ogImage }}{{ end -}}
 {{- if not $img }}{{ $img = partial "one-string.html" $site.favicon }}{{ end -}}
+{{- /* 微信 JS-SDK 不认 WebP 缩略图：统一转成 600×600 JPEG 再交给分享卡片。 */ -}}
+{{- if $img -}}
+  {{- $shareInfo := partial "img-src.html" (dict "src" $img "page" . "variant" "cover" "widths" (slice 600) "height" 600 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+  {{- if and $shareInfo.ok $shareInfo.variant -}}
+    {{- $shareInfo = partial "img-src.html" (dict "src" $shareInfo.src "page" . "widths" (slice 600) "height" 600 "fit" "fill" "format" "jpg" "quality" 85 "lqip" false "remote" true) -}}
+  {{- end -}}
+  {{- if $shareInfo.ok }}{{ $img = $shareInfo.src }}{{ end -}}
+{{- end -}}
+{{- if not $img }}{{ $img = "img/bj.png" | absURL }}{{ end -}}
 {{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
 {{- $zero := partial "zero/api.html" . -}}
 {{- $text := printf "%s %s" $title $url -}}
@@ -17,11 +26,11 @@
      data-share-image="{{ $img }}"
      data-share-api="{{ $zero.base }}"
      aria-label="{{ i18n "article-share-label" | default "分享" }}">
-  <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
+  <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" data-share-app="sinaweibo://sendweibo?content={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
   <button type="button" class="share-btn" data-share-wechat title="分享到微信" aria-label="分享到微信"><i class="fab fa-weixin" aria-hidden="true"></i><span>微信</span></button>
   <a class="share-btn" href="https://connect.qq.com/widget/shareqq/index.html?url={{ $url | urlquery }}&title={{ $title | urlquery }}&summary={{ $desc | urlquery }}&pics={{ $img | urlquery }}&site={{ $site.name | urlquery }}" target="_blank" rel="noopener noreferrer" data-share-qq title="分享到 QQ" aria-label="分享到 QQ"><i class="fab fa-qq" aria-hidden="true"></i><span>QQ</span></a>
-  <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
-  <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
+  <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" data-share-app="twitter://post?message={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
+  <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" data-share-app="tg://msg_url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
   <a class="share-btn" href="mailto:?subject={{ $title | urlquery }}&body={{ $text | urlquery }}" title="通过邮件分享" aria-label="通过邮件分享"><i class="fas fa-envelope" aria-hidden="true"></i><span>邮件</span></a>
   <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享"><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
@@ -72,13 +81,26 @@
       var ta = document.createElement('textarea');
       ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px';
       document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); flash(btn, '已复制'); } catch (e) {}
+      try { document.execCommand('copy'); if (btn) flash(btn, '已复制'); } catch (e) {}
       document.body.removeChild(ta);
     }
     function copyLink(btn) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(function () { flash(btn, '已复制'); }).catch(function () { fallbackCopy(btn); });
       } else fallbackCopy(btn);
+    }
+    function copySilent() {
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(url).catch(function () { fallbackCopy(null); });
+      fallbackCopy(null);
+      return Promise.resolve();
+    }
+    /* 先试 App 的 URL Scheme，没装 App 时再落到网页。页面隐藏（App 打开成功）就取消回退。 */
+    function openApp(scheme, fallback) {
+      var timer = setTimeout(function () { window.location.href = fallback; }, 2200);
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) clearTimeout(timer);
+      }, { once: true });
+      try { window.location.href = scheme; } catch (e) { window.location.href = fallback; }
     }
 
     if (nativeBtn) {
@@ -108,16 +130,20 @@
         var scheme = 'mqqapi://share/to_fri?src_type=web&version=1&file_type=news'
           + '&title=' + encodeURIComponent(title)
           + '&description=' + encodeURIComponent(text)
-          + '&url=' + encodeURIComponent(url)
+          + '&url=' + encodeURIComponent(shareUrl)
           + (image ? '&image_url=' + encodeURIComponent(image) : '');
-        var left = false;
-        var timer = setTimeout(function () {
-          if (!left) window.open(qqBtn.href, '_blank', 'noopener');
-        }, 1600);
-        document.addEventListener('visibilitychange', function () {
-          if (document.hidden) { left = true; clearTimeout(timer); }
-        }, { once: true });
-        window.location.href = scheme;
+        openApp(scheme, qqBtn.href);
+      });
+    }
+
+    if (isMobile) {
+      Array.prototype.slice.call(box.querySelectorAll('[data-share-app]')).forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          var scheme = link.getAttribute('data-share-app');
+          if (!scheme) return;
+          e.preventDefault();
+          openApp(scheme, link.href);
+        });
       });
     }
 
@@ -148,13 +174,16 @@
             timestamp: d.timestamp,
             nonceStr: d.nonceStr,
             signature: d.signature,
-            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData'],
+            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData', 'onMenuShareAppMessage', 'onMenuShareTimeline'],
           });
           window.wx.ready(function () {
             var payload = { title: title, desc: text, link: url };
             if (image) payload.imgUrl = image;
             window.wx.updateAppMessageShareData(payload);
             window.wx.updateTimelineShareData(payload);
+            /* 老版本微信客户端只认这两套接口，保留一份兼容调用 */
+            if (window.wx.onMenuShareAppMessage) window.wx.onMenuShareAppMessage(payload);
+            if (window.wx.onMenuShareTimeline) window.wx.onMenuShareTimeline(payload);
           });
         })
         .catch(function () {});
@@ -165,6 +194,14 @@
     if (wxBtn) {
       wxBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
+        if (isMobile) {
+          /* 外部浏览器没有“直接分享给微信好友”的接口：复制链接后拉起微信，用户粘贴即可 */
+          copySilent().then(function () {
+            toast('链接已复制，正在打开微信');
+            openApp('weixin://', 'https://weixin.qq.com/');
+          });
+          return;
+        }
         flash(wxBtn, '请用微信打开');
       });
     }
