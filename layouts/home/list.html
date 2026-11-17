@@ -91,9 +91,14 @@
 {{- $totalPages := cond (gt (len $data) 0) (int (math.Ceil (div (float (len $data)) (float $paginate)))) 0 -}}
 <main class="main" id="main">
   <section class="section">
-    <h1 class="section-title" data-i18n="home-title">{{ i18n "home-title" | default "主页" }}</h1>
+    {{- $homeTitle := $cfg.title | default ((partial "site-config.html" .).name) -}}
+    {{- if $cfg.showTitle -}}
+    <h1 class="section-title">{{ $homeTitle }}</h1>
+    {{- else -}}
+    <h1 class="zero-sr-only">{{ $homeTitle }}</h1>
+    {{- end -}}
     {{- if $cfg.showDesc }}
-    <p class="section-desc" data-i18n="home-desc">{{ partial "zero/md-text.html" (dict "text" ($cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。")) }}</p>
+    <p class="section-desc">{{ partial "zero/md-text.html" (dict "text" ($cfg.desc | default "这里生长着我关于设计、技术与生活的思考片段，随缘修剪，静待花开。")) }}</p>
     {{- end }}
     <div class="garden-bar">
       <div class="garden-tabs" role="tablist" aria-label="{{ i18n "home-sort-aria" | default "文章排序" }}">

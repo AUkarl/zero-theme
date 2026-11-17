@@ -42,7 +42,8 @@
   {{- else if .Params.seoTitle -}}
     {{ .Params.seoTitle }} {{ $sep }} {{ $siteName }}
   {{- else -}}
-    {{ partial "page-title.html" . }} {{ $sep }} {{ $siteName }}
+    {{- $pageTitle := partial "page-title.html" . -}}
+    {{- if ne $pageTitle $siteName }}{{ $pageTitle }} {{ $sep }} {{ $siteName }}{{ else }}{{ $siteName }}{{ end -}}
   {{- end -}}
 </title>
 

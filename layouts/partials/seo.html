@@ -108,12 +108,9 @@
 
 {{- /* ---------- 标题 / 站点名 ---------- */ -}}
 {{- $siteName := (partial "site-config.html" .).navName -}}
-{{- /* 首页的 .Title 是 content/_index.md 里的标题（新建站时那份还是示例站的 "Example Site"），
-       分享卡片会顶着它 —— 和浏览器标签、RSS 统一：首页只用站点名 */ -}}
-{{- /* 标题口径只有一份：见 partials/page-title.html（没写 title 的内容会退正文摘要→日期→站名，
-       以前这里 `.Title | default $siteName` 会让分享卡片顶着站点名） */ -}}
+{{- /* 标题口径只有一份：见 partials/page-title.html（首页取后台配置，其余页面按
+       标题 → 正文摘要 → 日期 → 站名兜底） */ -}}
 {{- $pageTitle := partial "page-title.html" . -}}
-{{- if or .IsHome (eq .Section "home") }}{{ $pageTitle = $siteName }}{{ end -}}
 
 {{- /* ---------- canonical（规范链接，避免重复内容） ---------- */ -}}
 {{- if (ne $seo.enable_canonical false) }}

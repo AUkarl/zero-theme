@@ -23,7 +23,7 @@
   <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
   <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
   <a class="share-btn" href="mailto:?subject={{ $title | urlquery }}&body={{ $text | urlquery }}" title="通过邮件分享" aria-label="通过邮件分享"><i class="fas fa-envelope" aria-hidden="true"></i><span>邮件</span></a>
-  <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
+  <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享"><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
 <div class="wx-share-tip" data-share-wx-tip hidden><i class="fas fa-arrow-up" aria-hidden="true"></i><span>点击右上角 ··· 分享</span></div>
 <script>
@@ -70,17 +70,23 @@
       } else fallbackCopy(btn);
     }
 
-    if (nativeBtn && isMobile) {
-      nativeBtn.hidden = false;
+    if (nativeBtn) {
       nativeBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
-        if (navigator.share) {
-          navigator.share({ title: title, text: text, url: url }).catch(function (err) {
-            if (err && err.name === 'AbortError') return;
+        if (typeof navigator.share === 'function') {
+          var payload = { title: title, url: url };
+          if (text) payload.text = text;
+          try {
+            navigator.share(payload).catch(function (err) {
+              if (err && err.name === 'AbortError') return;
+              copyLink(nativeBtn);
+            });
+          } catch (e) {
             copyLink(nativeBtn);
-          });
+          }
           return;
         }
+        if (isMobile) { flash(nativeBtn, '请用浏览器菜单'); return; }
         copyLink(nativeBtn);
       });
     }
