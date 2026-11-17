@@ -302,7 +302,7 @@ authorAvatar = ""                  # 文章署名行的头像兜底，留空用 
   reading_speed = 250             # 每分钟阅读字数，用来把字数换算成分钟
   show_tags = true                # 文末的标签行
   show_prev_next = true           # 上一篇 / 下一篇导航
-  show_views = false              # 元信息行里的浏览量（zero 统计或 Waline 计数器）
+  show_views = false              # 元信息行里的阅读人数（累计独立访客；Waline 时显示其计数器）
   show_toc = true                 # 右侧目录总开关（关掉时正文居中）；单篇还可由 front matter 的 toc = false 关掉，窄屏目录本来就用 CSS 隐藏
   toc_levels = ["h2", "h3"]       # 目录收哪几级标题
   toc_numbering = false           # 目录条目是否加 1.2 这类编号

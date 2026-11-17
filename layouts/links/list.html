@@ -92,10 +92,13 @@
 
 <main class="main" id="main">
   <section class="section links-page">
-    <h1 class="section-title">{{ i18n "links-title" | default "友链" }}</h1>
-    {{- if ne $lc.show_desc false }}
-    <p class="section-desc">{{ $lc.desc | default "互联网的毛细血管里，依然流淌着真诚的联结。" }}</p>
-    {{- end }}
+    {{- $ap := hugo.Data.apply | default dict -}}
+    {{- $linksDesc := "" -}}
+    {{- if ne $lc.show_desc false }}{{ $linksDesc = $ap.desc | default ($lc.desc | default "互联网的毛细血管里，依然流淌着真诚的联结。") }}{{ end -}}
+    {{- partial "zero/page-header.html" (dict
+      "showTitle" (ne $ap.showTitle false)
+      "title" ($ap.title | default (i18n "links-title" | default "友链"))
+      "desc" $linksDesc) }}
 
     <div class="links-body"{{ $swF.attrs | safeHTMLAttr }}>
     <div class="links-tabs" role="tablist" aria-label="友链">

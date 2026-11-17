@@ -52,7 +52,12 @@
 {{- /* 滚动时提前预取几批，读起来才不卡在「加载中」 */ -}}
 {{- $batchPreload := int (cond (isset $d "batchPreload") $d.batchPreload ($p.batch_preload | default 2)) -}}
 
+{{- $showTitle := true -}}
+{{- if isset $d "showTitle" }}{{ $showTitle = not (eq $d.showTitle false) }}{{ end -}}
 {{- return dict
+  "showTitle" $showTitle
+  "title" ($d.title | default "")
+  "desc" ($d.desc | default "")
   "paginate" $paginate
   "batchPreload" $batchPreload
   "showLocation" $showLocation

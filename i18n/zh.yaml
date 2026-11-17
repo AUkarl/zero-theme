@@ -24,7 +24,6 @@ loader-text: "我们的相逢，恰如其实"
 
 # ===== 新版主页（bento 布局）=====
 hb-featured: "精选"
-hb-featured-sub: ""
 hb-all: "全部文章"
 hb-all-link: "全部 →"
 hb-tab-latest: "最新"
@@ -68,7 +67,6 @@ page-suffix-zh: "页"
 # ===== 文章页 =====
 article-category-label: "分类："
 article-wordcount-label: "字数："
-article-views-label: "浏览："
 article-reading-about: "阅读时间：约 "
 article-minutes: " 分钟"
 article-prev: "上一篇"
@@ -84,7 +82,6 @@ author: "作者"
 # 文章页 - 中文客户端
 article-category-label-zh: "分类："
 article-wordcount-label-zh: "字数："
-article-views-label-zh: "浏览："
 article-reading-about-zh: "阅读时间：约 "
 article-minutes-zh: " 分钟"
 article-prev-zh: "上一篇"
@@ -94,12 +91,10 @@ article-donate-zh: "赞赏"
 article-comments-zh: "评论"
 article-toc-zh: "目录"
 donate-title-zh: "支持作者"
-donate-desc-zh: "如果您觉得这篇文章对您有帮助，欢迎扫码赞赏，您的支持是我持续创作的动力 ❤️"
 
 # 文章页 - 英文客户端
 # ===== 赞赏弹窗 =====
 donate-title: "支持作者"
-donate-desc: "如果您觉得这篇文章对您有帮助，欢迎扫码赞赏，您的支持是我持续创作的动力 ❤️"
 
 # ===== 归档页 =====
 archive-title: "归档"

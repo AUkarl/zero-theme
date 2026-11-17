@@ -21,14 +21,12 @@
 {{- if (ne .Site.Params.work.enable false) }}
 <main class="main" id="main">
   <section class="section"{{ $swWork.attrs | safeHTMLAttr }}>
-    <h1 class="section-title" data-i18n="work-title">{{ i18n "work-title" | default "工坊" }}</h1>
-    {{- if $w.show_desc }}
-    {{- if $w.desc }}
-    <p class="section-desc" data-i18n="work-desc">{{ partial "zero/md-text.html" (dict "text" $w.desc) }}</p>
-    {{- else }}
-    <p class="section-desc" data-i18n="work-desc">{{ i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。" }}</p>
-    {{- end }}
-    {{- end }}
+    {{- $workDesc := "" -}}
+    {{- if $w.show_desc }}{{ $workDesc = $w.desc | default (i18n "work-desc" | default "正在进行的创作项目，记录从灵感到成品的旅程。") }}{{ end -}}
+    {{- partial "zero/page-header.html" (dict
+      "showTitle" $w.show_title
+      "title" ($w.title | default (i18n "work-title" | default "工坊"))
+      "desc" $workDesc) }}
     <div class="work-grid">
       {{- range $i, $item := $w.items }}
       {{- $link := $item.url -}}

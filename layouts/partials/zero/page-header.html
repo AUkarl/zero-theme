@@ -1,0 +1,5 @@
+{{- /* 页面大标题与标题下描述：所有 data 驱动的页面共用这一份输出。 */ -}}
+{{- $title := .title -}}
+{{- $desc := .desc -}}
+{{- if .showTitle }}<h1 class="section-title">{{ $title }}</h1>{{ end }}
+{{- with $desc }}<p class="section-desc">{{ partial "zero/md-text.html" (dict "text" .) }}</p>{{ end }}

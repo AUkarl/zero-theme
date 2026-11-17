@@ -11,6 +11,8 @@
 {{- $remote := or (hasPrefix $custom "http://") (hasPrefix $custom "https://") (hasPrefix $custom "//") -}}
 {{- $needsFull := partial "fa-needed-full.html" . -}}
 {{- $faURL := "" -}}
+{{- $faVer := "" -}}
+{{- with (index hugo.Data "fa_version") }}{{ $faVer = .v | default "" }}{{ end -}}
 {{- if $custom -}}
   {{- $faURL = $custom -}}
 {{- else if not $needsFull -}}
@@ -22,5 +24,5 @@
   {{- $host := replaceRE `^(?:https?:)?//([^/]+).*$` "$1" $faURL -}}
 <link rel="preconnect" href="https://{{ $host }}" crossorigin>
 {{- end -}}
-<link rel="stylesheet" href="{{ $faURL }}" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="{{ $faURL }}"></noscript>
+<link rel="stylesheet" href="{{ $faURL }}{{ with $faVer }}?v={{ . }}{{ end }}" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="{{ $faURL }}{{ with $faVer }}?v={{ . }}{{ end }}"></noscript>

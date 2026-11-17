@@ -15,6 +15,7 @@
 {{- $work := .Site.Params.work | default dict -}}
 {{- $d := hugo.Data.works -}}
 {{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "descZh") "fallback" ($work.desc | default $work.desc_zh)) -}}
+{{- $title := partial "cms/text.html" (dict "data" $d "keys" (slice "title") "fallback" "") -}}
 {{- $raw := partial "cms/list.html" (dict "data" $d "keys" (slice "items" "works") "fallback" .Site.Params.works) -}}
 {{- if reflect.IsSlice $d -}}
   {{- $raw = $d -}}
@@ -30,6 +31,8 @@
   {{- end -}}
 {{- end -}}
 {{- return (dict
+  "title" $title
+  "show_title" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showTitle" "show_title") "default" true))
   "desc" $desc
   "items" $items
   "show_desc" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showDesc" "show_desc") "default" (ne $work.show_desc false)))

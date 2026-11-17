@@ -5,8 +5,12 @@
 {{- $p := site.Params.home | default dict -}}
 {{- $showDesc := true -}}
 {{- if isset $d "showDesc" }}{{ $showDesc = not (eq $d.showDesc false) }}{{ else if isset $p "show_desc" }}{{ $showDesc = not (eq $p.show_desc false) }}{{ end -}}
+{{- $showTitle := true -}}
+{{- if isset $d "showTitle" }}{{ $showTitle = not (eq $d.showTitle false) }}{{ end -}}
 {{- return (dict
   "layout" ($d.layout | default ($p.layout | default "bento"))
+  "showTitle" $showTitle
+  "title" ($d.title | default ($p.intro_title | default ""))
   "desc" ($d.desc | default ($p.desc | default $p.desc_zh))
   "showDesc" $showDesc
   "params" $p

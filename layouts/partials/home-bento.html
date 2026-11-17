@@ -21,7 +21,8 @@
 {{- /* 文案：后台「前端管理」写的 data/home.json 优先，其次 [home.bento] 的 params，留空用默认 */ -}}
 {{- $cfg := partial "home-config.html" . -}}
 {{- $introEyebrow := $bento.intro_eyebrow | default "" -}}
-{{- $introTitle := $bento.intro_title | default "" -}}
+{{- $introTitle := $cfg.title | default ($bento.intro_title | default "") -}}
+{{- $showTitle := $cfg.showTitle -}}
 {{- $introDesc := $bento.intro_desc | default $bento.intro_desc_zh -}}
 {{- with $cfg.desc }}{{ $introDesc = . }}{{ end -}}
 {{- $featuredTitle := $bento.featured_title | default (i18n "hb-featured" | default "精选") -}}
@@ -79,13 +80,13 @@
   {{- /* 后台没填顶部大标题时，页面就一个 h1 都没有（读屏进首页听不到主标题，
          axe 报 page-has-heading-one）。这里补一个只给读屏的 h1，视觉零变化；
          填了就走下面那条 <h1 class="hb-title">，两个分支互斥、不会多出第二个。 */ -}}
-  {{- if not $introTitle }}<h1 class="zero-sr-only">{{ i18n "home-title" | default "主页" }}</h1>{{ end }}
+  {{- if or (not $showTitle) (not $introTitle) }}<h1 class="zero-sr-only">{{ i18n "home-title" | default "主页" }}</h1>{{ end }}
   {{- /* ===== 顶部简介 ===== */ -}}
-  {{- if or $introEyebrow $introTitle $introDesc }}
+  {{- if or $introEyebrow (and $showTitle $introTitle) (and $cfg.showDesc $introDesc) }}
   <div class="hb-intro">
     {{- with $introEyebrow }}<p class="hb-eyebrow">{{ . }}</p>{{ end }}
-    {{- with $introTitle }}<h1 class="hb-title section-title">{{ . }}</h1>{{ end }}
-    {{- with $introDesc }}<p class="hb-desc section-desc">{{ partial "zero/md-text.html" (dict "text" .) }}</p>{{ end }}
+    {{- if and $showTitle $introTitle }}<h1 class="hb-title section-title">{{ $introTitle }}</h1>{{ end }}
+    {{- if and $cfg.showDesc $introDesc }}<p class="hb-desc section-desc">{{ partial "zero/md-text.html" (dict "text" $introDesc) }}</p>{{ end }}
   </div>
   {{- end }}
 

@@ -11,7 +11,7 @@
   - 生成物在 static/fa/{css,webfonts}，提交后随主题发布，构建期不需要 fonttools。
 """
 from __future__ import annotations
-import argparse, json, re, sys
+import argparse, hashlib, json, re, sys
 from pathlib import Path
 from fontTools import subset
 
@@ -147,12 +147,23 @@ def main():
             # FontTools 对个别 FA woff2 的 glyf 变换会报错；这个字重退回完整字体，
             # 图标仍然可用，只是这部分体积不省。不要为了省 20KB 把整包发布卡死。
             print(f"font: {filename} subset skipped: {e}")
+    # 图标或字体一变，CSS 与字体 URL 的版本号就变；fa-css.html 用同一份版本号，
+    # 免得站点的 31 天静态缓存一直拿旧子集（新图标会显示成空白）。
+    font_bytes = b""
+    for family in subsetted:
+        f = FA / "webfonts" / f"{family}-subset.woff2"
+        if f.exists(): font_bytes += f.read_bytes()
+    ver = hashlib.md5(("|".join(sorted(base_names))).encode() + font_bytes).hexdigest()[:10]
+    ver_file = ROOT / "data" / "fa_version.json"
+    ver_file.parent.mkdir(parents=True, exist_ok=True)
+    ver_file.write_text(json.dumps({"v": ver}, ensure_ascii=False) + "\n", encoding="utf-8")
     scss = css
     for family in subsetted:
         scss = scss.replace(f"../webfonts/{family}.woff2", f"../webfonts/{family}-subset.woff2")
         scss = scss.replace(f"../webfonts/{family}.ttf", f"../webfonts/{family}-subset.woff2")
         scss = re.sub(r'url\([^)]*' + re.escape(family) + r'\.ttf\) format\("truetype"\)', '', scss)
     scss = trim_icon_rules(scss, set(base_names))
+    scss = re.sub(r'(-subset\.woff2)(?!\?v=)', r'\1?v=' + ver, scss)
     out_css = FA / "css" / "fa-subset.css"
     out_css.write_text(scss, encoding="utf-8")
     print(f"css: {out_css} {out_css.stat().st_size} bytes")

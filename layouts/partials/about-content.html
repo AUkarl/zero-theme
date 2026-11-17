@@ -18,6 +18,7 @@
 {{- $cfg := .Site.Params.about | default dict -}}
 {{- $d := hugo.Data.about -}}
 {{- $desc := partial "cms/text.html" (dict "data" $d "keys" (slice "desc" "descZh") "fallback" ($cfg.desc | default $cfg.desc_zh)) -}}
+{{- $title := partial "cms/text.html" (dict "data" $d "keys" (slice "title") "fallback" "") -}}
 {{- $tagline := partial "cms/text.html" (dict "data" $d "keys" (slice "tagline" "taglineZh") "fallback" ($cfg.tagline | default $cfg.tagline_zh)) -}}
 {{- /* 头像与昵称：读 data/owner.json —— 后台「我的信息 → 账号资料」一保存，
        zero-api 就把站长的昵称与头像落到这个文件（见 setOwnerProfile），所以这里不用手改
@@ -63,6 +64,8 @@
   {{- end -}}
 {{- end -}}
 {{- return (dict
+  "title" $title
+  "show_title" (partial "cms/flag.html" (dict "data" $d "keys" (slice "showTitle" "show_title") "default" true))
   "desc" $desc
   "tagline" $tagline
   "name" $name

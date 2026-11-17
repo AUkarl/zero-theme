@@ -19,15 +19,16 @@
 {{- $pages := sort (where .Site.RegularPages "Section" "in" $mainSections) "Date" "desc" -}}
 <main class="main" id="main">
   <section class="section">
-    <h1 class="section-title">{{ i18n "archive-title" | default "归档" }}</h1>
-    {{- if ne $archiveCfg.show_desc false }}
-    {{- $archiveDesc := $archiveCfg.desc | default $archiveCfg.desc_zh -}}
-    {{- if $archiveDesc }}
-    <p class="section-desc">{{ $archiveDesc }}</p>
-    {{- else }}
-    <p class="section-desc">{{ i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}</p>
-    {{- end }}
-    {{- end }}
+    {{- $ah := hugo.Data.archive | default dict -}}
+    {{- $archiveDesc := "" -}}
+    {{- if ne $archiveCfg.show_desc false -}}
+      {{- $archiveDesc = $ah.desc | default ($archiveCfg.desc | default $archiveCfg.desc_zh) -}}
+      {{- if not $archiveDesc }}{{ $archiveDesc = i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}{{ end -}}
+    {{- end -}}
+    {{- partial "zero/page-header.html" (dict
+      "showTitle" (ne $ah.showTitle false)
+      "title" ($ah.title | default (i18n "archive-title" | default "归档"))
+      "desc" $archiveDesc) }}
     <div class="archive-wrapper{{ if not $groupByYear }} is-flat{{ end }}{{ if and $groupByYear (not $pages) }} is-empty{{ end }}">
       {{- /* 左侧时间刻度尺：本体由 archive-timeline.js 渲染，移动端换成下面的横向月份条 */ -}}
       <div class="archive-timeline" id="archiveTimeline">

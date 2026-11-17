@@ -1,41 +1,136 @@
 {{- /* 文章分享栏：不依赖第三方 SDK；复制链接用 Clipboard API，失败时选中输入框。
        分享链接只带公开文章地址，不带任何登录态/统计参数。 */ -}}
 {{- $url := .Permalink -}}
+{{- $site := partial "site-config.html" . -}}
 {{- $title := .Title | plainify | htmlUnescape -}}
+{{- $desc := .Description | default .Summary | plainify | htmlUnescape | truncate 90 -}}
+{{- $img := partial "one-string.html" (.Params.image | default .Params.img) -}}
+{{- if not $img }}{{ $img = partial "one-string.html" $site.ogImage }}{{ end -}}
+{{- if not $img }}{{ $img = partial "one-string.html" $site.favicon }}{{ end -}}
+{{- if and $img (not (or (hasPrefix $img "http://") (hasPrefix $img "https://"))) }}{{ $img = $img | absURL }}{{ end -}}
+{{- $zero := partial "zero/api.html" . -}}
 {{- $text := printf "%s %s" $title $url -}}
-<div class="article-share" data-share aria-label="{{ i18n "article-share-label" | default "分享" }}">
+<div class="article-share" data-share
+     data-share-title="{{ $title }}"
+     data-share-text="{{ $desc }}"
+     data-share-url="{{ $url }}"
+     data-share-image="{{ $img }}"
+     data-share-api="{{ $zero.base }}"
+     aria-label="{{ i18n "article-share-label" | default "分享" }}">
   <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
+  <button type="button" class="share-btn" data-share-wechat title="分享到微信" aria-label="分享到微信"><i class="fab fa-weixin" aria-hidden="true"></i><span>微信</span></button>
+  <a class="share-btn" href="https://connect.qq.com/widget/shareqq/index.html?url={{ $url | urlquery }}&title={{ $title | urlquery }}&summary={{ $desc | urlquery }}&pics={{ $img | urlquery }}&site={{ $site.name | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 QQ" aria-label="分享到 QQ"><i class="fab fa-qq" aria-hidden="true"></i><span>QQ</span></a>
   <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
   <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
   <a class="share-btn" href="mailto:?subject={{ $title | urlquery }}&body={{ $text | urlquery }}" title="通过邮件分享" aria-label="通过邮件分享"><i class="fas fa-envelope" aria-hidden="true"></i><span>邮件</span></a>
-  {{- /* aria-label 必须包含按钮上看得见的字（WCAG 2.5.3 Label in Name）：
-         以前写的是「复制文章链接」而屏上显示「复制链接」，读屏听到的名字和眼睛看到的不是一回事。 */ -}}
   <button type="button" class="share-btn" data-share-copy title="复制链接" aria-label="复制链接"><i class="fas fa-link" aria-hidden="true"></i><span>复制链接</span></button>
-  <button type="button" class="share-btn" data-share-native title="使用系统分享" aria-label="使用系统分享" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
+  <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享" hidden><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
+<div class="wx-share-tip" data-share-wx-tip hidden><i class="fas fa-arrow-up" aria-hidden="true"></i><span>点击右上角 ··· 分享</span></div>
 <script>
   (function () {
     var box = document.querySelector('[data-share]');
     if (!box) return;
-    var btn = box.querySelector('[data-share-copy]');
-    var native = box.querySelector('[data-share-native]');
-    if (native && navigator.share) {
-      native.hidden = false;
-      native.addEventListener('click', function () {
-        navigator.share({ title: document.title, url: location.href }).catch(function () {});
+    var title = box.dataset.shareTitle || document.title;
+    var text = box.dataset.shareText || '';
+    var url = box.dataset.shareUrl || location.href;
+    var image = box.dataset.shareImage || '';
+    var api = (box.dataset.shareApi || '').replace(/\/+$/, '');
+    var copyBtn = box.querySelector('[data-share-copy]');
+    var nativeBtn = box.querySelector('[data-share-native]');
+    var wxBtn = box.querySelector('[data-share-wechat]');
+    var wxTip = document.querySelector('[data-share-wx-tip]');
+    var inWeChat = /MicroMessenger/i.test(navigator.userAgent);
+    var wxReady = false;
+
+    function flash(btn, label) {
+      if (!btn) return;
+      var span = btn.querySelector('span');
+      if (!span) return;
+      var old = span.textContent;
+      span.textContent = label;
+      setTimeout(function () { span.textContent = old; }, 1600);
+    }
+
+    function copyLink(feedbackBtn) {
+      var done = function () { flash(feedbackBtn || copyBtn, '已复制'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(done).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+    }
+    function fallbackCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); flash(copyBtn, '已复制'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+
+    if (copyBtn) copyBtn.addEventListener('click', function () { copyLink(copyBtn); });
+
+    if (nativeBtn && navigator.share) {
+      nativeBtn.hidden = false;
+      nativeBtn.addEventListener('click', function () {
+        navigator.share({ title: title, text: text, url: url }).catch(function (err) {
+          if (err && err.name === 'AbortError') return;
+          copyLink(nativeBtn);
+        });
       });
     }
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-      var done = function () { btn.querySelector('span').textContent = '已复制'; setTimeout(function () { btn.querySelector('span').textContent = '复制链接'; }, 1600); };
-      var fail = function () {
-        var ta = document.createElement('textarea');
-        ta.value = location.href; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:-1000px';
-        document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); done(); } catch (e) {}
-        document.body.removeChild(ta);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(location.href).then(done).catch(fail); else fail();
-    });
+
+    function loadSdk() {
+      return new Promise(function (resolve, reject) {
+        if (window.wx) return resolve(window.wx);
+        var s = document.createElement('script');
+        s.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
+        s.onload = function () { window.wx ? resolve(window.wx) : reject(); };
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    function initWeChat() {
+      if (!inWeChat || !api) return;
+      loadSdk()
+        .then(function () {
+          return fetch(api + '/api/share/wechat?url=' + encodeURIComponent(location.href.split('#')[0]), { credentials: 'omit' });
+        })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (body) {
+          var d = body && body.data;
+          if (!d) return;
+          window.wx.config({
+            debug: false,
+            appId: d.appId,
+            timestamp: d.timestamp,
+            nonceStr: d.nonceStr,
+            signature: d.signature,
+            jsApiList: ['updateAppMessageShareData', 'updateTimelineShareData'],
+          });
+          window.wx.ready(function () {
+            var payload = { title: title, desc: text, link: url };
+            if (image) payload.imgUrl = image;
+            window.wx.updateAppMessageShareData(payload);
+            window.wx.updateTimelineShareData(payload);
+            wxReady = true;
+          });
+        })
+        .catch(function () {});
+    }
+
+    if (inWeChat) initWeChat();
+
+    if (wxBtn) {
+      wxBtn.addEventListener('click', function () {
+        if (wxReady && wxTip) {
+          wxTip.hidden = false;
+          setTimeout(function () { wxTip.hidden = true; }, 2400);
+          return;
+        }
+        copyLink(wxBtn);
+      });
+    }
   })();
 </script>

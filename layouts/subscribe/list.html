@@ -20,8 +20,11 @@
 {{- $sw := partial "zero/switch.html" (dict "zero" $zero "key" "subscribeEnabled") -}}
 <main class="main" id="main">
   <section class="section">
-    <h1 class="section-title">{{ i18n "subscribe-title" | default "邮箱订阅" }}</h1>
-    <p class="section-desc">{{ i18n "subscribe-desc" | default "留下邮箱，新文章写好了直接发给你，不用守着 RSS。" }}</p>
+    {{- $sb := hugo.Data.subscribe | default dict -}}
+    {{- partial "zero/page-header.html" (dict
+      "showTitle" (ne $sb.showTitle false)
+      "title" ($sb.title | default (i18n "subscribe-title" | default "邮箱订阅"))
+      "desc" ($sb.desc | default (i18n "subscribe-desc" | default "留下邮箱，新文章写好了直接发给你，不用守着 RSS。"))) }}
 
     <div class="zero-subscribe-page">
       {{- if not $zero.enabled -}}

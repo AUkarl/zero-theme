@@ -18,8 +18,6 @@
 {{- $zero := partial "zero/api.html" . -}}
 {{- if $zero.enabled -}}
 <form class="zero-apply" id="zeroApplyForm" hidden>
-  <p class="za-lead">填写下面的表单提交申请，站主审核通过后会自动收录进友链。</p>
-
   <div class="za-grid">
     <label class="za-field">
       <span>站点名称 <em>*</em></span>
@@ -35,12 +33,10 @@
       <span>站长邮箱 <em>*</em></span>
       <input type="email" name="email" maxlength="120" required autocomplete="email"
              placeholder="example@mail.com" title="站长邮箱是必填项，用来发审核结果">
-      <small>审核结果和其他通知都发到这个邮箱。</small>
     </label>
     <label class="za-field">
       <span>RSS 链接</span>
       <input type="url" name="rssUrl" maxlength="300" placeholder="https://">
-      <small>填了才会出现在「朋友动态」里。</small>
     </label>
     <label class="za-field">
       <span>头像链接</span>

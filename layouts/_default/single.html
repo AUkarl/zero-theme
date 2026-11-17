@@ -63,11 +63,13 @@
           {{- end -}}
           {{- if ne $art.show_views false -}}
             {{- if and .Site.Params.comment.enable (eq (.Site.Params.comment.article.provider | default "") "waline") (ne .Site.Params.comment.article.waline_pageview false) -}}
-          <span title="{{ i18n "article-views-label" | default "浏览" }}"><i class="far fa-eye" aria-hidden="true"></i><span class="waline-pageview-count">-</span></span>
+          <span title="阅读人数"><i class="far fa-user" aria-hidden="true"></i><span class="waline-pageview-count">-</span></span>
             {{- else -}}
-              {{- /* 没有 Waline 就走构建期统计（后台定时导出的 data/poststats.json） */ -}}
-              {{- $sc := partial "zero/post-score.html" (dict "ps" (partial "zero/poststats.html" .) "page" .) -}}
-              {{- if gt $sc.views 0 }}<span title="{{ i18n "article-views-label" | default "浏览" }}"><i class="far fa-eye" aria-hidden="true"></i>{{ $sc.views }}</span>{{ end -}}
+              {{- $ps := partial "zero/poststats.html" . -}}
+              {{- if $ps.ready -}}
+                {{- $sc := partial "zero/post-score.html" (dict "ps" $ps "page" .) -}}
+          <span title="阅读人数"><i class="far fa-user" aria-hidden="true"></i>{{ $sc.visitors }}</span>
+              {{- end -}}
             {{- end -}}
           {{- end -}}
         </div>

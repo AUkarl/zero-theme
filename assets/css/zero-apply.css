@@ -65,12 +65,6 @@
   display: none;
 }
 
-.za-lead {
-  margin: 0 0 14px;
-  font-size: 0.92rem;
-  color: var(--apply-lead, #666);
-}
-
 /* 固定三列：第一行 站点名称 / 站点地址 / 站长邮箱，
    第二行 RSS 链接 / 头像链接 / 我方链接，「简介」用 .za-full 横跨全部列。
    窄屏逐级降列（两列 → 一列），否则输入框会被挤得没法打字。 */

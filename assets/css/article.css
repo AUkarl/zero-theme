@@ -595,13 +595,6 @@
   text-align: center;
 }
 
-.donate-modal-content .donate-desc {
-  font-size: 0.95rem;
-  color: var(--text-secondary);
-  margin-bottom: 20px;
-  text-align: center;
-}
-
 .donate-qr-grid {
   display: flex;
   flex-wrap: wrap;
@@ -712,7 +705,23 @@
 
 /* 文章分享栏：与底部操作条同宽，图标 + 短文字；不改正文与目录布局 */
 .article-share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 18px 0 4px; padding-top: 16px; border-top: 1px dashed var(--border); }
-.article-share-label { font-size: .8rem; color: var(--text-secondary); margin-right: 4px; }
+/* 微信内点分享时指向右上角菜单；不需要时 hidden，无额外占位 */
+.wx-share-tip {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 0.85rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+.wx-share-tip[hidden] { display: none; }
 .share-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-bg); color: var(--text-secondary); font: inherit; font-size: .78rem; line-height: 1.2; text-decoration: none; cursor: pointer; transition: border-color .18s ease, color .18s ease; }
 .share-btn:hover { border-color: var(--logo-accent-text, #0d8368); color: var(--logo-accent-text, #0d8368); }
 .share-btn i { font-size: .9rem; }
