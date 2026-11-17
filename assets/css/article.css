@@ -821,5 +821,4 @@
   .share-btn { padding: 5px 6px; }
   .share-btn i { font-size: .82rem; }
   .share-btn span { display: none; }
-  .share-btn[data-share-native] span { display: inline; }
 }

@@ -27,7 +27,6 @@
   <a class="share-btn" href="https://x.com/intent/post?text={{ $title | urlquery }}&url={{ $url | urlquery }}" data-share-app="twitter://post?message={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 X" aria-label="分享到 X"><i class="fab fa-x-twitter" aria-hidden="true"></i><span>X</span></a>
   <a class="share-btn" href="https://t.me/share/url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" data-share-app="tg://msg_url?url={{ $url | urlquery }}&text={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到 Telegram" aria-label="分享到 Telegram"><i class="fab fa-telegram" aria-hidden="true"></i><span>Telegram</span></a>
   <a class="share-btn" href="mailto:?subject={{ $title | urlquery }}&body={{ $text | urlquery }}" title="通过邮件分享" aria-label="通过邮件分享"><i class="fas fa-envelope" aria-hidden="true"></i><span>邮件</span></a>
-  <button type="button" class="share-btn" data-share-native title="系统分享" aria-label="系统分享"><i class="fas fa-share-nodes" aria-hidden="true"></i><span>分享</span></button>
 </div>
 <div class="wx-share-tip" data-share-wx-tip hidden><i class="fas fa-arrow-up" aria-hidden="true"></i><span>点击右上角 ··· 分享</span></div>
 <div class="share-sheet" data-share-sheet hidden>
@@ -50,7 +49,6 @@
     var title = box.dataset.shareTitle || document.title;
     var text = box.dataset.shareText || '';
     var url = box.dataset.shareUrl || location.href;
-    var nativeBtn = box.querySelector('[data-share-native]');
     var wxBtn = box.querySelector('[data-share-wechat]');
     var qqBtn = box.querySelector('[data-share-qq]');
     var wxTip = document.querySelector('[data-share-wx-tip]');
@@ -162,7 +160,7 @@
       document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheet(); });
     }
 
-    /* 系统分享 */
+    /* 系统分享（iOS / 桌面） */
     function systemShare() {
       if (!navigator.share) return Promise.resolve(false);
       var payloads = [
@@ -181,11 +179,13 @@
       return next(0);
     }
 
-    /* 安卓系统分享：intent:// 不依赖 navigator.share，小米浏览器等可走这里 */
-    function androidIntentShare(onFail) {
+    /* 安卓定向分享：component 直接指向 QQ/微信的分享 Activity */
+    function androidIntent(component, onFail) {
       var intent = 'intent://#Intent;action=android.intent.action.SEND;type=text/plain'
+        + (component ? ';component=' + component : '')
         + ';S.android.intent.extra.TEXT=' + encodeURIComponent(shareUrl)
         + ';S.android.intent.extra.SUBJECT=' + encodeURIComponent(title)
+        + (component.indexOf('com.tencent.mm') === 0 ? ';S.Kdescription=' + encodeURIComponent(title) : '')
         + ';end';
       debugLog('intent: ' + intent);
       try {
@@ -198,17 +198,6 @@
         if (document.visibilityState === 'hidden' || !document.hasFocus()) return;
         if (onFail) onFail();
       }, 1400);
-    }
-
-    function shareSystem(onFail) {
-      if (isAndroid) {
-        androidIntentShare(onFail);
-        return;
-      }
-      systemShare().then(function (ok) {
-        if (ok) return;
-        if (onFail) onFail();
-      });
     }
 
     /* 唤起 App */
@@ -238,27 +227,23 @@
       }, 1600);
     }
 
-    if (nativeBtn) {
-      nativeBtn.addEventListener('click', function () {
-        if (inWeChat) { showWxTip(); return; }
-        shareSystem(function () {
-          copyLink().then(function (done) { toast(done ? '已复制' : '复制失败'); });
-        });
-      });
-    }
-
     if (qqBtn) {
       qqBtn.addEventListener('click', function (e) {
         if (!isMobile) return;
         e.preventDefault();
         if (inWeChat) { showWxTip(); return; }
-        shareSystem(function () {
+        function fallback() {
           openSheet({
             title: '分享到 QQ',
             actionLabel: '网页分享',
             action: function () { window.open(qqBtn.href, '_blank', 'noopener'); },
           });
-        });
+        }
+        if (isAndroid) {
+          androidIntent('com.tencent.mobileqq/com.tencent.mobileqq.activity.JumpActivity', fallback);
+          return;
+        }
+        systemShare().then(function (ok) { if (!ok) fallback(); });
       });
     }
 
@@ -285,17 +270,20 @@
     if (wxBtn) {
       wxBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
-        if (!isMobile) {
+        function fallback() {
           copyLink().then(function () {
             openSheet({ title: '分享到微信', actionLabel: '打开微信', action: function () { window.location.href = 'weixin://'; } });
           });
+        }
+        if (!isMobile) {
+          fallback();
           return;
         }
-        shareSystem(function () {
-          copyLink().then(function () {
-            openSheet({ title: '分享到微信', actionLabel: '打开微信', action: function () { window.location.href = 'weixin://'; } });
-          });
-        });
+        if (isAndroid) {
+          androidIntent('com.tencent.mm/com.tencent.mm.ui.tools.ShareImgUI', fallback);
+          return;
+        }
+        systemShare().then(function (ok) { if (!ok) fallback(); });
       });
     }
   })();
