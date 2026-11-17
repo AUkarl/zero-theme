@@ -761,7 +761,7 @@
 .share-btn { display: inline-flex; flex: 0 0 auto; white-space: nowrap; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--card-bg); color: var(--text-secondary); font: inherit; font-size: .78rem; line-height: 1.2; text-decoration: none; cursor: pointer; transition: border-color .18s ease, color .18s ease; }
 .share-btn:hover { border-color: var(--logo-accent-text, #0d8368); color: var(--logo-accent-text, #0d8368); }
 .share-btn i { font-size: .9rem; }
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .article-share { gap: 4px; }
   .share-btn { padding: 5px 6px; }
   .share-btn i { font-size: .82rem; }
