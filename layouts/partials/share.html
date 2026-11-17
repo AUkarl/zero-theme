@@ -20,7 +20,6 @@
      data-share-title="{{ $title }}"
      data-share-text="{{ $desc }}"
      data-share-url="{{ $url }}"
-     data-share-image="{{ $img }}"
      aria-label="{{ i18n "article-share-label" | default "分享" }}">
   <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" data-share-app="sinaweibo://sendweibo?content={{ $text | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
   <button type="button" class="share-btn" data-share-wechat title="分享到微信" aria-label="分享到微信"><i class="fab fa-weixin" aria-hidden="true"></i><span>微信</span></button>
@@ -51,7 +50,6 @@
     var title = box.dataset.shareTitle || document.title;
     var text = box.dataset.shareText || '';
     var url = box.dataset.shareUrl || location.href;
-    var image = box.dataset.shareImage || '';
     var nativeBtn = box.querySelector('[data-share-native]');
     var wxBtn = box.querySelector('[data-share-wechat]');
     var qqBtn = box.querySelector('[data-share-qq]');
@@ -66,7 +64,9 @@
     var inWeChat = /MicroMessenger/i.test(ua);
     var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     var isAndroid = /Android/i.test(ua);
+    var isXiaomi = /MiuiBrowser|XiaoMi|MiBro|HyperOS/i.test(ua);
     var isMobile = isIOS || isAndroid || /Mobile/i.test(ua);
+    var debug = /[?&]sharedebug=1(?:&|$)/.test(location.search);
     var shareUrl = url;
     try {
       if (new URL(url).origin !== location.origin) shareUrl = location.origin + location.pathname + location.search;
@@ -78,6 +78,22 @@
       el.textContent = msg;
       document.body.appendChild(el);
       setTimeout(function () { el.remove(); }, 2200);
+    }
+
+    function debugLog(msg) {
+      if (!debug) return;
+      var el = document.getElementById('share-debug');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'share-debug';
+        el.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99999;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.88);color:#fff;font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:pre-wrap;word-break:break-all';
+        document.body.appendChild(el);
+      }
+      el.textContent = msg;
+    }
+
+    if (debug) {
+      debugLog('UA ' + ua + '\nshare=' + typeof navigator.share + ' secure=' + isSecureContext + ' xiaomi=' + isXiaomi);
     }
 
     function fallbackCopy() {
@@ -157,11 +173,42 @@
       function next(i) {
         if (i >= payloads.length) return Promise.resolve(false);
         return navigator.share(payloads[i]).then(function () { return true; }).catch(function (e) {
+          debugLog('share ' + (i + 1) + ': ' + (e && e.name) + ' ' + (e && e.message));
           if (e && e.name === 'AbortError') return true;
           return next(i + 1);
         });
       }
       return next(0);
+    }
+
+    /* 安卓系统分享：intent:// 不依赖 navigator.share，小米浏览器等可走这里 */
+    function androidIntentShare(onFail) {
+      var intent = 'intent://#Intent;action=android.intent.action.SEND;type=text/plain'
+        + ';S.android.intent.extra.TEXT=' + encodeURIComponent(shareUrl)
+        + ';S.android.intent.extra.SUBJECT=' + encodeURIComponent(title)
+        + ';end';
+      debugLog('intent: ' + intent);
+      try {
+        window.location.href = intent;
+      } catch (e) {
+        if (onFail) onFail();
+        return;
+      }
+      setTimeout(function () {
+        if (document.visibilityState === 'hidden' || !document.hasFocus()) return;
+        if (onFail) onFail();
+      }, 1400);
+    }
+
+    function shareSystem(onFail) {
+      if (isAndroid) {
+        androidIntentShare(onFail);
+        return;
+      }
+      systemShare().then(function (ok) {
+        if (ok) return;
+        if (onFail) onFail();
+      });
     }
 
     /* 唤起 App */
@@ -194,8 +241,7 @@
     if (nativeBtn) {
       nativeBtn.addEventListener('click', function () {
         if (inWeChat) { showWxTip(); return; }
-        systemShare().then(function (ok) {
-          if (ok) return;
+        shareSystem(function () {
           copyLink().then(function (done) { toast(done ? '已复制' : '复制失败'); });
         });
       });
@@ -206,21 +252,11 @@
         if (!isMobile) return;
         e.preventDefault();
         if (inWeChat) { showWxTip(); return; }
-        systemShare().then(function (ok) {
-          if (ok) return;
-          var scheme = 'mqqapi://share/to_fri?src_type=web&version=1&file_type=news'
-            + '&generalpastboard=1&callback_type=scheme&shareType=0&cflag=0'
-            + '&title=' + encodeURIComponent(title)
-            + '&description=' + encodeURIComponent(text)
-            + '&url=' + encodeURIComponent(shareUrl)
-            + (image ? '&image_url=' + encodeURIComponent(image) + '&previewimageUrl=' + encodeURIComponent(image) : '');
-          copyLink();
+        shareSystem(function () {
           openSheet({
             title: '分享到 QQ',
-            actionLabel: '打开 QQ',
-            action: function () { launchApp(scheme, function () { toast('未打开 QQ'); }); },
-            webLabel: '网页分享',
-            webAction: function () { window.open(qqBtn.href, '_blank', 'noopener'); },
+            actionLabel: '网页分享',
+            action: function () { window.open(qqBtn.href, '_blank', 'noopener'); },
           });
         });
       });
@@ -255,8 +291,7 @@
           });
           return;
         }
-        systemShare().then(function (ok) {
-          if (ok) return;
+        shareSystem(function () {
           copyLink().then(function () {
             openSheet({ title: '分享到微信', actionLabel: '打开微信', action: function () { window.location.href = 'weixin://'; } });
           });
