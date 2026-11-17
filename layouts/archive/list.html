@@ -21,7 +21,9 @@
   <section class="section">
     {{- $ah := hugo.Data.archive | default dict -}}
     {{- $archiveDesc := "" -}}
-    {{- if ne $archiveCfg.show_desc false -}}
+    {{- $showArchiveDesc := ne $archiveCfg.show_desc false -}}
+    {{- if isset $ah "showDesc" }}{{ $showArchiveDesc = ne $ah.showDesc false }}{{ end -}}
+    {{- if $showArchiveDesc -}}
       {{- $archiveDesc = $ah.desc | default ($archiveCfg.desc | default $archiveCfg.desc_zh) -}}
       {{- if not $archiveDesc }}{{ $archiveDesc = i18n "archive-desc" | default "所有文章的时光索引，按时间线排列。" }}{{ end -}}
     {{- end -}}

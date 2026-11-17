@@ -94,7 +94,9 @@
   <section class="section links-page">
     {{- $ap := hugo.Data.apply | default dict -}}
     {{- $linksDesc := "" -}}
-    {{- if ne $lc.show_desc false }}{{ $linksDesc = $ap.desc | default ($lc.desc | default "互联网的毛细血管里，依然流淌着真诚的联结。") }}{{ end -}}
+    {{- $showLinksDesc := ne $lc.show_desc false -}}
+    {{- if isset $ap "showDesc" }}{{ $showLinksDesc = ne $ap.showDesc false }}{{ end -}}
+    {{- if $showLinksDesc }}{{ $linksDesc = $ap.desc | default ($lc.desc | default "互联网的毛细血管里，依然流淌着真诚的联结。") }}{{ end -}}
     {{- partial "zero/page-header.html" (dict
       "showTitle" (ne $ap.showTitle false)
       "title" ($ap.title | default (i18n "links-title" | default "友链"))

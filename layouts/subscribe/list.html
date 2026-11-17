@@ -24,7 +24,7 @@
     {{- partial "zero/page-header.html" (dict
       "showTitle" (ne $sb.showTitle false)
       "title" ($sb.title | default (i18n "subscribe-title" | default "邮箱订阅"))
-      "desc" ($sb.desc | default (i18n "subscribe-desc" | default "留下邮箱，新文章写好了直接发给你，不用守着 RSS。"))) }}
+      "desc" (cond (ne $sb.showDesc false) ($sb.desc | default (i18n "subscribe-desc" | default "留下邮箱，新文章写好了直接发给你，不用守着 RSS。")) "")) }}
 
     <div class="zero-subscribe-page">
       {{- if not $zero.enabled -}}

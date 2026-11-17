@@ -35,6 +35,9 @@
 {{- else if isset $pr "show_nickname" }}{{ $showNickname = not (eq $pr.show_nickname false) }}{{ end -}}
 
 {{- /* 位置：默认显示（旧站点没写这个键时也照旧显示 front matter 里的 location） */ -}}
+{{- $showDesc := true -}}
+{{- if isset $d "showDesc" }}{{ $showDesc = not (eq $d.showDesc false) }}{{ end -}}
+
 {{- $showLocation := true -}}
 {{- if isset $d "showLocation" }}{{ $showLocation = not (eq $d.showLocation false) }}
 {{- else if isset $p "show_location" }}{{ $showLocation = not (eq $p.show_location false) }}{{ end -}}
@@ -57,6 +60,7 @@
 {{- return dict
   "showTitle" $showTitle
   "title" ($d.title | default "")
+  "showDesc" $showDesc
   "desc" ($d.desc | default "")
   "paginate" $paginate
   "batchPreload" $batchPreload

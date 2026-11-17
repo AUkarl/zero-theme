@@ -19,7 +19,12 @@
 <main class="main" id="main">
   <section class="section"{{ $swAbout.attrs | safeHTMLAttr }}>
     {{- $aboutDesc := "" -}}
-    {{- if $a.show_desc }}{{ $aboutDesc = $a.desc | default (i18n "about-desc" | default "一个在数字世界里种花的人。") }}{{ end -}}
+    {{- if $a.show_desc -}}
+      {{- $aboutDesc = $a.desc -}}
+      {{- if and (not $aboutDesc) (not (isset (hugo.Data.about | default dict) "desc")) -}}
+        {{- $aboutDesc = i18n "about-desc" | default "一个在数字世界里种花的人。" -}}
+      {{- end -}}
+    {{- end -}}
     {{- partial "zero/page-header.html" (dict
       "showTitle" $a.show_title
       "title" ($a.title | default (i18n "about-title" | default "关于"))

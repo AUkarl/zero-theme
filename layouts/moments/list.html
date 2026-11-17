@@ -101,7 +101,7 @@
     "desc" $mc.desc) }}
   {{- else -}}
   <h1 class="zero-sr-only">{{ .Title | default (i18n "nav-moments" | default "时刻") }}</h1>
-  {{- with $mc.desc }}<p class="section-desc">{{ partial "zero/md-text.html" (dict "text" .) }}</p>{{ end -}}
+  {{- if and $mc.showDesc $mc.desc }}<p class="section-desc">{{ partial "zero/md-text.html" (dict "text" $mc.desc) }}</p>{{ end -}}
   {{- end -}}
   {{- /* ====== 顶部横幅 ======
         后台「前端管理 → 时刻页」关掉横幅背景时：
