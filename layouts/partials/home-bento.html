@@ -25,7 +25,7 @@
 {{- $introDesc := $bento.intro_desc | default $bento.intro_desc_zh -}}
 {{- with $cfg.desc }}{{ $introDesc = . }}{{ end -}}
 {{- $featuredTitle := $bento.featured_title | default (i18n "hb-featured" | default "精选") -}}
-{{- $featuredSub := $bento.featured_sub | default (i18n "hb-featured-sub" | default "值得先读的几篇") -}}
+{{- $featuredSub := $bento.featured_sub | default "" -}}
 {{- with $bento.featured_sub_zh }}{{ $featuredSub = . }}{{ end -}}
 {{- $articlesTitle := $bento.articles_title | default (i18n "hb-all" | default "全部文章") -}}
 {{- $allLinkText := $bento.articles_link_text | default (i18n "hb-all-link" | default "全部 →") -}}
@@ -172,7 +172,7 @@
     <div class="hb-sec-head">
       <div>
         <h2 class="hb-sec-title">{{ $articlesTitle }}</h2>
-        <p class="hb-sec-sub" data-hb-sub>{{ printf (i18n "hb-sub-latest" | default "共 %d 篇 · 按时间排序") $total }}</p>
+        <p class="hb-sec-sub" data-hb-sub>{{ printf (i18n "hb-sub-latest" | default "共 %d 篇") $total }}</p>
       </div>
       {{- /* 这一排是排序切换（按钮自带 aria-pressed），不是真 tablist：
              声明 role="tablist" 会让读屏去找必须存在的 role="tab" 子元素，找不到就整组读成空（axe critical）。

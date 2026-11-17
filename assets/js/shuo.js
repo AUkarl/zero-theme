@@ -272,9 +272,8 @@ function __shuoBoot__() {
 
   // ==================== 单条卡片 ====================
   function actButton(kind, id, icon, label) {
-    return '<button type="button" class="shuo-act shuo-' + kind + '" data-id="' + esc(id) + '">' +
+    return '<button type="button" class="shuo-act shuo-' + kind + '" data-id="' + esc(id) + '" aria-label="' + esc(label) + '">' +
       '<i class="' + icon + '" aria-hidden="true"></i>' +
-      '<span class="shuo-act-label">' + esc(label) + '</span>' +
       '<span class="shuo-act-count" hidden>0</span>' +
       '</button>';
   }
@@ -349,17 +348,10 @@ function __shuoBoot__() {
   function renderCount(el, kind, count) {
     var btn = el.querySelector('.shuo-' + kind);
     if (!btn) return;
-    var label = btn.querySelector('.shuo-act-label');
     var num = btn.querySelector('.shuo-act-count');
     if (!num) return;
-    if (count > 0) {
-      num.textContent = count;
-      num.hidden = false;
-      if (label) label.hidden = true;
-    } else {
-      num.hidden = true;
-      if (label) label.hidden = false;
-    }
+    num.textContent = count > 0 ? count : '';
+    num.hidden = !(count > 0);
   }
 
   function renderLike(el) {

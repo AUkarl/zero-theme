@@ -22,9 +22,9 @@
     commentProbe: {{ $bento.stats_comment_probe | default 6 }},
     cacheMinutes: {{ $bento.stats_cache_minutes | default 360 }},
     fallbackImage: {{ $bento.default_image | default "" | jsonify | safeJS }},
-    labelSubLatest: {{ i18n "hb-sub-latest" | default "共 %d 篇 · 按时间排序" | jsonify | safeJS }},
-    labelSubEarliest: {{ i18n "hb-sub-earliest" | default "共 %d 篇 · 按发布时间从早到晚" | jsonify | safeJS }},
-    labelSubHot: {{ i18n "hb-sub-hot" | default "共 %d 篇 · 按热度排序" | jsonify | safeJS }},
+    labelSubLatest: {{ i18n "hb-sub-latest" | default "共 %d 篇" | jsonify | safeJS }},
+    labelSubEarliest: {{ i18n "hb-sub-earliest" | default "共 %d 篇" | jsonify | safeJS }},
+    labelSubHot: {{ i18n "hb-sub-hot" | default "共 %d 篇" | jsonify | safeJS }},
     labelViews: {{ i18n "hb-views" | default "%d 次浏览" | jsonify | safeJS }}
   };
 </script>

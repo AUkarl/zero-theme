@@ -24,15 +24,15 @@ loader-text: "我们的相逢，恰如其实"
 
 # ===== 新版主页（bento 布局）=====
 hb-featured: "精选"
-hb-featured-sub: "值得先读的几篇"
+hb-featured-sub: ""
 hb-all: "全部文章"
 hb-all-link: "全部 →"
 hb-tab-latest: "最新"
 hb-tab-hot: "热门"
 hb-more: "加载更多"
 hb-empty: "暂无文章"
-hb-sub-latest: "共 %d 篇 · 按时间排序"
-hb-sub-hot: "共 %d 篇 · 按热度排序"
+hb-sub-latest: "共 %d 篇"
+hb-sub-hot: "共 %d 篇"
 hb-views: "%d 次浏览"
 
 # ===== 通用 UI =====

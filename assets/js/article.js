@@ -75,21 +75,6 @@
   updateActiveLink();
 })();
 
-// ==================== 字数与阅读时间 ====================
-// 统计文章正文字数，按 250 字/分钟计算阅读时间
-(function calcWordCount() {
-  const body = document.getElementById('articleBody');
-  if (!body) return;
-  const text = body.textContent || body.innerText || '';
-  const words = text.replace(/\s+/g, '').length;
-  const readTime = Math.max(1, Math.round(words / 250));
-
-  const wordSpan = document.getElementById('wordCount');
-  const timeSpan = document.getElementById('readTime');
-  if (wordSpan) wordSpan.textContent = words;
-  if (timeSpan) timeSpan.textContent = readTime;
-})();
-
 // ==================== 评论功能 ====================
 // 本地评论（无后端），支持提交和显示
 document.addEventListener('DOMContentLoaded', function() {

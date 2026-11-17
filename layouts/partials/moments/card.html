@@ -96,10 +96,10 @@
       {{- with $it.location }}<span class="shuo-loc"><i class="fas fa-location-dot" aria-hidden="true"></i> {{ . }}</span>{{ end }}
       <span class="shuo-bar-actions">
         {{- if $likeOn }}
-        <button type="button" class="shuo-act shuo-like" data-id="{{ $it.id }}"><i class="far fa-thumbs-up" aria-hidden="true"></i><span class="shuo-act-label">赞</span><span class="shuo-act-count" hidden>0</span></button>
+        <button type="button" class="shuo-act shuo-like" data-id="{{ $it.id }}" aria-label="赞"><i class="far fa-thumbs-up" aria-hidden="true"></i><span class="shuo-act-count" hidden>0</span></button>
         {{- end }}
         {{- if $commentUI }}
-        <button type="button" class="shuo-act shuo-comment" data-id="{{ $it.id }}"><i class="far fa-comment-dots" aria-hidden="true"></i><span class="shuo-act-label">评论</span><span class="shuo-act-count" hidden>0</span></button>
+        <button type="button" class="shuo-act shuo-comment" data-id="{{ $it.id }}" aria-label="评论"><i class="far fa-comment-dots" aria-hidden="true"></i><span class="shuo-act-count" hidden>0</span></button>
         {{- end }}
       </span>
     </div>

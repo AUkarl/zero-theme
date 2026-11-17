@@ -15,7 +15,6 @@
   <div class="donate-modal-content">
     <button class="close-btn" id="donateClose">&times;</button>
     <div class="donate-title" data-i18n="donate-title">{{ i18n "donate-title" | default "支持作者" }}</div>
-    <div class="donate-desc" data-i18n="donate-desc">{{ i18n "donate-desc" | default "如果您觉得这篇文章对您有帮助，欢迎扫码赞赏，您的支持是我持续创作的动力" }}</div>
     <div class="donate-qr-grid" id="donateQrGrid">
       {{- range first $maxQR $qr -}}
       {{- $src := . -}}

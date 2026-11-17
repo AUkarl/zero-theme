@@ -23,7 +23,7 @@
 {{- $default := trim (string ((partial "site-config.html" .).defaultAuthor | default "")) " " -}}
 {{- $linkTitle := "TA 的全部文章" -}}
 <div class="author-byline" data-author-ids="{{ delimit $ids "," }}">
-  <span class="byline-label">作者</span>
+  <span class="byline-label zero-sr-only">作者</span>
   {{- range $id := $ids -}}
   {{- $p := dict -}}
   {{- with $data -}}{{- with index $data $id -}}{{- $p = . -}}{{- end -}}{{- end -}}

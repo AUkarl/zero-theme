@@ -153,7 +153,7 @@
       </div>
       <nav class="feed-pager" id="feedPager" aria-label="动态翻页"></nav>
       {{- else }}
-      <p class="links-empty">还没有抓到朋友们的动态。检测脚本每天运行三次（北京时间 02:00 / 11:00 / 20:00），稍后再来看看。</p>
+      <p class="links-empty">暂无动态。</p>
       {{- end }}
     </section>
     {{- end }}
@@ -167,12 +167,11 @@
         {{- range $online }}{{ partial "links-neighbor.html" . }}{{ end }}
       </div>
       {{- else }}
-      <p class="links-empty">暂无（等检测脚本跑一次就会显示）。</p>
+      <p class="links-empty">暂无。</p>
       {{- end }}
 
       {{- if $lost }}
       <h2 class="links-subtitle is-lost"><i class="fas fa-sailboat" aria-hidden="true"></i> 迷失的小船 <span class="links-count">{{ len $lost }}</span></h2>
-      <p class="links-hint">超过 30 天无法访问、或 90 天没有新动态。</p>
       <div class="neighbor-grid is-lost">
         {{- range $lost }}{{ partial "links-neighbor.html" . }}{{ end }}
       </div>
@@ -206,7 +205,7 @@
             {{- end }}
           </ul>
           {{- else }}
-          <p class="links-empty" data-kind-empty>暂未加入任何联盟。</p>
+          <p class="links-empty" data-kind-empty>暂无。</p>
           {{- end }}
         </section>
       </div>

@@ -1,0 +1,8 @@
+{{- /*
+  字数口径：中文字符各算 1，连续的英文/数字算 1 个词；标点与空白不计。
+  传入渲染后的正文 HTML（.Content），先 plainify 去掉标签，与读者看到的文字一致。
+*/ -}}
+{{- $text := string . | plainify -}}
+{{- $han := len (findRE `\p{Han}` $text) -}}
+{{- $latin := len (findRE `[A-Za-z0-9]+` (replaceRE `\p{Han}` ` ` $text)) -}}
+{{- return (add $han $latin) -}}

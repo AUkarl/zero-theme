@@ -35,14 +35,13 @@
 
       {{- /* ---------- 订阅表单 ---------- */ -}}
       <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
-        <h2>{{ i18n "subscribe-form-title" | default "订阅新文章" }}</h2>
         {{- partial "zero/subscribe.html" (dict "p" . "zero" $zero) -}}
-        <p class="zsp-note">{{ i18n "subscribe-double-opt-in-note" | default "提交后会先收到一封确认邮件，点一下里面的链接才算订阅成功（这一步是为了防止别人拿你的邮箱乱订）。" }}</p>
+        <p class="zsp-note">{{ i18n "subscribe-double-opt-in-note" | default "提交后请到邮箱里确认一次；邮箱只用于文章通知，不公开。" }}</p>
       </div>
 
       {{- /* ---------- 状态查询 ---------- */ -}}
       <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
-        <h2>{{ i18n "subscribe-query-title" | default "查一查订了没有" }}</h2>
+        <h2>{{ i18n "subscribe-query-title" | default "查询订阅" }}</h2>
         <div class="zero-subscribe-query">
           <label class="zsf-sr-only" for="zsQueryEmail">{{ i18n "zero-subscribe-email-label" | default "邮箱地址" }}</label>
           <input type="email" id="zsQueryEmail" maxlength="200" autocomplete="email"
@@ -51,13 +50,6 @@
           <p class="zs-state" role="status" aria-live="polite"></p>
           {{- partial "zero/subscribe-i18n.html" . -}}
         </div>
-      </div>
-
-      {{- /* ---------- 退订说明 ---------- */ -}}
-      <div class="zsp-block"{{ $sw.attrs | safeHTMLAttr }}>
-        <h2>{{ i18n "subscribe-unsub-title" | default "怎么退订" }}</h2>
-        <p>{{ i18n "subscribe-unsub-desc" | default "每封推送邮件的最下面都有一条退订链接，点开就立刻退出名单，不用回信也不用登录。退订之后再想收，回到上面重新提交并确认一次即可。" }}</p>
-        <p class="zsp-note">{{ i18n "subscribe-privacy-note" | default "邮箱只用来发文章通知，不会公开，也不会给别人。" }}</p>
       </div>
 
       {{- /* 开关关掉时露出的那句话（由 zero-switches.js 控制显示） */ -}}
