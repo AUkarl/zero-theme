@@ -293,9 +293,11 @@ function __shuoBoot__() {
 
     var anchor = momentAnchor(item);
     return '<article class="shuo-item"' + (anchor ? ' id="' + esc(anchor) + '"' : '') + ' data-id="' + id + '" data-slug="' + slug + '">' +
-      '<div class="shuo-avatar"><img src="' + esc(item.avatarUrl || '/img/avatar.png') + '" alt="" loading="lazy"></div>' +
-      '<div class="shuo-body">' +
+      '<div class="shuo-head">' +
+        '<div class="shuo-avatar"><img src="' + esc(item.avatarUrl || '/img/avatar.png') + '" alt="" loading="lazy"></div>' +
         '<div class="shuo-name">' + esc(item.nickname || '博主') + '</div>' +
+      '</div>' +
+      '<div class="shuo-body">' +
         '<div class="shuo-content" hidden></div>' +
         buildImagesHtml(item) +
         '<div class="shuo-media" hidden></div>' +

@@ -108,13 +108,19 @@
 }
 
 .shuo-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: block;
   padding: 18px 2px;
   border-bottom: 1px solid var(--border);
   /* 锚点跳转用：卡片顶部停在固定导航下方，不被盖住 */
   scroll-margin-top: calc(var(--nav-height) + 16px);
+}
+
+/* 头像 + 昵称一行；昵称在头像右侧按头像高度垂直居中 */
+.shuo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .shuo-item:last-child {
@@ -163,7 +169,7 @@
 }
 
 .shuo-item .shuo-body {
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
 }
 
@@ -171,7 +177,8 @@
   font-size: 0.94rem;
   font-weight: 600;
   color: var(--shuo-name, #576b95);
-  margin-bottom: 4px;
+  margin: 0;
+  line-height: 1.2;
 }
 
 .shuo-item .shuo-content {
@@ -245,7 +252,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: 78%;
+  max-width: 100%;
   padding: 8px 10px;
   margin-bottom: 8px;
   border: 1px solid var(--border);
@@ -314,7 +321,7 @@
 
 /* --- 视频 --- */
 .shuo-video-wrap {
-  max-width: 88%;
+  max-width: 100%;
   margin-bottom: 8px;
 }
 
@@ -331,7 +338,7 @@
   display: flex;
   align-items: stretch;
   gap: 10px;
-  max-width: 88%;
+  max-width: 100%;
   margin-bottom: 8px;
   padding: 10px;
   border: 1px solid var(--border);

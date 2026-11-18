@@ -37,9 +37,11 @@
 {{- $musicTitle = $musicTitle | default "音乐" -}}
 
 <article class="shuo-item"{{ if $anchor }} id="{{ $anchor }}"{{ end }} data-id="{{ $it.id }}" data-slug="{{ $slug }}" data-ssr="1">
-  <div class="shuo-avatar"><img src="{{ $it.avatarUrl | default "/img/avatar.png" }}" alt="" loading="lazy"></div>
-  <div class="shuo-body">
+  <div class="shuo-head">
+    <div class="shuo-avatar"><img src="{{ $it.avatarUrl | default "/img/avatar.png" }}" alt="" loading="lazy"></div>
     <div class="shuo-name">{{ $it.nickname | default "博主" }}</div>
+  </div>
+  <div class="shuo-body">
     <div class="shuo-content"{{ if not $text }} hidden{{ end }}>{{ $text }}</div>
     {{- if $count }}
     <div class="shuo-images count-{{ $count }}">

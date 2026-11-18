@@ -27,9 +27,11 @@
   <section class="section">
     <div class="shuo-wrapper">
       <article class="shuo-item">
-        <div class="shuo-avatar"><img src="{{ $avatar }}" alt="" loading="lazy"></div>
-        <div class="shuo-body">
+        <div class="shuo-head">
+          <div class="shuo-avatar"><img src="{{ $avatar }}" alt="" loading="lazy"></div>
           <div class="shuo-name">{{ $nickname }}</div>
+        </div>
+        <div class="shuo-body">
           <div class="shuo-content" hidden></div>
           <template class="shuo-raw">{{ .Content }}</template>
 
