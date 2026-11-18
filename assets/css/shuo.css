@@ -195,19 +195,19 @@
   display: grid;
   gap: 4px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 78%;
+  max-width: 100%;
   margin-bottom: 8px;
 }
 
 .shuo-images.count-1 {
   display: block;
-  max-width: 62%;
+  max-width: 100%;
 }
 
 .shuo-images.count-2,
 .shuo-images.count-4 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 62%;
+  max-width: 100%;
 }
 
 .shuo-img-link {
@@ -492,7 +492,7 @@
 /* --- 正文里的短代码媒体（音频 / 视频 / 内嵌播放器）--- */
 .shuo-media {
   margin-bottom: 8px;
-  max-width: 88%;
+  max-width: 100%;
 }
 
 .shuo-media[hidden] {
@@ -644,24 +644,12 @@
     padding: 0 10px;
   }
   .shuo-item {
-    gap: 10px;
     padding: 16px 0;
   }
   .shuo-item .shuo-avatar {
     flex: 0 0 38px;
     width: 38px;
     height: 38px;
-  }
-  .shuo-images,
-  .shuo-images.count-1,
-  .shuo-images.count-2,
-  .shuo-images.count-4 {
-    max-width: 82%;
-  }
-  .shuo-music,
-  .shuo-link,
-  .shuo-video-wrap {
-    max-width: 100%;
   }
   .moments-header-banner {
     height: 220px;
