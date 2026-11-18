@@ -20,6 +20,7 @@
      data-share-title="{{ $title }}"
      data-share-text="{{ $desc }}"
      data-share-url="{{ $url }}"
+     data-share-image="{{ $img }}"
      aria-label="{{ i18n "article-share-label" | default "分享" }}">
   <a class="share-btn" href="https://service.weibo.com/share/share.php?url={{ $url | urlquery }}&title={{ $title | urlquery }}" target="_blank" rel="noopener noreferrer" title="分享到微博" aria-label="分享到微博"><i class="fab fa-weibo" aria-hidden="true"></i><span>微博</span></a>
   <button type="button" class="share-btn" data-share-wechat title="分享到微信" aria-label="分享到微信"><i class="fab fa-weixin" aria-hidden="true"></i><span>微信</span></button>
@@ -49,6 +50,7 @@
     var title = box.dataset.shareTitle || document.title;
     var text = box.dataset.shareText || '';
     var url = box.dataset.shareUrl || location.href;
+    var image = box.dataset.shareImage || '';
     var wxBtn = box.querySelector('[data-share-wechat]');
     var qqBtn = box.querySelector('[data-share-qq]');
     var wxTip = document.querySelector('[data-share-wx-tip]');
@@ -63,6 +65,7 @@
     var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     var isAndroid = /Android/i.test(ua);
     var isXiaomi = /MiuiBrowser|XiaoMi|MiBro|HyperOS/i.test(ua);
+    var isVendorBrowser = /MiuiBrowser|XiaoMi|MiBro|HyperOS|HuaweiBrowser|Huawei|HonorBrowser|HONOR|HeyTapBrowser|OppoBrowser|Oppo|VivoBrowser|Vivo|SamsungBrowser|Samsung|MZBrowser|Meizu|LenovoBrowser|Lenovo|ZTEBrowser|ZTE|SonyBrowser|Sony|NokiaBrowser|Nokia|Motorola|Moto|Realme|OnePlus|OPlus|Smartisan|Nubia|Gionee|Coolpad|HTCBrowser|LGBrowser/i.test(ua);
     var isMobile = isIOS || isAndroid || /Mobile/i.test(ua);
     var debug = /[?&]sharedebug=1(?:&|$)/.test(location.search);
     var shareUrl = url;
@@ -214,11 +217,12 @@
       window.addEventListener('pagehide', mark, { once: true });
       try {
         if (isAndroid) {
-          var iframe = document.createElement('iframe');
-          iframe.style.cssText = 'display:none;width:0;height:0;border:0';
-          iframe.src = scheme;
-          document.body.appendChild(iframe);
-          setTimeout(function () { if (iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 1600);
+          var a = document.createElement('a');
+          a.href = scheme;
+          a.style.cssText = 'display:none';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 600);
         } else {
           window.location.href = scheme;
         }
@@ -230,6 +234,26 @@
         if (left || document.visibilityState === 'hidden') return;
         if (onFail) onFail();
       }, 1600);
+    }
+
+    /* QQ 中转页：a.app.qq.com 负责拉起 QQ，mqqapi 里带分享卡片 */
+    function qqScheme() {
+      return 'mqqapi://share/to_fri?src_type=web&version=1&file_type=news'
+        + '&generalpastboard=1&callback_type=scheme&shareType=0&cflag=0'
+        + '&title=' + encodeURIComponent(title)
+        + '&description=' + encodeURIComponent(text)
+        + '&url=' + encodeURIComponent(shareUrl)
+        + (image ? '&image_url=' + encodeURIComponent(image) + '&previewimageUrl=' + encodeURIComponent(image) : '');
+    }
+
+    function openQQTransit(onFail) {
+      var enc = encodeURIComponent(qqScheme());
+      var transit = 'https://a.app.qq.com/o/simple.jsp?pkgname=com.tencent.mobileqq'
+        + (isIOS ? '&ios_scheme=' + enc + '&scheme=' + enc : '&android_schema=' + enc + '&android_scheme=' + enc);
+      debugLog('qq transit: ' + transit);
+      var win = null;
+      try { win = window.open(transit, '_blank'); } catch (e) {}
+      if (!win) onFail();
     }
 
     if (qqBtn) {
@@ -244,11 +268,7 @@
             action: function () { window.open(qqBtn.href, '_blank', 'noopener'); },
           });
         }
-        if (isAndroid) {
-          androidIntent('com.tencent.mobileqq/.activity.JumpActivity', fallback);
-          return;
-        }
-        systemShare().then(function (ok) { if (!ok) fallback(); });
+        openQQTransit(fallback);
       });
     }
 
@@ -285,10 +305,19 @@
           return;
         }
         if (isAndroid) {
-          androidIntent('com.tencent.mm/.ui.tools.ShareImgUI', fallback);
+          if (isVendorBrowser) androidIntent('com.tencent.mm/.ui.tools.ShareImgUI', fallback);
+          else launchApp('weixin://', fallback);
           return;
         }
-        systemShare().then(function (ok) { if (!ok) fallback(); });
+        if (isIOS) {
+          if (typeof navigator.share === 'function') {
+            systemShare().then(function (ok) { if (!ok) launchApp('weixin://', fallback); });
+          } else {
+            launchApp('weixin://', fallback);
+          }
+          return;
+        }
+        fallback();
       });
     }
   })();
