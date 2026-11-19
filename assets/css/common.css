@@ -815,8 +815,8 @@ a {
   gap: 0;
   width: 100%;
   /* 图标是 lazy 外链：图没到时这一行只有 padding 的高度，图到了会顶一下页脚。
-     30px 图 + 上下 4px padding＝38px，先把槽位占住；加载完尺寸不变。 */
-  min-height: 38px;
+     40px 图 + 上下 4px padding＝48px，先把槽位占住；加载完尺寸不变。 */
+  min-height: 46px;
 }
 
 .footer .footer-center .footer-services a {
@@ -872,7 +872,7 @@ a {
 
 /* 中栏带文字，图高一点；右栏是纯图标那一排，压到与图标差不多高 */
 .footer .footer-center .footer-services img.footer-service-img {
-  max-height: 30px;
+  max-height: 40px;
 }
 
 .footer .footer-right .social-row img.footer-service-img {
@@ -942,23 +942,25 @@ a {
     width: 100%;
   }
   .footer .footer-center .footer-services img.footer-service-img {
-    max-height: clamp(18px, 5.5vw, 26px);
+    max-height: clamp(24px, 4.6vw, 36px);
   }
   .footer .footer-center .footer-services a {
     padding: 4px 4px;
     gap: 3px;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
+    min-height: 44px;
   }
 }
 
 @media (max-width: 500px) {
   .footer .footer-center .footer-services img.footer-service-img {
-    max-height: clamp(14px, 4.2vw, 20px);
+    max-height: clamp(22px, 5.6vw, 30px);
   }
   .footer .footer-center .footer-services a {
     padding: 2px 2px;
     gap: 2px;
-    font-size: 0.6rem;
+    font-size: 0.7rem;
+    min-height: 38px;
   }
 }
 
