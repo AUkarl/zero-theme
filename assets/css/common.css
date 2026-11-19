@@ -813,21 +813,17 @@ a {
   align-items: center;
   flex-wrap: nowrap;
   gap: 0;
-  width: 100%;
   /* 图标是 lazy 外链：图没到时这一行只有 padding 的高度，图到了会顶一下页脚。
-     40px 图 + 上下 4px padding＝48px，先把槽位占住；加载完尺寸不变。 */
-  min-height: 46px;
+     30px 图 + 上下 4px padding＝38px，先把槽位占住；加载完尺寸不变。 */
+  min-height: 38px;
 }
 
 .footer .footer-center .footer-services a {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex: 1 1 0;
   min-width: 0;
-  overflow: hidden;
   gap: 5px;
-  padding: 4px 6px;
+  padding: 4px 14px;
   font-size: 0.82rem;
   color: var(--text-secondary);
   text-decoration: none;
@@ -836,7 +832,14 @@ a {
 }
 
 .footer .footer-center .footer-services a:not(:last-child)::after {
-  display: none;
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 14px;
+  background: var(--border);
 }
 
 .footer .footer-center .footer-services .footer-service-name {
@@ -872,7 +875,7 @@ a {
 
 /* 中栏带文字，图高一点；右栏是纯图标那一排，压到与图标差不多高 */
 .footer .footer-center .footer-services img.footer-service-img {
-  max-height: 40px;
+  max-height: 30px;
 }
 
 .footer .footer-right .social-row img.footer-service-img {
@@ -941,14 +944,23 @@ a {
   .footer .footer-center {
     width: 100%;
   }
-  .footer .footer-center .footer-services img.footer-service-img {
-    max-height: clamp(24px, 4.6vw, 36px);
+  .footer .footer-center .footer-services {
+    width: 100%;
   }
   .footer .footer-center .footer-services a {
+    flex: 1 1 0;
+    justify-content: center;
+    overflow: hidden;
     padding: 4px 4px;
     gap: 3px;
     font-size: 0.75rem;
     min-height: 44px;
+  }
+  .footer .footer-center .footer-services a:not(:last-child)::after {
+    display: none;
+  }
+  .footer .footer-center .footer-services img.footer-service-img {
+    max-height: clamp(24px, 4.6vw, 36px);
   }
 }
 
