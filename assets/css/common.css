@@ -839,6 +839,13 @@ a {
   display: none;
 }
 
+.footer .footer-center .footer-services .footer-service-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .footer .footer-center .footer-services a:hover {
   color: var(--text);
 }
@@ -925,6 +932,8 @@ a {
   max-height: 30px;
   width: auto;
   height: auto;
+  flex: 0 1 auto;
+  min-width: 0;
   object-fit: contain;
 }
 
@@ -944,10 +953,12 @@ a {
 
 @media (max-width: 500px) {
   .footer .footer-center .footer-services img.footer-service-img {
-    max-height: clamp(16px, 5vw, 22px);
+    max-height: clamp(14px, 4.2vw, 20px);
   }
   .footer .footer-center .footer-services a {
-    font-size: 0.68rem;
+    padding: 2px 2px;
+    gap: 2px;
+    font-size: 0.6rem;
   }
 }
 
