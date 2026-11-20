@@ -1,5 +1,5 @@
 # zero
-
+### [演示站点](https://molyun.com)
 一个为个人站点写的 Hugo 主题：**静态页面 + 自建动态后端**。
 文章、时刻（朋友圈式动态）、友链、关于页、工坊页都是 Hugo 构建出来的静态 HTML；
 评论、点赞收藏、订阅、访问统计、账号体系由配套的 [zero-stack](https://github.com/AUkarl/zero-stack) 在 Cloudflare 上提供，
