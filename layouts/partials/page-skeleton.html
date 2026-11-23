@@ -1,0 +1,163 @@
+{{- /* ============================================================
+  page-skeleton.html — 全站页面切换骨架
+  ------------------------------------------------------------
+  外链/新标签/同页锚点不拦；站内跳转时先显示与页面同构的框架，
+  慢网络下内容由流光骨架占位，快跳转时因 140ms 延迟根本不会闪出来。
+  首屏 HTML 由 Hugo 直出，不盖遮罩，避免把已经能看的正文藏起来。
+  ============================================================ */ -}}
+<div class="page-skeleton" id="pageSkeleton" hidden aria-hidden="true">
+  <div class="sk-nav">
+    <span class="sk-logo"></span>
+    <span class="sk-nav-links"><i></i><i></i><i></i><i></i></span>
+  </div>
+  <div class="sk-body">
+    <div class="sk-main">
+      <span class="sk-kicker"></span>
+      <span class="sk-title"></span>
+      <span class="sk-meta"></span>
+      <div class="sk-text">
+        <span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="sk-sub-block">
+        <span class="sk-sub"></span>
+        <div class="sk-reply"><span class="sk-avatar"></span><span class="sk-rlines"><i></i><i></i></span></div>
+        <div class="sk-reply"><span class="sk-avatar"></span><span class="sk-rlines"><i></i><i></i></span></div>
+      </div>
+    </div>
+    <aside class="sk-aside">
+      <div class="sk-side">
+        <span class="sk-sub"></span>
+        <span class="sk-side-line"></span>
+        <span class="sk-side-line"></span>
+        <span class="sk-side-line"></span>
+        <span class="sk-side-line"></span>
+      </div>
+    </aside>
+  </div>
+</div>
+<style>
+  .page-skeleton { position: fixed; inset: 0; z-index: 1180; display: flex; flex-direction: column;
+    background: var(--bg, #fff); overflow: hidden; }
+  .page-skeleton[hidden] { display: none !important; }
+  .sk-nav { flex: 0 0 var(--nav-height, 64px); height: var(--nav-height, 64px); display: flex;
+    align-items: center; justify-content: space-between; gap: 24px;
+    width: min(var(--max-width, 1200px), calc(100% - 48px)); margin: 0 auto;
+    border-bottom: 1px solid var(--border, #e5e5e5); }
+  .sk-logo { width: 64px; height: 20px; border-radius: 6px; }
+  .sk-nav-links { display: flex; align-items: center; gap: 18px; }
+  .sk-nav-links i { width: 34px; height: 10px; border-radius: 999px; }
+  .sk-body { width: min(1080px, calc(100% - 48px)); margin: clamp(18px, 4vw, 40px) auto 0;
+    display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 24px; align-items: start; }
+  .sk-main, .sk-side { background: var(--card-bg, #fff); border: 1px solid var(--border, #e5e5e5);
+    border-radius: var(--radius, 4px); box-shadow: var(--shadow, none); }
+  .sk-main { padding: clamp(20px, 3vw, 34px); }
+  .sk-side { padding: 20px 18px; }
+  .sk-kicker { display: block; width: 76px; height: 12px; border-radius: 999px; margin-bottom: 14px; }
+  .sk-title { display: block; width: min(420px, 62%); height: 24px; border-radius: 7px; margin-bottom: 14px; }
+  .sk-meta { display: block; width: 46%; height: 10px; border-radius: 999px; margin-bottom: 26px; }
+  .sk-text { display: flex; flex-direction: column; gap: 12px; }
+  .sk-text span { display: block; height: 11px; border-radius: 999px; }
+  .sk-text span:nth-child(1) { width: 97%; }
+  .sk-text span:nth-child(2) { width: 92%; }
+  .sk-text span:nth-child(3) { width: 95%; }
+  .sk-text span:nth-child(4) { width: 78%; }
+  .sk-text span:nth-child(5) { width: 96%; }
+  .sk-text span:nth-child(6) { width: 58%; }
+  .sk-sub-block { margin-top: 30px; padding-top: 22px; border-top: 1px dashed var(--border, #e5e5e5); }
+  .sk-sub { display: block; width: 96px; height: 14px; border-radius: 999px; margin-bottom: 18px; }
+  .sk-reply { display: flex; gap: 12px; margin-bottom: 16px; }
+  .sk-avatar { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 50%; }
+  .sk-rlines { flex: 1; display: flex; flex-direction: column; gap: 9px; padding-top: 3px; }
+  .sk-rlines i { display: block; height: 10px; border-radius: 999px; }
+  .sk-rlines i:first-child { width: 30%; }
+  .sk-rlines i:last-child { width: 86%; }
+  .sk-side-line { display: block; height: 9px; border-radius: 999px; margin-bottom: 12px; }
+  .sk-side-line:nth-child(2) { width: 88%; }
+  .sk-side-line:nth-child(3) { width: 70%; }
+  .sk-side-line:nth-child(4) { width: 82%; }
+  .sk-side-line:nth-child(5) { width: 56%; }
+  /* 所有占位块共用一条流光：中性灰在深浅两套配色下都看得清，不跟品牌色抢眼 */
+  .sk-logo, .sk-nav-links i, .sk-kicker, .sk-title, .sk-meta, .sk-text span,
+  .sk-sub, .sk-avatar, .sk-rlines i, .sk-side-line {
+    background-color: rgba(128, 128, 128, 0.16);
+    background-image: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.35) 42%, transparent 64%);
+    background-size: 220% 100%; background-repeat: no-repeat;
+    animation: pageSkeletonShimmer 1.35s linear infinite;
+  }
+  @keyframes pageSkeletonShimmer { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+  @media (max-width: 900px) {
+    .sk-aside { display: none; }
+    .sk-body { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .sk-nav { width: calc(100% - 32px); }
+    .sk-nav-links { gap: 12px; }
+    .sk-nav-links i { width: 26px; }
+    .sk-nav-links i:nth-child(n + 4) { display: none; }
+    .sk-body { width: calc(100% - 24px); margin-top: 14px; }
+    .sk-main { padding: 20px 16px; }
+    .sk-title { width: 78%; height: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk-logo, .sk-nav-links i, .sk-kicker, .sk-title, .sk-meta, .sk-text span,
+    .sk-sub, .sk-avatar, .sk-rlines i, .sk-side-line { animation: none; background-image: none; }
+  }
+</style>
+<script>
+  (function () {
+    var el = document.getElementById('pageSkeleton');
+    if (!el) return;
+    var timer = 0, guard = 0, pending = false;
+
+    function dismiss() {
+      pending = false;
+      clearTimeout(timer);
+      clearTimeout(guard);
+      el.hidden = true;
+    }
+
+    function arm() {
+      if (pending) return;
+      pending = true;
+      clearTimeout(timer);
+      timer = setTimeout(function () { if (pending) el.hidden = false; }, 140);
+      clearTimeout(guard);
+      guard = setTimeout(dismiss, 6000);
+    }
+
+    function sameTarget(url) {
+      return url.origin === location.origin
+        && url.pathname === location.pathname
+        && url.search === location.search;
+    }
+
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (!a) return;
+      var target = (a.getAttribute('target') || '').toLowerCase();
+      if (target && target !== '_self') return;
+      if (a.hasAttribute('download') || a.hasAttribute('data-no-skeleton')) return;
+      var url;
+      try { url = new URL(a.href, location.href); } catch (err) { return; }
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+      if (url.origin !== location.origin || sameTarget(url)) return;
+      arm();
+    });
+
+    document.addEventListener('submit', function (e) {
+      if (e.defaultPrevented) return;
+      var form = e.target;
+      if (!form || !form.getAttribute) return;
+      var target = (form.getAttribute('target') || '').toLowerCase();
+      if (target && target !== '_self') return;
+      var url;
+      try { url = new URL(form.getAttribute('action') || location.href, location.href); } catch (err) { return; }
+      if (url.origin !== location.origin || sameTarget(url)) return;
+      arm();
+    });
+
+    window.addEventListener('pageshow', dismiss);
+    window.addEventListener('popstate', dismiss);
+  })();
+</script>

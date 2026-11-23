@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse, hashlib, json, re, sys
 from pathlib import Path
 from fontTools import subset
+from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent
 FA = ROOT / "static" / "fa"
@@ -63,6 +64,26 @@ def css_icon_codepoints(css, names):
                 out.add(int(code, 16))
     return out
 
+def css_icon_map(css):
+    out = {}
+    for selectors, code in re.findall(r'([^{}]+)\{content:"\\([0-9a-fA-F]+)"\}', css):
+        for part in selectors.split(','):
+            hit = re.fullmatch(r'\.(fa-[a-z0-9-]+):before', part.strip())
+            if hit:
+                out[hit.group(1)] = int(code, 16)
+    return out
+
+def style_cmaps():
+    out = {}
+    for style, filename in (('fa-solid', 'fa-solid-900.woff2'), ('fa-regular', 'fa-regular-400.woff2'), ('fa-brands', 'fa-brands-400.woff2')):
+        p = FA / 'webfonts' / filename
+        if not p.exists():
+            continue
+        font = TTFont(str(p))
+        out[style] = set((font.getBestCmap() or {}).keys())
+        font.close()
+    return out
+
 def trim_icon_rules(css, keep_names):
     """删掉只给图标字形用的 .fa-xxx:before 规则；其余（基础/工具类）原样保留。
 
@@ -105,7 +126,22 @@ def main():
         name = parts[-1]
         if name in css_names: pairs.append(f"{'fa-'+style if style != 'solid' else 'fa-solid'} {name}")
     # 去重、稳定排序；保留当前模板里的 legacy 类（fas/far/fab）作为同义输入
-    classes = sorted(set(pairs), key=lambda s: (s.split()[-1], s))
+    code_map = css_icon_map(css)
+    maps = style_cmaps()
+    valid = []
+    for pair in set(pairs):
+        parts = pair.split()
+        if len(parts) != 2:
+            continue
+        style, name = parts
+        code = code_map.get(name)
+        if code is None:
+            continue
+        cmap = maps.get(style)
+        if cmap is not None and code not in cmap:
+            continue
+        valid.append(pair)
+    classes = sorted(valid, key=lambda s: (s.split()[-1], s))
     # 只保留有真正 content 的 base 图标
     base_names = sorted({c.split()[-1] for c in classes})
     payload = json.dumps({"classes": classes}, ensure_ascii=False, indent=2) + "\n"
